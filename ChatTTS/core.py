@@ -100,7 +100,7 @@ class Chat:
             
         self.check_model()
     
-    def infer(self, text, skip_refine_text=False, params_refine_text={}, params_infer_code={}, use_decoder=False):
+    def infer(self, text, skip_refine_text=False, params_refine_text={}, params_infer_code={}, use_decoder=False, return_text=False):
         assert self.check_model(use_decoder=use_decoder)
         if not skip_refine_text:
             text_tokens = refine_text(self.pretrain_models, text, **params_refine_text)['ids']
@@ -112,7 +112,10 @@ class Chat:
         else:
             mel_spec = [self.pretrain_models['dvae'](i[None].permute(0,2,1)) for i in result['ids']]
         wav = [self.pretrain_models['vocos'].decode(i).cpu().numpy() for i in mel_spec]
-        return wav
-        
+
+        if return_text:
+            return wav, text
+        else:
+            return wav    
         
 

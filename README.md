@@ -1,5 +1,25 @@
 # ChatTTS
 
+start webui / 启动webui
+
+```bash
+python webui.py
+```
+
+![Webui Dashboard Image](images/webui_dashboard.png)
+
+## Install
+
+Install conda, and...
+
+```bash
+conda create -n chattts  python=3.9
+conda activate chattts
+
+conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+pip install omegaconf vocos transformers vector-quantize-pytorch
+```
+
 ## To be Finished
 
 ```python
