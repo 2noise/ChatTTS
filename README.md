@@ -1,5 +1,12 @@
 # ChatTTS
 
+## Installation
+
+Install the environment using [Miniforge](https://github.com/conda-forge/miniforge#mambaforge). Run the following command:
+```
+mamba env create -f env.yaml
+```
+
 ## To be Finished
 
 ```python
