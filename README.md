@@ -122,7 +122,7 @@ In the current released model, the only token-level control units are [laugh], [
 
 ---
 ## Acknowledgements
-- [bark](https://github.com/suno-ai/bark), [TTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by a autoregressive-style system.
+- [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by a autoregressive-style system.
 - [fish-speech](https://github.com/fishaudio/fish-speech) reveals capability of GVQ as audio tokenizer for LLM modeling.
 - [vocos](https://github.com/gemelo-ai/vocos) which is used as a pretrained vocoder.
 
