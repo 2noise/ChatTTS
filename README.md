@@ -2,7 +2,9 @@
   
 # ChatTTS
 [**English**](./README.md) | [**中文简体**](./README_CN.md)     <div>
- [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/gist/ahmedosman2001/6f485b90382d067ef5031fac4c269ac0/chattts_demo.ipynb) </div>
+ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/gist/ahmedosman2001/6f485b90382d067ef5031fac4c269ac0/chattts_demo.ipynb) 
+[![HuggingFace](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/Dzkaka/ChatTTS)
+ </div>
 
 </div>
 
