@@ -1,5 +1,10 @@
+<div align="center">
+  
 # ChatTTS
-[**English**](./README.md) | [**中文简体**](./README_CN.md)
+[**English**](./README.md) | [**中文简体**](./README_CN.md)     <div>
+ [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/gist/ahmedosman2001/6f485b90382d067ef5031fac4c269ac0/chattts_demo.ipynb) </div>
+
+</div>
 
 ChatTTS is a text-to-speech model designed specifically for dialogue scenario such as LLM assistant. It supports both English and Chinese languages. Our model is trained with 100,000+ hours composed of chinese and english. The open-source version on HuggingFace is a 40,000 hours pre trained model without SFT.
 
