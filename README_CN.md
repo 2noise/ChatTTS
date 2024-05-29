@@ -124,7 +124,7 @@ audio_array_en = chat.infer(inputs_en, params_refine_text=params_refine_text)
 
 ---
 ## 致谢
-- [bark](https://github.com/suno-ai/bark),[TTSv2](https://github.com/coqui-ai/TTS)和[valle](https://arxiv.org/abs/2301.02111)展示了自回归任务用于TTS任务的可能性.
+- [bark](https://github.com/suno-ai/bark),[XTTSv2](https://github.com/coqui-ai/TTS)和[valle](https://arxiv.org/abs/2301.02111)展示了自回归任务用于TTS任务的可能性.
 - [fish-speech](https://github.com/fishaudio/fish-speech)一个优秀的自回归TTS模型, 揭示了GVQ用于LLM任务的可能性.
 - [vocos](https://github.com/gemelo-ai/vocos)作为模型中的vocoder.
 
