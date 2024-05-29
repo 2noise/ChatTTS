@@ -11,7 +11,7 @@ For formal inquiries about model and roadmap, please contact us at open-source@2
 2. **Fine-grained Control**: The model could predict and control fine-grained prosodic features, including laughter, pauses, and interjections. 
 3. **Better Prosody**: ChatTTS surpasses most of open-source TTS models in terms of prosody. We provide pretrained models to support further research and development.
 
-对于模型的具体介绍, 可以参考B站的[宣传视频](https://www.bilibili.com/video/BV1zn4y1o7iV) 
+For the detailed description of the model, you can refer to [video on Bilibili](https://www.bilibili.com/video/BV1zn4y1o7iV) 
 
 ---
 
