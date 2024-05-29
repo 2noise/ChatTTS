@@ -1,7 +1,7 @@
 # ChatTTS
 [**English**](./README.md) | [**中文简体**](./README_CN.md)
 
-ChatTTS is a text-to-speech model designed specifically for dialogue scenario such as LLM assistant. It supports both English and Chinese languages. Our model is trained with 100,000+ hours composed of chinese and english. The open-source version on HuggingFace is a 40,000 hours pre trained model without SFT.
+ChatTTS is a text-to-speech model designed specifically for dialogue scenario such as LLM assistant. It supports both English and Chinese languages. Our model is trained with 100,000+ hours composed of chinese and english. The open-source version on HuggingFace is a 40,000 hours pre trained model without SFT. Try the Hugging Face [demo](https://huggingface.co/spaces/Dzkaka/ChatTTS).
 
 For formal inquiries about model and roadmap, please contact us at open-source@2noise.com. You could join our QQ group: 808364215 for discussion. Adding github issues is always welcomed.
 
