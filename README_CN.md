@@ -128,3 +128,6 @@ audio_array_en = chat.infer(inputs_en, params_refine_text=params_refine_text)
 - [fish-speech](https://github.com/fishaudio/fish-speech)一个优秀的自回归TTS模型, 揭示了GVQ用于LLM任务的可能性.
 - [vocos](https://github.com/gemelo-ai/vocos)作为模型中的vocoder.
 
+---
+## 特别致谢
+- [wlu-audio lab](https://audio.westlake.edu.cn/)为我们提供了早期算法试验的支持.
