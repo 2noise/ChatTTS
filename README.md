@@ -23,6 +23,20 @@ ChatTTS is a powerful text-to-speech system. However, it is very important to ut
 
 
 ---
+## Environment Installation
+
+<h4>requirements and installation</h4>
+
+```python
+git clone https://github.com/2noise/ChatTTS.git
+cd ChatTTS
+conda create env -n chattts python=3.10
+conda activate chattts
+pip install -r requirements.txt
+```
+
+
+---
 ## Usage
 
 <h4>basic usage</h4>
