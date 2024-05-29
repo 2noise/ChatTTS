@@ -29,6 +29,7 @@ ChatTTS is a powerful text-to-speech system. However, it is very important to ut
 
 ```python
 import ChatTTS
+import scipy
 from IPython.display import Audio
 
 chat = ChatTTS.Chat()
@@ -38,6 +39,7 @@ texts = ["<PUT YOUR TEXT HERE>",]
 
 wavs = chat.infer(texts, use_decoder=True)
 Audio(wavs[0], rate=24_000, autoplay=True)
+scipy.io.wavfile.write(filename = "./chattts_download_0.wav", rate = 24_000, data = wavs[0].T) # save audio file
 ```
 
 <h4>advanced usage</h4>

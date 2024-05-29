@@ -27,6 +27,7 @@ ChatTTS是一个强大的文本转语音系统。然而，负责任地和符合�
 
 ```python
 import ChatTTS
+import scipy
 from IPython.display import Audio
 
 chat = ChatTTS.Chat()
@@ -36,6 +37,7 @@ texts = ["<PUT YOUR TEXT HERE>",]
 
 wavs = chat.infer(texts, use_decoder=True)
 Audio(wavs[0], rate=24_000, autoplay=True)
+scipy.io.wavfile.write(filename = "./chattts_download_0.wav", rate = 24_000, data = wavs[0].T) # 保存音频
 ```
 
 <h4>进阶用法</h4>
