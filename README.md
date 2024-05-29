@@ -126,3 +126,6 @@ In the current released model, the only token-level control units are [laugh], [
 - [fish-speech](https://github.com/fishaudio/fish-speech) reveals capability of GVQ as audio tokenizer for LLM modeling.
 - [vocos](https://github.com/gemelo-ai/vocos) which is used as a pretrained vocoder.
 
+---
+## Special Appreciation
+- [wlu-audio lab](https://audio.westlake.edu.cn/) for early algorithm experiments.
