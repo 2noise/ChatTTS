@@ -8,7 +8,6 @@ from fastapi.responses import StreamingResponse, Response
 from omegaconf import OmegaConf
 from pydantic import BaseModel
 
-
 import ChatTTS
 import uvicorn
 
@@ -24,7 +23,7 @@ class TTS(BaseModel):
 class Chat(ChatTTS.Chat):
     """重写一下load_models方法，方便我们自定义models的路径，照顾国内的宝宝"""
 
-    def load_models(self, source=''):
+    def load_models(self, source='', force_redownload=False, local_path='<LOCAL_PATH>'):
         download_path = source
         self._load(**{k: os.path.join(download_path, v) for k, v in
                       OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()})
@@ -47,7 +46,10 @@ def wave_header_chunk(frame_input=b"", channels=1, sample_width=2, sample_rate=2
 
 
 def infer(text):
-    chunks = (chat.infer([text], use_decoder=True)[0] * 32768).astype(np.int16)
+    # 热心群友1142052965提的建议
+    audio_data = chat.infer([text], use_decoder=True)[0]
+    audio_data = audio_data / np.max(np.abs(audio_data))
+    chunks = (audio_data * 32768).astype(np.int16)
     yield wave_header_chunk()
     for chunk in chunks:
         if chunk is not None:
