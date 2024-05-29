@@ -72,4 +72,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.debug(f"model_dir: {args.model_dir}")
     chat.load_models(args.model_dir)
-    uvicorn.run(app, host="0.0.0.0", port=12456)
+    uvicorn.run(app, host=args.host, port=args.port)
