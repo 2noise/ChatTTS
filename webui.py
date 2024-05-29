@@ -24,7 +24,7 @@ def generate_seed():
 def generate_audio(text, temperature, top_P, top_K, audio_seed_input, text_seed_input, refine_text_flag):
 
     torch.manual_seed(audio_seed_input)
-    rand_spk = torch.randn(768)
+    rand_spk = chat.sample_random_speaker()
     params_infer_code = {
         'spk_emb': rand_spk, 
         'temperature': temperature,
@@ -72,7 +72,7 @@ def main():
             top_k_slider = gr.Slider(minimum=1, maximum=20, step=1, value=20, label="top_K")
 
         with gr.Row():
-            audio_seed_input = gr.Number(value=42, label="Audio Seed")
+            audio_seed_input = gr.Number(value=2, label="Audio Seed")
             generate_audio_seed = gr.Button("\U0001F3B2")
             text_seed_input = gr.Number(value=42, label="Text Seed")
             generate_text_seed = gr.Button("\U0001F3B2")
