@@ -1,4 +1,3 @@
-
 import os
 import logging
 from omegaconf import OmegaConf
@@ -13,15 +12,15 @@ from .infer.api import refine_text, infer_code
 
 from huggingface_hub import snapshot_download
 
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 
 class Chat:
-    def __init__(self, ):
+    def __init__(self):
         self.pretrain_models = {}
         self.logger = logging.getLogger(__name__)
         
-    def check_model(self, level = logging.INFO, use_decoder = False):
+    def check_model(self, level=logging.INFO, use_decoder=False):
         not_finish = False
         check_list = ['vocos', 'gpt', 'tokenizer']
         
@@ -73,11 +72,11 @@ class Chat:
         if not device:
             device = select_device(4096)
             self.logger.log(logging.INFO, f'use {device}')
-            
+        
         if vocos_config_path:
             vocos = Vocos.from_hparams(vocos_config_path).to(device).eval()
             assert vocos_ckpt_path, 'vocos_ckpt_path should not be None'
-            vocos.load_state_dict(torch.load(vocos_ckpt_path))
+            vocos.load_state_dict(torch.load(vocos_ckpt_path, map_location=device))
             self.pretrain_models['vocos'] = vocos
             self.logger.log(logging.INFO, 'vocos loaded.')
         
@@ -85,7 +84,7 @@ class Chat:
             cfg = OmegaConf.load(dvae_config_path)
             dvae = DVAE(**cfg).to(device).eval()
             assert dvae_ckpt_path, 'dvae_ckpt_path should not be None'
-            dvae.load_state_dict(torch.load(dvae_ckpt_path, map_location='cpu'))
+            dvae.load_state_dict(torch.load(dvae_ckpt_path, map_location=device))
             self.pretrain_models['dvae'] = dvae
             self.logger.log(logging.INFO, 'dvae loaded.')
             
@@ -93,23 +92,23 @@ class Chat:
             cfg = OmegaConf.load(gpt_config_path)
             gpt = GPT_warpper(**cfg).to(device).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
-            gpt.load_state_dict(torch.load(gpt_ckpt_path, map_location='cpu'))
+            gpt.load_state_dict(torch.load(gpt_ckpt_path, map_location=device))
             self.pretrain_models['gpt'] = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), 'spk_stat.pt')
             assert os.path.exists(spk_stat_path), f'Missing spk_stat.pt: {spk_stat_path}'
-            self.pretrain_models['spk_stat'] = torch.load(spk_stat_path).to(device)
+            self.pretrain_models['spk_stat'] = torch.load(spk_stat_path, map_location=device).to(device)
             self.logger.log(logging.INFO, 'gpt loaded.')
             
         if decoder_config_path:
             cfg = OmegaConf.load(decoder_config_path)
             decoder = DVAE(**cfg).to(device).eval()
             assert decoder_ckpt_path, 'decoder_ckpt_path should not be None'
-            decoder.load_state_dict(torch.load(decoder_ckpt_path, map_location='cpu'))
+            decoder.load_state_dict(torch.load(decoder_ckpt_path, map_location=device))
             self.pretrain_models['decoder'] = decoder
             self.logger.log(logging.INFO, 'decoder loaded.')
         
         if tokenizer_path:
-            tokenizer = torch.load(tokenizer_path, map_location='cpu')
+            tokenizer = torch.load(tokenizer_path, map_location=device)
             tokenizer.padding_side = 'left'
             self.pretrain_models['tokenizer'] = tokenizer
             self.logger.log(logging.INFO, 'tokenizer loaded.')
@@ -144,14 +143,11 @@ class Chat:
         else:
             mel_spec = [self.pretrain_models['dvae'](i[None].permute(0,2,1)) for i in result['ids']]
             
-        wav = [self.pretrain_models['vocos'].decode(i).cpu().numpy() for i in mel_spec]
+        wav = [self.pretrain_models['vocos'].decode(i).to('cpu').numpy() for i in mel_spec]
         
         return wav
     
-    def sample_random_speaker(self, ):
-        
+    def sample_random_speaker(self):
         dim = self.pretrain_models['gpt'].gpt.layers[0].mlp.gate_proj.in_features
         std, mean = self.pretrain_models['spk_stat'].chunk(2)
         return torch.randn(dim, device=std.device) * std + mean
-        
-
