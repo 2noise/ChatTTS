@@ -1,0 +1,6 @@
+fastapi
+soundfile
+loguru
+streamlit
+gunicorn
+pydub

@@ -1,3 +1,47 @@
+# ChatTTS-api-ui-docker
+
+One command to start a ChatTTS API server with a web interface.
+
+一行命令启动一个带有 Web 界面的 ChatTTS API 服务器。
+
+Prerequisites: GPU with CUDA support, Docker, 4GB GPU memory
+
+前提条件：支持 CUDA 的 GPU，Docker, 4GB GPU 内存
+
+## Usage 使用方法
+
+Start Server 启动服务 (ps: 镜像压缩后 5.16 GB)
+```bash
+docker run --name chat_tts \
+  --gpus all --ipc=host \
+  --ulimit memlock=-1 --ulimit stack=67108864 \
+  -p 8080:8080 -p 8501:8501 \
+  jackiexiao/chat_tts_api_ui:24.05.30
+```
+
+Stop server 删除服务
+```
+docker rm -f chat_tts
+```
+
+- The service will take some time to start. After the service is started, visit http://localhost:8501 to view the web interface.
+- 服务启动需要一段时间，等待服务启动完成后，访问 http://localhost:8501 即可查看 Web 界面。
+- Web UI
+  - URL 网页: http://localhost:8501
+  - build with streamlit
+- Api
+  - URL: http://localhost:8080
+  - Document: http://localhost:8080/docs
+  - client: `python client.py`
+  - build with fastapi
+
+## known issues 已知问题
+1. 文本过长会有问题，不要超过100个字。
+2. 不支持并发
+3. 采样率为24000
+4. 会有幻觉, 合成效果不稳定, 很多标点符号不支持(比如感叹号, 数字), 请谨慎使用
+
+
 # ChatTTS
 [**English**](./README.md) | [**中文简体**](./README_CN.md)
 
