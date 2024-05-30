@@ -8,10 +8,6 @@ import numpy as np
 
 import ChatTTS
 
-print("loading ChatTTS model...")
-chat = ChatTTS.Chat()
-chat.load_models()
-
 
 def generate_seed():
     new_seed = random.randint(1, 100000000)
@@ -97,7 +93,18 @@ def main():
     parser = argparse.ArgumentParser(description='ChatTTS demo Launch')
     parser.add_argument('--server_name', type=str, default='0.0.0.0', help='Server name')
     parser.add_argument('--server_port', type=int, default=8080, help='Server port')
+    parser.add_argument('--local_path', type=str, default=None, help='the local_path if need')
     args = parser.parse_args()
+
+    print("loading ChatTTS model...")
+    global chat
+    chat = ChatTTS.Chat()
+
+    if args.local_path == None:
+        chat.load_models()
+    else:
+        print('local model path:', args.local_path)
+        chat.load_models('local', local_path=args.local_path)
 
     demo.launch(server_name=args.server_name, server_port=args.server_port, inbrowser=True)
 
