@@ -16,8 +16,6 @@ from huggingface_hub import snapshot_download
 
 logging.basicConfig(level = logging.INFO)
 
-torch._dynamo.config.suppress_errors = True
-torch.set_float32_matmul_precision('medium')
 
 class Chat:
     def __init__(self, ):
@@ -137,6 +135,9 @@ class Chat:
     ):
         
         assert self.check_model(use_decoder=use_decoder)
+        
+        if not isinstance(text, list): 
+            text = [text]
         
         if do_text_normalization:
             for i, t in enumerate(text):

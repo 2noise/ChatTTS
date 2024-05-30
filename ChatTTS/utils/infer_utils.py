@@ -48,7 +48,7 @@ class CustomRepetitionPenaltyLogitsProcessor():
 def count_invalid_characters(s):
     
     s = re.sub(r'\[uv_break\]|\[laugh\]|\[lbreak\]', '', s)
-    pattern = re.compile(r'[^\u4e00-\u9fffA-Za-z，。,\. ]')
+    pattern = re.compile(r'[^\u4e00-\u9fffA-Za-z，。、,\. ]')
     non_alphabetic_chinese_chars = pattern.findall(s)
     return set(non_alphabetic_chinese_chars)
 
