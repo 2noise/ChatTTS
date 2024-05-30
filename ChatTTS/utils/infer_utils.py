@@ -51,3 +51,16 @@ def count_invalid_characters(s):
     pattern = re.compile(r'[^\u4e00-\u9fffA-Za-z，。,\. ]')
     non_alphabetic_chinese_chars = pattern.findall(s)
     return set(non_alphabetic_chinese_chars)
+
+def detect_language(sentence):
+
+    chinese_char_pattern = re.compile(r'[\u4e00-\u9fff]')
+    english_word_pattern = re.compile(r'\b[A-Za-z]+\b')
+
+    chinese_chars = chinese_char_pattern.findall(sentence)
+    english_words = english_word_pattern.findall(sentence)
+
+    if len(chinese_chars) > len(english_words):
+        return "zh"
+    else:
+        return "en"

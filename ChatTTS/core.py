@@ -8,7 +8,7 @@ from vocos import Vocos
 from .model.dvae import DVAE
 from .model.gpt import GPT_warpper
 from .utils.gpu_utils import select_device
-from .utils.infer_utils import count_invalid_characters
+from .utils.infer_utils import count_invalid_characters, detect_language
 from .utils.io_utils import get_latest_modified_file
 from .infer.api import refine_text, infer_code
 
@@ -22,6 +22,7 @@ torch.set_float32_matmul_precision('medium')
 class Chat:
     def __init__(self, ):
         self.pretrain_models = {}
+        self.normalizer = {}
         self.logger = logging.getLogger(__name__)
         
     def check_model(self, level = logging.INFO, use_decoder = False):
@@ -130,12 +131,19 @@ class Chat:
         refine_text_only=False, 
         params_refine_text={}, 
         params_infer_code={}, 
-        use_decoder=False
+        use_decoder=True,
+        do_text_normalization=True,
+        lang=None,
     ):
         
         assert self.check_model(use_decoder=use_decoder)
         
-                
+        if do_text_normalization:
+            for i, t in enumerate(text):
+                _lang = detect_language(t) if lang is None else lang
+                self.init_normalizer(_lang)
+                text[i] = self.normalizer[_lang].normalize(t, verbose=False, punct_post_process=True)
+            
         for i in text:
             invalid_characters = count_invalid_characters(i)
             if len(invalid_characters):
@@ -166,5 +174,10 @@ class Chat:
         dim = self.pretrain_models['gpt'].gpt.layers[0].mlp.gate_proj.in_features
         std, mean = self.pretrain_models['spk_stat'].chunk(2)
         return torch.randn(dim, device=std.device) * std + mean
+    
+    def init_normalizer(self, lang):
         
+        if lang not in self.normalizer:
+            from nemo_text_processing.text_normalization.normalize import Normalizer
+            self.normalizer[lang] = Normalizer(input_case='cased', lang=lang)
 
