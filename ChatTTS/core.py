@@ -8,6 +8,7 @@ from vocos import Vocos
 from .model.dvae import DVAE
 from .model.gpt import GPT_warpper
 from .utils.gpu_utils import select_device
+from .utils.infer_utils import count_invalid_characters
 from .utils.io_utils import get_latest_modified_file
 from .infer.api import refine_text, infer_code
 
@@ -134,6 +135,12 @@ class Chat:
         
         assert self.check_model(use_decoder=use_decoder)
         
+                
+        for i in text:
+            invalid_characters = count_invalid_characters(i)
+            if len(invalid_characters):
+                self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
+                
         if not skip_refine_text:
             text_tokens = refine_text(self.pretrain_models, text, **params_refine_text)['ids']
             text_tokens = [i[i < self.pretrain_models['tokenizer'].convert_tokens_to_ids('[break_0]')] for i in text_tokens]
