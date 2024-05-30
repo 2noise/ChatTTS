@@ -130,7 +130,7 @@ class Chat:
         skip_refine_text=False, 
         refine_text_only=False, 
         params_refine_text={}, 
-        params_infer_code={}, 
+        params_infer_code={'prompt':'[speed_5]'}, 
         use_decoder=True,
         do_text_normalization=True,
         lang=None,
