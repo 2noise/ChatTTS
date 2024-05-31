@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "ChatTTS is a generative speech model for daily dialogue."
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
+packages = [
+    { include = "ChatTTS", from = "." },
+]
 
 [tool.poetry.dependencies]
 python = ">=3.10.*"
