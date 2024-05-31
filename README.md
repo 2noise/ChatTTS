@@ -66,6 +66,12 @@ pip install git+https://github.com/2noise/ChatTTS
 
 ### Basic
 
+## Quick Start
+```
+pip install --upgrade -r requirements.txt 
+python3 app.py "your text"
+```
+
 ```python
 import ChatTTS
 from IPython.display import Audio
