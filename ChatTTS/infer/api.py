@@ -25,9 +25,9 @@ def infer_code(
         temperature = [temperature] * models['gpt'].num_vq
     
     if spk_emb is not None:
-        text = [f'[Stts][spk_emb]{i}[uv_break][Ptts]' for i in text] 
+        text = [f'[Stts][spk_emb]{i}[Ptts]' for i in text] 
     else:
-        text = [f'[Stts][empty_spk]{i}[uv_break][Ptts]' for i in text]
+        text = [f'[Stts][empty_spk]{i}[Ptts]' for i in text]
     
     text_token = models['tokenizer'](text, return_tensors='pt', add_special_tokens=False, padding=True).to(device)
     input_ids = text_token['input_ids'][...,None].expand(-1, -1, models['gpt'].num_vq)
