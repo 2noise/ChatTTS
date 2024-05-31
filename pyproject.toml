@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "chattts"
+name = "ChatTTS"
 version = "0.1.0"
 description = "ChatTTS is a generative speech model for daily dialogue."
 authors = ["Your Name <you@example.com>"]
