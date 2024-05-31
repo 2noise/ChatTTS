@@ -8,15 +8,15 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10.*"
 omegaconf = "^2.3.0"
-torch = "^2.3.0"
 tqdm = "^4.66.4"
 einops = "^0.8.0"
 vector-quantize-pytorch = "^1.14.24"
 transformers = "^4.41.2"
 vocos = "^0.1.0"
+ipython = "^8.25.0"
 
 [tool.poetry.group.dev.dependencies]
-ipython = "^8.25.0"
+
 
 [build-system]
 requires = ["poetry-core"]
