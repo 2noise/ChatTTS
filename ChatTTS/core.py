@@ -99,7 +99,7 @@ class Chat:
             gpt = GPT_warpper(**cfg).to(device).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
             gpt.load_state_dict(torch.load(gpt_ckpt_path, map_location='cpu'))
-            if compile:
+            if compile and 'cuda' in str(device):
                 gpt.gpt.forward = torch.compile(gpt.gpt.forward,  backend='inductor', dynamic=True)
             self.pretrain_models['gpt'] = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), 'spk_stat.pt')
