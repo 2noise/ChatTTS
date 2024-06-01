@@ -10,3 +10,5 @@ fastapi
 soundfile
 loguru
 pypinyin
+Cython
+LangSegment

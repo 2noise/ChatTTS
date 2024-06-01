@@ -1,8 +1,6 @@
-import copy
 import io
-import json
+
 import os
-import pickle
 import wave
 import numpy as np
 import torch
@@ -10,14 +8,14 @@ from fastapi import FastAPI, Query, Depends
 from fastapi.responses import StreamingResponse
 
 from pydantic import BaseModel
-
+from LangSegment import LangSegment
 import ChatTTS
 import uvicorn
 
 import argparse
 from loguru import logger
 from utils.zh_normalization import text_normalize
-from utils.text_split_method import cut2, cut5, text_split_registry
+from utils.text_split_method import text_split_registry
 
 
 class TTS(BaseModel):
@@ -39,6 +37,7 @@ args = None
 speaker = {}
 
 curr_speaker = None
+LangSegment.setfilters(["zh", "ja", "en"])
 
 
 def wave_header_chunk(frame_input=b"", channels=1, sample_width=2, sample_rate=24000):
@@ -62,7 +61,9 @@ def infer(texts, spk="random"):
     params_infer_code = {'spk_emb': spk_emb, }
     yield wave_header_chunk()
     for text in texts:
-        audio_data = chat.infer(text, use_decoder=True, params_infer_code=params_infer_code)[0]
+        audio_data = chat.infer(text, use_decoder=True,
+                                params_infer_code=params_infer_code,
+                                do_text_normalization=False)[0]
         audio_data = audio_data / np.max(np.abs(audio_data))
         chunks = (audio_data * 32768).astype(np.int16)
         for chunk in chunks:
@@ -71,15 +72,39 @@ def infer(texts, spk="random"):
                 yield chunk
 
 
+def tts_handle(params: TTS):
+    logger.debug(params)
+    # 主要是为了格式化一下数字和一些文字的读法
+
+    # 将长文本分割成短文本,最好就用cut2
+    texts = text_split_registry[params.text_split_method](params.text)
+    text_list = []
+    for text in texts:
+        for tmp in LangSegment.getTexts(text):
+            normalize = text_normalize(tmp.get("text"))
+            logger.debug(f"{tmp} {normalize}")
+            if normalize != "" and tmp.get("lang") == "en" and normalize not in ["."]:
+                if len(text_list) > 0:
+                    text_list[-1] += normalize
+                else:
+                    text_list.append(normalize)
+            elif tmp.get("lang") == "zh":
+                text_list.append(normalize)
+            else:
+                text_list.append(tmp.get("text"))
+    wavs = infer(text_list, params.spk)
+    logger.debug(text_list)
+    return StreamingResponse(wavs, media_type="audio/wav")
+
+
 @app.get("/")
 async def index(params: TTS = Depends(TTS)):
-    # 主要是为了格式化一下数字和一些文字的读法
-    text = text_normalize(params.text)
-    # 将长文本分割成短文本,最好就用cut2
-    text = text_split_registry[params.text_split_method](text)
-    wavs = infer(text,params.spk)
-    logger.debug(text)
-    return StreamingResponse(wavs, media_type="audio/wav")
+    return tts_handle(params)
+
+
+@app.post("/")
+async def index_post(params: TTS):
+    return tts_handle(params)
 
 
 @app.post("/speaker")
@@ -89,6 +114,12 @@ async def speaker_handle(params: Speaker):
         torch.save(curr_speaker, os.path.join(args.spk_dir, f"{params.name}.pt"))
         speaker[params.name] = curr_speaker
     return {'code': 200, 'msg': 'success'}
+
+
+@app.get("/speaker")
+async def speaker_list():
+    l = list(speaker.keys())
+    return {'code': 200, 'msg': 'success', 'data': l}
 
 
 if __name__ == "__main__":

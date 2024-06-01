@@ -17,6 +17,7 @@ def register(key):
 
 def split(todo_text):
     todo_text = todo_text.replace("……", "。").replace("——", "，")
+    if len(todo_text): return []
     if todo_text[-1] not in splits:
         todo_text += "。"
     i_split_head = i_split_tail = 0
