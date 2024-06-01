@@ -5,6 +5,7 @@ einops
 vector_quantize_pytorch
 transformers~=4.41.1
 vocos
+IPython
 fastapi
 soundfile
 loguru
