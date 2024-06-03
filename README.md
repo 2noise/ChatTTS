@@ -41,6 +41,9 @@ docker rm -f chat_tts
 3. 采样率为24000
 4. 会有幻觉, 合成效果不稳定, 很多标点符号不支持(比如感叹号, 数字), 请谨慎使用
 
+## 类似项目
+> 也提供了 UI 和 Api
+- https://github.com/jianchang512/ChatTTS-ui
 
 # ChatTTS
 [**English**](./README.md) | [**中文简体**](./README_CN.md)
