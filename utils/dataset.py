@@ -21,10 +21,10 @@ class LazyDataType(typing.TypedDict):
 
 
 class DataType(LazyDataType):
-    text_input_ids: torch.Tensor
-    text_attention_mask: torch.Tensor
-    audio_mel_spec: torch.Tensor
-    audio_attention_mask: torch.Tensor
+    text_input_ids: torch.Tensor    # (batch_size, text_len)
+    text_attention_mask: torch.Tensor   # (batch_size, text_len)
+    audio_mel_spec: torch.Tensor    # (batch_size, audio_len*2, 100)
+    audio_attention_mask: torch.Tensor  # (batch_size, audio_len)
 
 
 class AudioFolder(torch.utils.data.Dataset, abc.ABC):
@@ -65,7 +65,7 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         text_input_ids = self.text_input_ids[n]
         audio_mel_spec = self.audio_mel_specs[n]
         text_attention_mask = torch.ones(len(text_input_ids), device=text_input_ids.device)
-        audio_attention_mask = torch.ones(len(audio_mel_spec), device=audio_mel_spec.device)
+        audio_attention_mask = torch.ones(len(audio_mel_spec) // 2, device=audio_mel_spec.device)
         return {
             'filepath': self.lazy_data[n]['filepath'],
             'speaker': self.lazy_data[n]['speaker'],
@@ -137,14 +137,14 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         # text = f'[Stts][empty_spk]{text}[Ptts]'
 
         text_token = self.tokenizer(text, return_tensors='pt', add_special_tokens=False).to(device=self.device)
-        return text_token['input_ids']
+        return text_token['input_ids'].squeeze(0)
 
     def preprocess_audio(self, filepath: str) -> torch.Tensor:
         waveform, sample_rate = torchaudio.load(filepath)
         if sample_rate != 24_000:
             waveform = torchaudio.functional.resample(waveform, orig_freq=sample_rate, new_freq=24_000)
         mel_spec: torch.Tensor = self.vocos.feature_extractor(waveform.to(device=self.device))
-        return mel_spec.squeeze(0).transpose(0, 1)  # (audio_len, 100)
+        return mel_spec.squeeze(0).transpose(0, 1)  # (audio_len*2, 100)
 
     def init_normalizer(self, lang: str):
         if lang not in self.normalizer:
@@ -204,7 +204,7 @@ class AudioCollator:
     def __call__(self, batch: list[DataType]):
         batch = [x for x in batch if x is not None]
 
-        audio_maxlen = max(len(item['audio_attention_mask']) for item in batch)
+        audio_maxlen = (max(len(item['audio_attention_mask']) for item in batch) + 1) // 2
         text_maxlen = max(len(item['text_attention_mask']) for item in batch)
 
         file_path = []
@@ -238,7 +238,7 @@ class AudioCollator:
             audio_mel_spec.append(
                 torch.nn.functional.pad(
                     x['audio_mel_spec'],
-                    (0, audio_maxlen - len(x['audio_mel_spec'])),
+                    (0, 0, 0, audio_maxlen*2 - len(x['audio_mel_spec'])),
                     value=self.audio_pad,
                 )
             )

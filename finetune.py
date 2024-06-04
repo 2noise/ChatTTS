@@ -1,5 +1,6 @@
 import argparse
 from enum import StrEnum
+from tqdm import tqdm
 
 import torch.utils.data
 import torch.nn
@@ -27,7 +28,7 @@ def train_autoencoder(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: Tr
     decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
 
     train_params = list(decoder.parameters())   # TODO: placeholder
-    # match train_module:
+    # match train_module:   # TODO: remove comments
     #     case TrainModule.AUTOENCODER:
     #         encoder.train().requires_grad_()
     #         decoder.train().requires_grad_()
@@ -45,23 +46,24 @@ def train_autoencoder(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: Tr
     optimizer = torch.optim.Adam(train_params, lr=1e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10, 1e-6)
 
-    loader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
+    loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
     for epoch in range(10):
-        for batch in loader:
-            audio_mel_spec: torch.Tensor = batch['audio_mel_spec']  # (batch_size, audio_len, 100)
+        for batch in tqdm(loader):
+            audio_mel_spec: torch.Tensor = batch['audio_mel_spec']  # (batch_size, audio_len*2, 100)
 
             batch_size = audio_mel_spec.size(0)
-            audio_len = audio_mel_spec.size(1)
+            audio_len = audio_mel_spec.size(1) // 2
 
             # TODO: placeholder
-            # audio_quantized_latents, audio_input_ids = encode(audio_mel_spec)
+            # audio_quantized_latents, audio_input_ids = encode(audio_mel_spec)  # TODO: not implemented
             audio_quantized_latents = torch.zeros(
                 (batch_size, audio_len, decoder.out_conv.in_channels*2),
                 dtype=audio_mel_spec.dtype,
                 device=audio_mel_spec.device,
             )   # (batch_size, audio_len, audio_dim)
 
-            gen_mel_spec = decoder(audio_quantized_latents)
+            # TODO: do we need to care about the padded parts?
+            gen_mel_spec = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)   # (batch_size, audio_len*2, audio_dim)
             loss: torch.Tensor = loss_fn(gen_mel_spec, audio_mel_spec)
 
             optimizer.zero_grad()
@@ -75,9 +77,9 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
     gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
     # encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']   # TODO: placeholder
-    decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']   # TODO: placeholder
+    decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
 
-    # encoder.eval().requires_grad_(False)
+    # encoder.eval().requires_grad_(False)   # TODO: remove comment
     if train_module == TrainModule.SPEAKER:
         gpt.eval().requires_grad_(False)
     else:
@@ -92,17 +94,26 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
     }
     SPEAKER_TOKEN: int = tokenizer.convert_tokens_to_ids('[spk_emb]')
 
+    train_params = list(gpt.parameters())   # TODO: placeholder
+    # match train_module:   # TODO: remove comments
+    #     case TrainModule.GPT_SPEAKER:
+    #         train_params = list(gpt.parameters()) + list(speaker_embeds.values())
+    #     case TrainModule.GPT:
+    #         train_params = list(gpt.parameters())
+    #     case TrainModule.SPEAKER:
+    #         train_params = list(speaker_embeds.values())
+
     loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(gpt.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(train_params, lr=1e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10, 1e-6)
 
-    loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
+    loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
     for epoch in range(10):
-        for batch in loader:
+        for batch in tqdm(loader):
             speakers: list[str] = batch['speaker']  # (batch_size,)
             text_input_ids: torch.Tensor = batch['text_input_ids']   # (batch_size, text_len)
             text_attention_mask: torch.Tensor = batch['text_attention_mask']   # (batch_size, text_len)
-            audio_mel_spec: torch.Tensor = batch['audio_mel_spec']   # (batch_size, audio_len, 100)
+            audio_mel_spec: torch.Tensor = batch['audio_mel_spec']   # (batch_size, audio_len*2, 100)
             audio_attention_mask: torch.Tensor = batch['audio_attention_mask']   # (batch_size, audio_len)
 
             batch_size = text_attention_mask.size(0)
@@ -110,7 +121,7 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
             audio_len = audio_attention_mask.size(1)
 
             # TODO: placeholder
-            # audio_quantized_latents, audio_input_ids = encode(audio_mel_spec)
+            # audio_quantized_latents, audio_input_ids = encode(audio_mel_spec)  # TODO: not implemented
             audio_input_ids = torch.zeros(
                 (batch_size, audio_len, gpt.num_vq),
                 dtype=text_input_ids.dtype,
