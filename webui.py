@@ -89,6 +89,15 @@ def main():
         generate_button.click(generate_audio, 
                               inputs=[text_input, temperature_slider, top_p_slider, top_k_slider, audio_seed_input, text_seed_input, refine_text_checkbox], 
                               outputs=[audio_output, text_output])
+        
+        gr.Examples(
+            examples=[
+                ["四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。", 0.3, 0.7, 20, 2, 42, True],
+                ["What is your favorite english food?", 0.5, 0.5, 10, 245, 531, True],
+                ["chat T T S is a text to speech model designed for dialogue applications. It supports mixed language input and offers multi speaker capabilities with precise control over prosodic elements like like laughter, pauses, and intonation. It delivers natural and expressive speech, so please use the project responsibly at your own risk.", 0.2, 0.6, 15, 67, 165, True],
+            ],
+            inputs=[text_input, temperature_slider, top_p_slider, top_k_slider, audio_seed_input, text_seed_input, refine_text_checkbox],
+        )
 
     parser = argparse.ArgumentParser(description='ChatTTS demo Launch')
     parser.add_argument('--server_name', type=str, default='0.0.0.0', help='Server name')
