@@ -35,9 +35,11 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         vocos_model: vocos.Vocos,
         device: str | torch.device | None = None,
         speakers: typing.Iterable[str] | None = None,
+        sample_rate: int = 24_000,
         default_speaker: str = None,
         default_lang: str = None,
     ) -> None:
+        self.sample_rate = sample_rate
         self.default_speaker = default_speaker
         self.default_lang = default_lang
 
@@ -141,8 +143,8 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
 
     def preprocess_audio(self, filepath: str) -> torch.Tensor:
         waveform, sample_rate = torchaudio.load(filepath)
-        if sample_rate != 24_000:
-            waveform = torchaudio.functional.resample(waveform, orig_freq=sample_rate, new_freq=24_000)
+        if sample_rate != self.sample_rate:
+            waveform = torchaudio.functional.resample(waveform, orig_freq=sample_rate, new_freq=self.sample_rate)
         mel_spec: torch.Tensor = self.vocos.feature_extractor(waveform.to(device=self.device))
         return mel_spec.squeeze(0).transpose(0, 1)  # (audio_len*2, 100)
 
