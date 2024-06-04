@@ -163,6 +163,13 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
 
 
 class JsonFolder(AudioFolder):
+    """
+    In json file, each item is formatted as following example:
+    `{"filepath": "path/to/file.wav", "speaker": "John", "lang": "ZH", "text": "Hello"}`.
+
+    filepath is relative to the dirname of root json file.
+    """
+
     def get_raw_data(self, root: str) -> list[dict[str, str]]:
         with open(root, 'r', encoding='utf-8') as f:
             raw_data = json.load(f)
@@ -170,6 +177,13 @@ class JsonFolder(AudioFolder):
 
 
 class ListFolder(AudioFolder):
+    """
+    In list file, each row is formatted as `filepath|speaker|lang|text` with `|` as separator.
+    `path/to/file.wav|John|ZH|Hello`.
+
+    filepath is relative to the dirname of root list file.
+    """
+
     def get_raw_data(self, root: str) -> list[dict[str, str]]:
         raw_data = []
         with open(os.path.join(root), 'r', encoding='utf-8') as f:
@@ -186,7 +200,24 @@ class ListFolder(AudioFolder):
 
 
 class XzListFolder(ListFolder):
-    """[Xz乔希](https://space.bilibili.com/5859321)"""
+    """
+    [Xz乔希](https://space.bilibili.com/5859321)
+
+    Only look at the basename of filepath in list file. Previous folder paths are ignored.
+    Files are organized as `[list basename]/[file basename]`
+
+    Example tree structure:
+
+    [folder]
+    ├── speaker_A
+    │   ├── 1.wav
+    │   └── 2.wav
+    ├── speaker_A.list
+    ├── speaker_B
+    │   ├── 1.wav
+    │   └── 2.wav
+    └── speaker_B.list
+    """
 
     def get_raw_data(self, root: str) -> list[dict[str, str]]:
         raw_data = super().get_raw_data(root)
