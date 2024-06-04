@@ -1,3 +1,5 @@
+# python finetune.py --data_path data/Bekki.list --train_module autoencoder
+
 import argparse
 from enum import StrEnum
 from tqdm import tqdm
