@@ -195,7 +195,7 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
 def main():
     parser = argparse.ArgumentParser(description='ChatTTS demo Launch')
     parser.add_argument('--local_path', type=str, default=None, help='the local_path if need')
-    parser.add_argument('--data_path', type=str, default='dummy_data/data.json', help='the data_path')
+    parser.add_argument('--data_path', type=str, default='dummy_data/xz_list_style/speaker_A.list', help='the data_path')
     parser.add_argument(
         '--train_module', type=str, default='gpt',
         choices=['gpt_speaker', 'gpt', 'speaker', 'autoencoder', 'encoder', 'decoder'],

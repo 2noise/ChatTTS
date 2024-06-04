@@ -1,6 +1,0 @@
-[
-    {"speaker": "speaker_A", "lang":"ZH", "filename": "speaker_A/1.wav", "text":"hello, how are you?"},
-    {"speaker": "speaker_A", "lang":"ZH", "filename": "speaker_A/2.wav", "text":"hello, how are you?"},
-    {"speaker": "speaker_B", "lang":"EN", "filename": "speaker_B/1.wav", "text":"hello, how are you?"},
-    {"speaker": "speaker_B", "lang":"EN", "filename": "speaker_B/2.wav", "text":"hello, how are you?"}
-]

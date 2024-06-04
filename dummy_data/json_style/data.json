@@ -1,0 +1,6 @@
+[
+    {"filename": "speaker_A/1.wav", "speaker": "speaker_A", "lang":"ZH", "text":"hello, how are you?"},
+    {"filename": "speaker_A/2.wav", "speaker": "speaker_A", "lang":"ZH", "text":"hello, how are you?"},
+    {"filename": "speaker_B/1.wav", "speaker": "speaker_B", "lang":"EN", "text":"hello, how are you?"},
+    {"filename": "speaker_B/2.wav", "speaker": "speaker_B", "lang":"EN", "text":"hello, how are you?"}
+]
