@@ -1,7 +1,7 @@
 # ChatTTS
 [**English**](./README.md) | [**中文简体**](./README_CN.md)
 
-ChatTTS is a text-to-speech model designed specifically for dialogue scenario such as LLM assistant. It supports both English and Chinese languages. Our model is trained with 100,000+ hours composed of chinese and english. The open-source version on **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** is a 40,000 hours pre trained model without SFT.
+ChatTTS is a text-to-speech model designed specifically for dialogue scenarios such as LLM assistant. It supports both English and Chinese languages. Our model is trained with 100,000+ hours composed of Chinese and English. The open-source version on **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** is a 40,000 hours pre-trained model without SFT.
 
 For formal inquiries about model and roadmap, please contact us at **open-source@2noise.com**. You could join our QQ group: ~~808364215 (Full)~~ 230696694 (Group 2) for discussion. Adding github issues is always welcomed.
 
@@ -115,7 +115,7 @@ For a 30-second audio clip, at least 4GB of GPU memory is required. For the 4090
 
 ##### model stability is not good enough, with issues such as multi speakers or poor audio quality.
 
-This is a problem that typically occurs with autoregressive models(for bark and valle). It's generally difficult to avoid. One can try multiple samples to find a suitable result.
+This is a problem that typically occurs with autoregressive models (for bark and valle). It's generally difficult to avoid. One can try multiple samples to find a suitable result.
 
 ##### Besides laughter, can we control anything else? Can we control other emotions?
 
@@ -123,7 +123,7 @@ In the current released model, the only token-level control units are [laugh], [
 
 ---
 ## Acknowledgements
-- [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by a autoregressive-style system.
+- [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by an autoregressive-style system.
 - [fish-speech](https://github.com/fishaudio/fish-speech) reveals capability of GVQ as audio tokenizer for LLM modeling.
 - [vocos](https://github.com/gemelo-ai/vocos) which is used as a pretrained vocoder.
 
