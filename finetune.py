@@ -99,7 +99,6 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
     loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
     for epoch in range(10):
         for batch in loader:
-            print('hello')
             speakers: list[str] = batch['speaker']  # (batch_size,)
             text_input_ids: torch.Tensor = batch['text_input_ids']   # (batch_size, text_len)
             text_attention_mask: torch.Tensor = batch['text_attention_mask']   # (batch_size, text_len)
