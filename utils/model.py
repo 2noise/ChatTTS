@@ -7,12 +7,10 @@ import ChatTTS.model.dvae
 
 
 def encode(
-    chat: ChatTTS.Chat,
+    # encoder,  # TODO: placeholder
+    vq: ChatTTS.model.dvae.GFSQ,
     audio_mel_specs: torch.Tensor,  # (batch_size, audio_len*2, 100)
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    dvae: ChatTTS.model.dvae.DVAE = chat.pretrain_models['dvae']
-    vq: ChatTTS.model.dvae.GFSQ = dvae.vq_layer
-
     batch_size = audio_mel_specs.shape[0]
     audio_len = audio_mel_specs.shape[1] // 2
 

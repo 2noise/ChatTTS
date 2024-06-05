@@ -29,6 +29,7 @@ def train_autoencoder(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: Tr
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
     # encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']   # TODO: placeholder
     decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
+    vq: ChatTTS.model.dvae.GFSQ = decoder.vq_layer  # TODO: None for "decoder" case
 
     train_params = list(decoder.parameters())   # TODO: placeholder
     # match train_module:   # TODO: remove comments
@@ -55,7 +56,7 @@ def train_autoencoder(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: Tr
             audio_mel_specs: torch.Tensor = batch['audio_mel_specs']  # (batch_size, audio_len*2, 100)
             # TODO: do we need to care about the padded parts?
             # audio_quantized_latents shape (batch_size, audio_len, audio_dim)
-            audio_quantized_latents, _ = encode(chat, audio_mel_specs)
+            audio_quantized_latents, _ = encode(vq, audio_mel_specs)
 
             # (batch_size, audio_len*2, audio_dim)
             gen_mel_specs = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
@@ -72,9 +73,12 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
     gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
     # encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']   # TODO: placeholder
-    decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
-
     # encoder.eval().requires_grad_(False)   # TODO: remove comment
+
+    decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
+    decoder.eval().requires_grad_(False)
+    vq: ChatTTS.model.dvae.GFSQ = decoder.vq_layer  # TODO: None for "decoder" case
+
     if train_module == TrainModule.SPEAKER:
         gpt.eval().requires_grad_(False)
     else:
@@ -114,7 +118,7 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
 
             # audio_quantized_latents shape (batch_size, audio_len, audio_dim)
             # audio_input_ids shape (batch_size, audio_len, num_vq)
-            audio_quantized_latents, audio_input_ids = encode(chat, audio_mel_specs)
+            audio_quantized_latents, audio_input_ids = encode(vq, audio_mel_specs)
 
             input_ids = torch.cat(   # (batch_size, text_len + audio_len, num_vq)
                 [
