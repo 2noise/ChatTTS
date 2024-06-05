@@ -11,6 +11,7 @@ import torch.utils.data
 import torch.nn
 import transformers
 from transformers.trainer_pt_utils import LabelSmoother
+import numpy as np
 
 import ChatTTS
 import ChatTTS.model.gpt
@@ -40,11 +41,11 @@ class DecoderType(StrEnum):
 def train_autoencoder(
         chat: ChatTTS.Chat,
         dataset: AudioFolder,
+        encoder: DVAEEncoder,
+        decoder: ChatTTS.model.dvae.DVAE,
         train_module: TrainModule = TrainModule.AUTOENCODER,
-        decoder_type: str = DecoderType.DECODER,
 ):
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
-    decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models[decoder_type]
     encoder: DVAEEncoder = DVAEEncoder(
         **get_encoder_config(decoder.decoder),
     ).to(device=dataset.device)
@@ -88,22 +89,30 @@ def train_autoencoder(
     optimizer.zero_grad()
 
 
-def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModule = TrainModule.GPT_SPEAKER, train_text: bool = True):
+def train_gpt(
+    chat: ChatTTS.Chat,
+    dataset: AudioFolder,
+    decoder_encoder: DVAEEncoder,
+    dvae_encoder: DVAEEncoder,
+    train_module: TrainModule = TrainModule.GPT_SPEAKER,
+    train_text: bool = True,
+    speaker_embeds: dict[str, torch.Tensor] = {},
+):
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
 
     decoder_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
     decoder_decoder.eval().requires_grad_(False)
-    decoder_encoder: DVAEEncoder = DVAEEncoder(
-        **get_encoder_config(decoder_decoder.decoder),
-    ).to(device=dataset.device)
-    decoder_encoder.eval().requires_grad_(False)
+    # decoder_encoder: DVAEEncoder = DVAEEncoder(
+    #     **get_encoder_config(decoder_decoder.decoder),
+    # )
+    decoder_encoder.to(device=dataset.device).eval().requires_grad_(False)
 
     dvae_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['dvae']
     dvae_decoder.eval().requires_grad_(False)
-    dvae_encoder: DVAEEncoder = DVAEEncoder(
-        **get_encoder_config(dvae_decoder.decoder),
-    ).to(device=dataset.device)
-    dvae_encoder.eval().requires_grad_(False)
+    # dvae_encoder: DVAEEncoder = DVAEEncoder(
+    #     **get_encoder_config(dvae_decoder.decoder),
+    # )
+    dvae_encoder.to(device=dataset.device).eval().requires_grad_(False)
     dvae_vq: ChatTTS.model.dvae.GFSQ = dvae_decoder.vq_layer
 
     gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
@@ -118,7 +127,7 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
             device=dataset.device,
             requires_grad=train_module in [TrainModule.GPT_SPEAKER, TrainModule.SPEAKER],
         ) for speaker in dataset.speakers
-    }
+    } | speaker_embeds
     SPEAKER_TOKEN_ID: int = tokenizer.convert_tokens_to_ids('[spk_emb]')
     AUDIO_EOS_TOKEN_ID: int = tokenizer.convert_tokens_to_ids('[Etts]')
     PAD_TOKEN_ID: int = tokenizer.pad_token_id
@@ -229,6 +238,7 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
 
             optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(gpt.parameters(), 1.0)
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
@@ -247,11 +257,28 @@ def main():
         choices=['decoder', 'dvae'],
     )
     parser.add_argument('--train_text', action='store_true', help='train text loss')
+    parser.add_argument('--gpt_lora', action='store_true', help='train gpt with lora')
+    parser.add_argument('--gpt_kbit', type=int, default=16, help='train gpt with kbit')
+    parser.add_argument('--decoder_encoder_path', type=str)
+    parser.add_argument('--decoder_decoder_path', type=str)
+    parser.add_argument('--dvae_encoder_path', type=str)
+    parser.add_argument('--dvae_decoder_path', type=str)
+    parser.add_argument('--gpt_path', type=str)
+    parser.add_argument('--speaker_embeds_path', type=str)
     args = parser.parse_args()
     local_path: str | None = args.local_path
     data_path: str = args.data_path
     train_module: TrainModule = args.train_module
+    decoder_type: DecoderType = args.decoder_type
     train_text: bool = args.train_text
+    gpt_lora: bool = args.gpt_lora
+    gpt_kbit: int = args.gpt_kbit
+
+    decoder_encoder_path: str = args.decoder_encoder_path
+    decoder_decoder_path: str = args.decoder_decoder_path
+    dvae_encoder_path: str = args.dvae_encoder_path
+    dvae_decoder_path: str = args.dvae_decoder_path
+    speaker_embeds_path: str = args.speaker_embeds_path
 
     chat = ChatTTS.Chat()
     if local_path is None:
@@ -260,6 +287,30 @@ def main():
         print('local model path:', local_path)
         chat.load_models('local', local_path=local_path)
 
+    if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT]:
+        gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
+        if gpt_lora:
+            import peft
+            lora_config = peft.LoraConfig(r=8, lora_alpha=16)
+            # match gpt_kbit:
+            #     case 4:
+            #         quantization_config = transformers.BitsAndBytesConfig(
+            #             load_in_4bit=True,
+            #             bnb_4bit_quant_type="nf4",
+            #             bnb_4bit_use_double_quant=True,
+            #             bnb_4bit_compute_dtype=torch.bfloat16,
+            #         )
+            #     case 8:
+            #         quantization_config = transformers.BitsAndBytesConfig(
+            #             load_in_4bit=True,
+            #             bnb_4bit_quant_type="nf4",
+            #             bnb_4bit_use_double_quant=True,
+            #             bnb_4bit_compute_dtype=torch.bfloat16,
+            #     )
+            # gpt.gpt = transformers.LlamaModel.from_pretrained()
+            # peft.prepare_model_for_gpt_kbit_training(gpt.gpt)
+            gpt.gpt = peft.get_peft_model(gpt.gpt, lora_config)
+
     dataset = XzListFolder(
         root=data_path,
         tokenizer=chat.pretrain_models['tokenizer'],
@@ -267,10 +318,50 @@ def main():
         # device=None,
         # speakers=None,  # set(['speaker_A', 'speaker_B'])
     )
-    if train_module in [TrainModule.SPEAKER, TrainModule.GPT, TrainModule.GPT_SPEAKER]:
-        train = functools.partial(train_gpt, train_text=train_text)
+
+    decoder_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
+    decoder_encoder: DVAEEncoder = DVAEEncoder(
+        **get_encoder_config(decoder_decoder.decoder),
+    )
+    dvae_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['dvae']
+    dvae_encoder: DVAEEncoder = DVAEEncoder(
+        **get_encoder_config(dvae_decoder.decoder),
+    )
+
+    # load pretrained models
+    if decoder_encoder_path is not None:
+        decoder_encoder.load_state_dict(torch.load(decoder_encoder_path, map_location='cpu'))
+    if decoder_decoder_path is not None:
+        decoder_decoder.load_state_dict(torch.load(decoder_decoder_path, map_location='cpu'))
+    if dvae_encoder_path is not None:
+        dvae_encoder.load_state_dict(torch.load(dvae_encoder_path, map_location='cpu'))
+    if dvae_decoder_path is not None:
+        dvae_decoder.load_state_dict(torch.load(dvae_decoder_path, map_location='cpu'))
+    if speaker_embeds_path is None:
+        speaker_embeds: dict[str, torch.Tensor] = {}
     else:
-        train = train_autoencoder
+        np_speaker_embeds: dict[str, np.ndarray] = np.load(speaker_embeds_path)
+        speaker_embeds = {
+            speaker: torch.from_numpy(speaker_embed).to(dataset.device)
+            for speaker, speaker_embed in np_speaker_embeds.items()
+        }
+
+    if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT, TrainModule.SPEAKER]:
+        train = functools.partial(
+            train_gpt,
+            decoder_encoder=decoder_encoder,
+            dvae_encoder=dvae_encoder,
+            train_text=train_text,
+            speaker_embeds=speaker_embeds,
+        )
+    else:
+        if decoder_type == DecoderType.DECODER:
+            encoder = decoder_encoder
+            decoder = decoder_decoder
+        else:
+            encoder = dvae_encoder
+            decoder = dvae_decoder
+        train = functools.partial(train_autoencoder, encoder=encoder, decoder=decoder)
     train(chat=chat, dataset=dataset, train_module=train_module)
 
 
