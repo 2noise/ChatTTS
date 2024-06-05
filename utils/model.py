@@ -7,7 +7,7 @@ import ChatTTS.model.dvae
 
 
 def encode(
-    # encoder,  # TODO: placeholder
+    encoder,  # TODO: placeholder
     vq: ChatTTS.model.dvae.GFSQ,
     audio_mel_specs: torch.Tensor,  # (batch_size, audio_len*2, 100)
 ) -> tuple[torch.Tensor, torch.Tensor]:
