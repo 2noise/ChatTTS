@@ -55,10 +55,10 @@ def train_autoencoder(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: Tr
             audio_mel_specs: torch.Tensor = batch['audio_mel_specs']  # (batch_size, audio_len*2, 100)
             # TODO: do we need to care about the padded parts?
             # audio_quantized_latents shape (batch_size, audio_len, audio_dim)
-            # audio_input_ids shape (batch_size, audio_len, num_vq)
-            audio_quantized_latents, audio_input_ids = encode(chat, audio_mel_specs)
+            audio_quantized_latents, _ = encode(chat, audio_mel_specs)
 
-            gen_mel_spec = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)   # (batch_size, audio_len*2, audio_dim)
+            # (batch_size, audio_len*2, audio_dim)
+            gen_mel_spec = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
             loss: torch.Tensor = loss_fn(gen_mel_spec, audio_mel_specs)
 
             optimizer.zero_grad()
