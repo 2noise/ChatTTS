@@ -23,7 +23,7 @@ class LazyDataType(typing.TypedDict):
 class DataType(LazyDataType):
     text_input_ids: torch.Tensor    # (batch_size, text_len)
     text_attention_mask: torch.Tensor   # (batch_size, text_len)
-    audio_mel_spec: torch.Tensor    # (batch_size, audio_len*2, 100)
+    audio_mel_specs: torch.Tensor    # (batch_size, audio_len*2, 100)
     audio_attention_mask: torch.Tensor  # (batch_size, audio_len)
 
 
@@ -54,7 +54,6 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
 
         self.text_input_ids = [self.preprocess_text(item['text'], item['lang']) for item in self.lazy_data]
         self.audio_mel_specs = [self.preprocess_audio(item['filepath']) for item in self.lazy_data]
-        # TODO: mel_specs (100, seq_len), seq_len is different for audio samples.
 
     @abc.abstractmethod
     def get_raw_data(self, root: str) -> list[dict[str, str]]:
@@ -65,9 +64,9 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
 
     def __getitem__(self, n: int) -> DataType:
         text_input_ids = self.text_input_ids[n]
-        audio_mel_spec = self.audio_mel_specs[n]
+        audio_mel_specs = self.audio_mel_specs[n]
         text_attention_mask = torch.ones(len(text_input_ids), device=text_input_ids.device)
-        audio_attention_mask = torch.ones(len(audio_mel_spec) // 2, device=audio_mel_spec.device)
+        audio_attention_mask = torch.ones(len(audio_mel_specs) // 2, device=audio_mel_specs.device)
         return {
             'filepath': self.lazy_data[n]['filepath'],
             'speaker': self.lazy_data[n]['speaker'],
@@ -75,7 +74,7 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
             'text': self.lazy_data[n]['text'],
             'text_input_ids': text_input_ids,
             'text_attention_mask': text_attention_mask,
-            'audio_mel_spec': audio_mel_spec,
+            'audio_mel_specs': audio_mel_specs,
             'audio_attention_mask': audio_attention_mask,
         }
 
@@ -246,7 +245,7 @@ class AudioCollator:
         text = []
         text_input_ids = []
         text_attention_mask = []
-        audio_mel_spec = []
+        audio_mel_specs = []
         audio_attention_mask = []
 
         for x in batch:
@@ -268,10 +267,10 @@ class AudioCollator:
                     value=0,
                 )
             )
-            audio_mel_spec.append(
+            audio_mel_specs.append(
                 torch.nn.functional.pad(
-                    x['audio_mel_spec'],
-                    (0, 0, 0, audio_maxlen*2 - len(x['audio_mel_spec'])),
+                    x['audio_mel_specs'],
+                    (0, 0, 0, audio_maxlen*2 - len(x['audio_mel_specs'])),
                     value=self.audio_pad,
                 )
             )
@@ -289,6 +288,6 @@ class AudioCollator:
             'text': text,
             'text_input_ids': torch.stack(text_input_ids),
             'text_attention_mask': torch.stack(text_attention_mask),
-            'audio_mel_spec': torch.stack(audio_mel_spec),
+            'audio_mel_specs': torch.stack(audio_mel_specs),
             'audio_attention_mask': torch.stack(audio_attention_mask),
         }
