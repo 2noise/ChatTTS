@@ -1,4 +1,6 @@
-# python finetune.py --data_path data/Bekki.list --train_module autoencoder
+# python finetune.py --data_path data/Bekki.list --train_module autoencoder --decoder_type decoder
+# python finetune.py --data_path data/Bekki.list --train_module autoencoder --decoder_type dvae
+# python finetune.py --data_path data/Bekki.list --train_module gpt_speaker
 
 import argparse
 import functools
@@ -43,7 +45,9 @@ def train_autoencoder(
 ):
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
     decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models[decoder_type]
-    encoder: DVAEEncoder = DVAEEncoder(**get_encoder_config(decoder))
+    encoder: DVAEEncoder = DVAEEncoder(
+        **get_encoder_config(decoder.decoder),
+    ).to(device=dataset.device)
 
     match train_module:
         case TrainModule.AUTOENCODER:
@@ -68,12 +72,12 @@ def train_autoencoder(
         for batch in tqdm(loader):
             audio_mel_specs: torch.Tensor = batch['audio_mel_specs']  # (batch_size, audio_len*2, 100)
             audio_attention_mask: torch.Tensor = batch['audio_attention_mask']  # (batch_size, audio_len)
-            mel_attention_mask = audio_attention_mask.unsqueeze(-1).repeat(1, 1, 2)  # (batch_size, audio_len*2)
+            mel_attention_mask = audio_attention_mask.unsqueeze(-1).repeat(1, 1, 2).flatten(1)  # (batch_size, audio_len*2)
 
             # (batch_size, audio_len, audio_dim)
-            audio_latents = encoder(audio_mel_specs, audio_attention_mask) * audio_attention_mask.unsqueeze(-1)
+            audio_latents: torch.Tensor = encoder(audio_mel_specs, audio_attention_mask) * audio_attention_mask.unsqueeze(-1)
             # (batch_size, audio_len*2, 100)
-            gen_mel_specs = decoder(audio_latents.transpose(1, 2)).transpose(1, 2) * mel_attention_mask.unsqueeze(-1)
+            gen_mel_specs: torch.Tensor = decoder(audio_latents.transpose(1, 2)).transpose(1, 2) * mel_attention_mask.unsqueeze(-1)
 
             loss: torch.Tensor = loss_fn(gen_mel_specs, audio_mel_specs)
 
@@ -89,12 +93,16 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
 
     decoder_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
     decoder_decoder.eval().requires_grad_(False)
-    decoder_encoder: DVAEEncoder = DVAEEncoder(**get_encoder_config(decoder_decoder))
+    decoder_encoder: DVAEEncoder = DVAEEncoder(
+        **get_encoder_config(decoder_decoder.decoder),
+    ).to(device=dataset.device)
     decoder_encoder.eval().requires_grad_(False)
 
     dvae_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['dvae']
     dvae_decoder.eval().requires_grad_(False)
-    dvae_encoder: DVAEEncoder = DVAEEncoder(**get_encoder_config(dvae_decoder))
+    dvae_encoder: DVAEEncoder = DVAEEncoder(
+        **get_encoder_config(dvae_decoder.decoder),
+    ).to(device=dataset.device)
     dvae_encoder.eval().requires_grad_(False)
     dvae_vq: ChatTTS.model.dvae.GFSQ = dvae_decoder.vq_layer
 
@@ -235,7 +243,7 @@ def main():
         choices=['gpt_speaker', 'gpt', 'speaker', 'autoencoder', 'encoder', 'decoder'],
     )
     parser.add_argument(
-        '--decoder_type', type=str, default='gpt',
+        '--decoder_type', type=str, default='decoder',
         choices=['decoder', 'dvae'],
     )
     parser.add_argument('--train_text', action='store_true', help='train text loss')

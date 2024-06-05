@@ -59,8 +59,8 @@ class DVAEEncoder(nn.Module):
         audio_attention_mask: torch.Tensor,  # (batch_size, audio_len)
         conditioning=None,
     ) -> torch.Tensor:
-        mel_attention_mask = audio_attention_mask.unsqueeze(-1).repeat(1, 1, 2).flatten(-2, -1)
-        x = self.wavenet(audio_mel_specs.transpose(1, 2))   # (batch_size, idim, audio_len*2)
+        mel_attention_mask = audio_attention_mask.unsqueeze(-1).repeat(1, 1, 2).flatten(1)
+        x: torch.Tensor = self.wavenet(audio_mel_specs.transpose(1, 2))   # (batch_size, idim, audio_len*2)
         x = x * mel_attention_mask.unsqueeze(1)
         x = self.conv_in_transpose(x)   # (batch_size, hidden, audio_len*2)
         for f in self.encoder_block:
