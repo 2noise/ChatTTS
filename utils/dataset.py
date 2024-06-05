@@ -143,9 +143,14 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
 
     def preprocess_audio(self, filepath: str) -> torch.Tensor:
         waveform, sample_rate = torchaudio.load(filepath)
+        waveform = waveform.to(device=self.vocos_device)
         if sample_rate != self.sample_rate:
-            waveform = torchaudio.functional.resample(waveform, orig_freq=sample_rate, new_freq=self.sample_rate)
-        mel_spec: torch.Tensor = self.vocos.feature_extractor(waveform.to(device=self.vocos_device))
+            waveform = torchaudio.functional.resample(
+                waveform,
+                orig_freq=sample_rate,
+                new_freq=self.sample_rate,
+            )
+        mel_spec: torch.Tensor = self.vocos.feature_extractor(waveform)
         return mel_spec.to(device=self.device).squeeze(0).transpose(0, 1)  # (audio_len*2, 100)
 
     def init_normalizer(self, lang: str):
