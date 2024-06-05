@@ -115,7 +115,7 @@ def train_gpt(
     dvae_encoder.to(device=dataset.device).eval().requires_grad_(False)
     dvae_vq: ChatTTS.model.dvae.GFSQ = dvae_decoder.vq_layer
 
-    gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
+    gpt: ChatTTS.model.gpt.GPT_wrapper = chat.pretrain_models['gpt']
     if train_module == TrainModule.SPEAKER:
         gpt.eval().requires_grad_(False)
     else:
@@ -288,7 +288,7 @@ def main():
         chat.load_models('local', local_path=local_path)
 
     if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT]:
-        gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
+        gpt: ChatTTS.model.gpt.GPT_wrapper = chat.pretrain_models['gpt']
         if gpt_lora:
             import peft
             lora_config = peft.LoraConfig(r=8, lora_alpha=16)

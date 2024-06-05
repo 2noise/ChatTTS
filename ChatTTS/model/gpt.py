@@ -29,7 +29,7 @@ class LlamaMLP(nn.Module):
         return down_proj
     
     
-class GPT_warpper(nn.Module):
+class GPT_wrapper(nn.Module):
     def __init__(
         self, 
         gpt_config, 

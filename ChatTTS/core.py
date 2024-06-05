@@ -7,7 +7,7 @@ from omegaconf import OmegaConf
 import torch
 from vocos import Vocos
 from .model.dvae import DVAE
-from .model.gpt import GPT_warpper
+from .model.gpt import GPT_wrapper
 from .utils.gpu_utils import select_device
 from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map
 from .utils.io_utils import get_latest_modified_file
@@ -96,7 +96,7 @@ class Chat:
             
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
-            gpt = GPT_warpper(**cfg).to(device).eval()
+            gpt = GPT_wrapper(**cfg).to(device).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
             gpt.load_state_dict(torch.load(gpt_ckpt_path, map_location='cpu'))
             if compile and 'cuda' in str(device):
