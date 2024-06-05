@@ -128,9 +128,9 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
 
             text_len = text_attention_mask.size(1)
 
+            # decoder_audio_latents = encode(decoder_encoder, audio_mel_specs)  # (batch_size, audio_len, audio_dim=768)
             dvae_audio_latents = encode(dvae_encoder, audio_mel_specs)  # (batch_size, audio_len, audio_dim=1024)
             _, dvae_audio_input_ids = quantize(dvae_vq, dvae_audio_latents)  # (batch_size, audio_len, num_vq)
-            # decoder_audio_latents = encode(decoder_encoder, audio_mel_specs)  # (batch_size, audio_len, audio_dim=768)
 
             input_ids = torch.cat(   # (batch_size, text_len + audio_len, num_vq)
                 [
