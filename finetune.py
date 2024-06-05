@@ -12,7 +12,7 @@ import ChatTTS
 import ChatTTS.model.gpt
 import ChatTTS.model.dvae
 from utils.dataset import XzListFolder, AudioFolder, AudioCollator
-from utils.model import encode
+from utils.model import encode, quantize
 
 
 class TrainModule(StrEnum):
@@ -39,8 +39,6 @@ def train_autoencoder(
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
     encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models[decoder_type]   # TODO: placeholder
     decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models[decoder_type]
-    vq: ChatTTS.model.dvae.GFSQ | None = decoder.vq_layer  # TODO: None for "decoder" case
-    decoder.vq_layer = None
 
     match train_module:
         case TrainModule.AUTOENCODER:
@@ -64,12 +62,11 @@ def train_autoencoder(
     for epoch in range(10):
         for batch in tqdm(loader):
             audio_mel_specs: torch.Tensor = batch['audio_mel_specs']  # (batch_size, audio_len*2, 100)
-            # TODO: do we need to care about the padded parts?
-            # audio_quantized_latents shape (batch_size, audio_len, audio_dim)
-            audio_quantized_latents, _ = encode(encoder, vq, audio_mel_specs)
+            audio_latents = encode(encoder, audio_mel_specs)  # (batch_size, audio_len, audio_dim)
 
+            # TODO: do we need to care about the padded parts?
             # (batch_size, audio_len*2, audio_dim)
-            gen_mel_specs = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
+            gen_mel_specs = decoder(audio_latents.transpose(1, 2)).transpose(1, 2)
             loss: torch.Tensor = loss_fn(gen_mel_specs, audio_mel_specs)
 
             optimizer.zero_grad()
@@ -77,7 +74,6 @@ def train_autoencoder(
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
-    decoder.vq_layer = vq
 
 
 def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModule = TrainModule.GPT_SPEAKER):
@@ -93,7 +89,6 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
     dvae_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['dvae']
     dvae_decoder.eval().requires_grad_(False)
     dvae_vq: ChatTTS.model.dvae.GFSQ = dvae_decoder.vq_layer  # TODO: None for "decoder" case
-    dvae_decoder.vq_layer = None
 
     gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
     if train_module == TrainModule.SPEAKER:
@@ -133,12 +128,9 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
 
             text_len = text_attention_mask.size(1)
 
-            # dvae_audio_quantized_latents shape (batch_size, audio_len, audio_dim=1024)
-            # dvae_audio_input_ids shape (batch_size, audio_len, num_vq)
-            _, dvae_audio_input_ids = encode(dvae_encoder, dvae_vq, audio_mel_specs)
-
-            # decoder_audio_quantized_latents shape (batch_size, audio_len, audio_dim=768)
-            decoder_audio_quantized_latents, _ = encode(decoder_encoder, None, audio_mel_specs)
+            dvae_audio_latents = encode(dvae_encoder, audio_mel_specs)  # (batch_size, audio_len, audio_dim=1024)
+            _, dvae_audio_input_ids = quantize(dvae_vq, dvae_audio_latents)  # (batch_size, audio_len, num_vq)
+            # decoder_audio_latents = encode(decoder_encoder, audio_mel_specs)  # (batch_size, audio_len, audio_dim=768)
 
             input_ids = torch.cat(   # (batch_size, text_len + audio_len, num_vq)
                 [
@@ -191,16 +183,16 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
                 gpt_gen_mel_specs,
                 audio_mel_specs,
             )
-            # TODO: an alternative is to measure mel distance with encoder results
+            # # TODO: an alternative is to measure mel distance with encoder results
             # loss += torch.nn.functional.mse_loss(
             #     gpt_gen_mel_specs,
-            #     decoder_decoder(decoder_audio_quantized_latents.transpose(1, 2)).transpose(1, 2),
+            #     decoder_decoder(decoder_audio_latents.transpose(1, 2)).transpose(1, 2),
             # )
 
-            # TODO: an alternative is to measure distance on the quantized latents
+            # # TODO: an alternative is to measure distance on the quantized latents
             # loss += torch.nn.functional.mse_loss(
             #     audio_hidden_states,
-            #     decoder_audio_quantized_latents,
+            #     decoder_audio_latents,
             # )
 
             optimizer.zero_grad()
@@ -208,7 +200,6 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
-    dvae_decoder.vq_layer = dvae_vq
 
 
 def main():
