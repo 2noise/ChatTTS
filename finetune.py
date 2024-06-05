@@ -161,11 +161,23 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
             text_loss: torch.Tensor = loss_fn(text_logits.flatten(0, 1), text_input_ids[:, 1:].flatten(0, 1))
             audio_loss: torch.Tensor = loss_fn(audio_logits.flatten(0, 1), audio_input_ids.flatten(0, 1))
             loss = text_loss + audio_loss
-            if False:   # TODO: placeholder
+            if False:   # TODO: A possible loss for "decoder" case ("dvae" case doesn't have this loss term)
                 loss += torch.nn.functional.mse_loss(
                     audio_hidden_states,
                     audio_quantized_latents,
                 )
+                # TODO: an alternative is to measure mel_specs instead of quantized_latents
+                # But the question is to measure which 2 mel_specs since there are 3.
+
+                # audio_mel_specs
+                # encoder_gen_mel_specs = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
+                # gpt_gen_mel_specs = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
+
+                # loss += torch.nn.functional.mse_loss(
+                #     audio_mel_specs,
+                #     gpt_gen_mel_specs,
+                # )
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
