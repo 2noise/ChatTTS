@@ -89,14 +89,13 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
     }
     SPEAKER_TOKEN: int = tokenizer.convert_tokens_to_ids('[spk_emb]')
 
-    train_params = list(gpt.parameters())   # TODO: placeholder
-    # match train_module:   # TODO: remove comments
-    #     case TrainModule.GPT_SPEAKER:
-    #         train_params = list(gpt.parameters()) + list(speaker_embeds.values())
-    #     case TrainModule.GPT:
-    #         train_params = list(gpt.parameters())
-    #     case TrainModule.SPEAKER:
-    #         train_params = list(speaker_embeds.values())
+    match train_module:
+        case TrainModule.GPT_SPEAKER:
+            train_params = list(gpt.parameters()) + list(speaker_embeds.values())
+        case TrainModule.GPT:
+            train_params = list(gpt.parameters())
+        case TrainModule.SPEAKER:
+            train_params = list(speaker_embeds.values())
 
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(train_params, lr=1e-4)
