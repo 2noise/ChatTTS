@@ -25,11 +25,21 @@ class TrainModule(StrEnum):
     DECODER = 'decoder'
 
 
-def train_autoencoder(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModule = TrainModule.AUTOENCODER):
+class DecoderType(StrEnum):
+    DECODER = 'decoder'
+    DVAE = 'dvae'
+
+
+def train_autoencoder(
+        chat: ChatTTS.Chat,
+        dataset: AudioFolder,
+        train_module: TrainModule = TrainModule.AUTOENCODER,
+        decoder_type: str = DecoderType.DECODER,
+):
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
-    encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']   # TODO: placeholder
-    decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
-    vq: ChatTTS.model.dvae.GFSQ = decoder.vq_layer  # TODO: None for "decoder" case
+    encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models[decoder_type]   # TODO: placeholder
+    decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models[decoder_type]
+    vq: ChatTTS.model.dvae.GFSQ | None = decoder.vq_layer  # TODO: None for "decoder" case
     decoder.vq_layer = None
 
     match train_module:
@@ -67,17 +77,23 @@ def train_autoencoder(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: Tr
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
+    decoder.vq_layer = vq
 
 
 def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModule = TrainModule.GPT_SPEAKER):
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
-    encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']   # TODO: placeholder
-    encoder.eval().requires_grad_(False)
 
-    decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
-    decoder.eval().requires_grad_(False)
-    vq: ChatTTS.model.dvae.GFSQ = decoder.vq_layer  # TODO: None for "decoder" case
-    decoder.vq_layer = None
+    decoder_encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']   # TODO: placeholder
+    decoder_encoder.eval().requires_grad_(False)
+    decoder_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['decoder']
+    decoder_decoder.eval().requires_grad_(False)
+
+    dvae_encoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['dvae']   # TODO: placeholder
+    dvae_encoder.eval().requires_grad_(False)
+    dvae_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['dvae']
+    dvae_decoder.eval().requires_grad_(False)
+    dvae_vq: ChatTTS.model.dvae.GFSQ = dvae_decoder.vq_layer  # TODO: None for "decoder" case
+    dvae_decoder.vq_layer = None
 
     gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
     if train_module == TrainModule.SPEAKER:
@@ -117,14 +133,17 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
 
             text_len = text_attention_mask.size(1)
 
-            # audio_quantized_latents shape (batch_size, audio_len, audio_dim)
-            # audio_input_ids shape (batch_size, audio_len, num_vq)
-            audio_quantized_latents, audio_input_ids = encode(encoder, vq, audio_mel_specs)
+            # dvae_audio_quantized_latents shape (batch_size, audio_len, audio_dim=1024)
+            # dvae_audio_input_ids shape (batch_size, audio_len, num_vq)
+            _, dvae_audio_input_ids = encode(dvae_encoder, dvae_vq, audio_mel_specs)
+
+            # decoder_audio_quantized_latents shape (batch_size, audio_len, audio_dim=768)
+            decoder_audio_quantized_latents, _ = encode(decoder_encoder, None, audio_mel_specs)
 
             input_ids = torch.cat(   # (batch_size, text_len + audio_len, num_vq)
                 [
                     text_input_ids.unsqueeze(-1).repeat(1, 1, gpt.num_vq),   # (batch_size, text_len, num_vq)
-                    audio_input_ids,   # (batch_size, audio_len, num_vq)
+                    dvae_audio_input_ids,   # (batch_size, audio_len, num_vq)
                 ],
                 dim=1,
             )
@@ -164,30 +183,32 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
             )  # (batch_size, audio_len, num_class_audio)
 
             text_loss: torch.Tensor = loss_fn(text_logits.flatten(0, 1), text_input_ids[:, 1:].flatten(0, 1))
-            audio_loss: torch.Tensor = loss_fn(audio_logits.flatten(0, 1), audio_input_ids.flatten(0, 1))
+            audio_loss: torch.Tensor = loss_fn(audio_logits.flatten(0, 1), dvae_audio_input_ids.flatten(0, 1))
             loss = text_loss + audio_loss
-            if False:   # TODO: A possible loss for "decoder" case ("dvae" case doesn't have this loss term)
-                loss += torch.nn.functional.mse_loss(
-                    audio_hidden_states,
-                    audio_quantized_latents,
-                )
-                # TODO: an alternative is to measure mel_specs instead of quantized_latents
-                # But the question is to measure which 2 mel_specs since there are 3.
 
-                # audio_mel_specs
-                # encoder_gen_mel_specs = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
-                # gpt_gen_mel_specs = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
+            gpt_gen_mel_specs = decoder_decoder(audio_hidden_states.transpose(1, 2)).transpose(1, 2)
+            loss += torch.nn.functional.mse_loss(
+                gpt_gen_mel_specs,
+                audio_mel_specs,
+            )
+            # TODO: an alternative is to measure mel distance with encoder results
+            # loss += torch.nn.functional.mse_loss(
+            #     gpt_gen_mel_specs,
+            #     decoder_decoder(decoder_audio_quantized_latents.transpose(1, 2)).transpose(1, 2),
+            # )
 
-                # loss += torch.nn.functional.mse_loss(
-                #     audio_mel_specs,
-                #     gpt_gen_mel_specs,
-                # )
+            # TODO: an alternative is to measure distance on the quantized latents
+            # loss += torch.nn.functional.mse_loss(
+            #     audio_hidden_states,
+            #     decoder_audio_quantized_latents,
+            # )
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
+    dvae_decoder.vq_layer = dvae_vq
 
 
 def main():
@@ -197,6 +218,10 @@ def main():
     parser.add_argument(
         '--train_module', type=str, default='gpt',
         choices=['gpt_speaker', 'gpt', 'speaker', 'autoencoder', 'encoder', 'decoder'],
+    )
+    parser.add_argument(
+        '--decoder_type', type=str, default='gpt',
+        choices=['decoder', 'dvae'],
     )
     args = parser.parse_args()
     local_path: str | None = args.local_path

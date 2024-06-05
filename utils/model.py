@@ -8,9 +8,9 @@ import ChatTTS.model.dvae
 
 def encode(
     encoder,  # TODO: placeholder
-    vq: ChatTTS.model.dvae.GFSQ,
+    vq: ChatTTS.model.dvae.GFSQ | None,
     audio_mel_specs: torch.Tensor,  # (batch_size, audio_len*2, 100)
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor | None]:
     batch_size = audio_mel_specs.shape[0]
     audio_len = audio_mel_specs.shape[1] // 2
 
@@ -20,6 +20,9 @@ def encode(
         dtype=audio_mel_specs.dtype,
         device=audio_mel_specs.device,
     )   # (batch_size, audio_len, audio_dim)
+
+    if vq is None:
+        return latents, None
 
     # feat shape (batch_size, audio_len, audio_dim)
     # ind shape (GFSQ.G, batch_size, audio_len, GFSQ.R)
