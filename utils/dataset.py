@@ -67,7 +67,10 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         text_input_ids = self.text_input_ids[n]
         audio_mel_specs = self.audio_mel_specs[n]
         text_attention_mask = torch.ones(len(text_input_ids), device=text_input_ids.device)
-        audio_attention_mask = torch.ones(len(audio_mel_specs) // 2, device=audio_mel_specs.device)
+        audio_attention_mask = torch.ones(
+            (len(audio_mel_specs)+1) // 2,
+            device=audio_mel_specs.device,
+        )
         return {
             'filepath': self.lazy_data[n]['filepath'],
             'speaker': self.lazy_data[n]['speaker'],

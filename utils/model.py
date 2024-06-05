@@ -26,7 +26,7 @@ def encode(
 def quantize(
     vq: ChatTTS.model.dvae.GFSQ,
     audio_latents: torch.Tensor,   # (batch_size, audio_len, audio_dim=1024)
-):
+) -> tuple[torch.Tensor, torch.Tensor]:
     # feat shape (batch_size, audio_len, audio_dim)
     # ind shape (GFSQ.G, batch_size, audio_len, GFSQ.R)
     # num_vq=GFSQ.G*GFSQ.R
