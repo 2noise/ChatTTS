@@ -125,7 +125,6 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
 
         invalid_characters = count_invalid_characters(text)
         if len(invalid_characters):
-            # TODO: how to avoid warning of '！' and '？'
             self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
             text = apply_character_map(text)
 

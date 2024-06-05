@@ -67,6 +67,7 @@ def detect_language(sentence):
     
     
 character_map = {
+    '？': '?',
     '：': '，',
     '；': '，',
     '！': '。',
