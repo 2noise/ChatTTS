@@ -48,7 +48,8 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
 
         self.tokenizer = tokenizer
         self.vocos = vocos_model
-        self.device = device or next(self.vocos.parameters()).device
+        self.vocos_device = next(self.vocos.parameters()).device
+        self.device = device or self.vocos_device
 
         self.lazy_data, self.speakers = self.get_lazy_data(root, speakers)
 
@@ -144,8 +145,8 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         waveform, sample_rate = torchaudio.load(filepath)
         if sample_rate != self.sample_rate:
             waveform = torchaudio.functional.resample(waveform, orig_freq=sample_rate, new_freq=self.sample_rate)
-        mel_spec: torch.Tensor = self.vocos.feature_extractor(waveform.to(device=self.device))
-        return mel_spec.squeeze(0).transpose(0, 1)  # (audio_len*2, 100)
+        mel_spec: torch.Tensor = self.vocos.feature_extractor(waveform.to(device=self.vocos_device))
+        return mel_spec.to(device=self.device).squeeze(0).transpose(0, 1)  # (audio_len*2, 100)
 
     def init_normalizer(self, lang: str):
         if lang not in self.normalizer:
