@@ -58,8 +58,8 @@ def train_autoencoder(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: Tr
             audio_quantized_latents, _ = encode(chat, audio_mel_specs)
 
             # (batch_size, audio_len*2, audio_dim)
-            gen_mel_spec = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
-            loss: torch.Tensor = loss_fn(gen_mel_spec, audio_mel_specs)
+            gen_mel_specs = decoder(audio_quantized_latents.transpose(1, 2)).transpose(1, 2)
+            loss: torch.Tensor = loss_fn(gen_mel_specs, audio_mel_specs)
 
             optimizer.zero_grad()
             loss.backward()
