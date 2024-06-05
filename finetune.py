@@ -62,9 +62,9 @@ def train_autoencoder(
     for epoch in range(10):
         for batch in tqdm(loader):
             audio_mel_specs: torch.Tensor = batch['audio_mel_specs']  # (batch_size, audio_len*2, 100)
+            # TODO: do we need to care about the padded parts?
             audio_latents = encode(encoder, audio_mel_specs)  # (batch_size, audio_len, audio_dim)
 
-            # TODO: do we need to care about the padded parts?
             # (batch_size, audio_len*2, audio_dim)
             gen_mel_specs = decoder(audio_latents.transpose(1, 2)).transpose(1, 2)
             loss: torch.Tensor = loss_fn(gen_mel_specs, audio_mel_specs)
@@ -88,7 +88,7 @@ def train_gpt(chat: ChatTTS.Chat, dataset: AudioFolder, train_module: TrainModul
     dvae_encoder.eval().requires_grad_(False)
     dvae_decoder: ChatTTS.model.dvae.DVAE = chat.pretrain_models['dvae']
     dvae_decoder.eval().requires_grad_(False)
-    dvae_vq: ChatTTS.model.dvae.GFSQ = dvae_decoder.vq_layer  # TODO: None for "decoder" case
+    dvae_vq: ChatTTS.model.dvae.GFSQ = dvae_decoder.vq_layer
 
     gpt: ChatTTS.model.gpt.GPT_warpper = chat.pretrain_models['gpt']
     if train_module == TrainModule.SPEAKER:
