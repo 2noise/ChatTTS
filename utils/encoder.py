@@ -66,5 +66,5 @@ class DVAEEncoder(nn.Module):
         for f in self.encoder_block:
             x = f(x, conditioning)
         x = self.conv_out_transpose(x)   # (batch_size, odim, audio_len*2)
-        x = x.view(x.size(0), x.size(1), 2, x.size(2) // 2).permute(0, 3, 2, 1).flatten(2)
+        x = x.view(x.size(0), x.size(1), 2, x.size(2) // 2).permute(0, 3, 1, 2).flatten(2)
         return x   # (batch_size, audio_len, audio_dim=odim*2)
