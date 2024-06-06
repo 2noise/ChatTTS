@@ -31,33 +31,45 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
     def __init__(
         self,
         root: str,
-        tokenizer: transformers.PreTrainedTokenizer,
-        vocos_model: vocos.Vocos,
+        tokenizer: transformers.PreTrainedTokenizer | None = None,
+        vocos_model: vocos.Vocos | None = None,
         device: str | torch.device | None = None,
         speakers: typing.Iterable[str] | None = None,
         sample_rate: int = 24_000,
         default_speaker: str = None,
         default_lang: str = None,
     ) -> None:
+        self.root = root
         self.sample_rate = sample_rate
         self.default_speaker = default_speaker
         self.default_lang = default_lang
 
+        self.folder_path = os.path.dirname(root)
         self.logger = logging.getLogger(__name__)
         self.normalizer = {}
 
         self.tokenizer = tokenizer
         self.vocos = vocos_model
-        self.vocos_device = next(self.vocos.parameters()).device
+        self.vocos_device = None if self.vocos is None else next(self.vocos.parameters()).device
         self.device = device or self.vocos_device
 
         self.lazy_data, self.speakers = self.get_lazy_data(root, speakers)
 
-        self.text_input_ids = [self.preprocess_text(item['text'], item['lang']) for item in self.lazy_data]
-        self.audio_mel_specs = [self.preprocess_audio(item['filepath']) for item in self.lazy_data]
+    @functools.cached_property
+    def text_input_ids(self):
+        return [self.preprocess_text(item['text'], item['lang']) for item in self.lazy_data]
+
+    @functools.cached_property
+    def audio_mel_specs(self):
+        return [self.preprocess_audio(item['filepath']) for item in self.lazy_data]
 
     @abc.abstractmethod
     def get_raw_data(self, root: str) -> list[dict[str, str]]:
+        ...
+
+    @staticmethod
+    @abc.abstractmethod
+    def save_config(save_path: str, lazy_data: list[LazyDataType], rel_path: str = './') -> None:
         ...
 
     def __len__(self):
@@ -183,6 +195,14 @@ class JsonFolder(AudioFolder):
             raw_data = json.load(f)
         return raw_data
 
+    @staticmethod
+    def save_config(save_path: str, lazy_data: list[LazyDataType], rel_path: str = './') -> None:
+        save_data = [item.copy() for item in lazy_data]
+        for item in save_data:
+            item['filepath'] = os.path.relpath(item['filepath'], rel_path)
+        with open(save_path, 'w', encoding='utf-8') as f:
+            json.dump(save_data, f, ensure_ascii=False, indent=4)
+
 
 class ListFolder(AudioFolder):
     """
@@ -196,8 +216,10 @@ class ListFolder(AudioFolder):
         raw_data = []
         with open(os.path.join(root), 'r', encoding='utf-8') as f:
             for line in f.readlines():
+                line = line.strip().removesuffix('\n')
+                if len(line) == 0:
+                    continue
                 filepath, speaker, lang, text = line.split(sep='|', maxsplit=3)
-                text = text.strip().removesuffix('\n')
                 raw_data.append({
                     'text': text,
                     'filepath': filepath,
@@ -205,6 +227,15 @@ class ListFolder(AudioFolder):
                     'lang': lang,
                 })
         return raw_data
+
+    @staticmethod
+    def save_config(save_path: str, lazy_data: list[LazyDataType], rel_path: str = './') -> None:
+        save_data = [item.copy() for item in lazy_data]
+        for item in save_data:
+            item['filepath'] = os.path.relpath(item['filepath'], rel_path)
+        with open(save_path, 'w', encoding='utf-8') as f:
+            for item in save_data:
+                f.write(f"{item['filepath']}|{item['speaker']}|{item['lang']}|{item['text']}\n")
 
 
 class XzListFolder(ListFolder):
@@ -300,3 +331,36 @@ class AudioCollator:
             'audio_mel_specs': torch.stack(audio_mel_specs),
             'audio_attention_mask': torch.stack(audio_attention_mask),
         }
+
+
+def formalize_xz_list(src_folder: str):
+    for root, _, files in os.walk(src_folder):
+        for file in files:
+            if file.endswith('.list'):
+                file_path = os.path.join(root, file)
+                print(file_path)
+                lazy_data = XzListFolder(file_path).lazy_data
+                XzListFolder.save_config(file_path, lazy_data, rel_path=src_folder)
+
+
+def concat_dataset(src_folder: str, save_folder: str) -> None:
+    if os.path.isfile(save_folder):
+        raise FileExistsError(f'{save_folder} already exists as a file!')
+    elif not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+    lazy_data = []
+    same_folder = os.path.samefile(src_folder, save_folder)
+    for root, _, files in os.walk(src_folder):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if same_folder and file in ('all.list', 'all.json'):
+                continue
+            if file.endswith('.list'):
+                print(file_path)
+                lazy_data += ListFolder(file_path).lazy_data
+            if file.endswith('.json'):
+                print(file_path)
+                lazy_data += JsonFolder(file_path).lazy_data
+    ListFolder.save_config(os.path.join(save_folder, 'all.list'), lazy_data, rel_path=save_folder)
+    JsonFolder.save_config(os.path.join(save_folder, 'all.json'), lazy_data, rel_path=save_folder)
+    print(f'Saved to {save_folder}')
