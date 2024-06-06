@@ -1,6 +1,6 @@
 """
-python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module encoder --decoder_type decoder
-python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module encoder --decoder_type dvae
+python finetune.py --save_folder ./saved_models --data_path data/all.list --train_module encoder --decoder_type decoder
+python finetune.py --save_folder ./saved_models --data_path data/all.list --train_module encoder --decoder_type dvae
 python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
 """
 
@@ -19,7 +19,7 @@ import numpy as np
 import ChatTTS
 import ChatTTS.model.gpt
 import ChatTTS.model.dvae
-from utils.dataset import XzListFolder, AudioFolder, AudioCollator
+from utils.dataset import ListFolder, AudioFolder, AudioCollator
 from utils.model import quantize
 from utils.encoder import DVAEEncoder, get_encoder_config
 
@@ -303,7 +303,7 @@ def main():
         print('local model path:', local_path)
         chat.load_models('local', local_path=local_path)
 
-    dataset = XzListFolder(
+    dataset = ListFolder(
         root=data_path,
         tokenizer=chat.pretrain_models['tokenizer'],
         vocos_model=chat.pretrain_models['vocos'],
