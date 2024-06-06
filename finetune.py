@@ -2,22 +2,6 @@
 python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module encoder --decoder_type decoder
 python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module encoder --decoder_type dvae
 python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
-
-
-local_path: str | None = args.local_path
-data_path: str = args.data_path
-train_module: TrainModule = args.train_module
-decoder_type: DecoderType = args.decoder_type
-train_text: bool = args.train_text
-gpt_lora: bool = args.gpt_lora
-gpt_kbit: int = args.gpt_kbit
-save_folder: str = args.save_folder
-
-decoder_encoder_path: str = args.decoder_encoder_path
-decoder_decoder_path: str = args.decoder_decoder_path
-dvae_encoder_path: str = args.dvae_encoder_path
-dvae_decoder_path: str = args.dvae_decoder_path
-speaker_embeds_path: str = args.speaker_embeds_path
 """
 
 import argparse
