@@ -31,7 +31,7 @@ class DataType(LazyDataType):
 
 
 class XzListTarKwargsType(typing.TypedDict):
-    tokenizer: typing.NotRequired[transformers.PreTrainedTokenizer | None]]
+    tokenizer: typing.NotRequired[transformers.PreTrainedTokenizer | None]
     vocos_model: typing.NotRequired[vocos.Vocos | None]
     device: typing.NotRequired[str | torch.device | None]
     speakers: typing.NotRequired[typing.Iterable[str] | None]

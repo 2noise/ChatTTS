@@ -1,7 +1,7 @@
 """
-CUDA_VISIBLE_DEVICES=2 python finetune.py --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --batch_size 32 --epochs 10 --train_module encoder --decoder_type decoder
-CUDA_VISIBLE_DEVICES=3 python finetune.py --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --batch_size 32 --epochs 10 --train_module encoder --decoder_type dvae
-python finetune.py --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 64 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
+CUDA_VISIBLE_DEVICES=1 python finetune.py --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --batch_size 32 --epochs 10 --train_module encoder --decoder_type decoder
+CUDA_VISIBLE_DEVICES=2 python finetune.py --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --batch_size 32 --epochs 10 --train_module encoder --decoder_type dvae
+CUDA_VISIBLE_DEVICES=3 python finetune.py --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 16 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
 """
 
 import argparse
