@@ -446,6 +446,7 @@ def main():
                 torch.save(decoder_decoder.state_dict(), decoder_decoder_save_path)
             else:
                 torch.save(dvae_decoder.state_dict(), dvae_decoder_save_path)
+    print('save models to:', save_folder)
 
 
 if __name__ == '__main__':

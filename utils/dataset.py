@@ -57,39 +57,44 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         tar_in_memory: bool = False,
         process_ahead: bool = False,
     ) -> None:
-        self.root= root
-        self.sample_rate= sample_rate
-        self.default_speaker= default_speaker
-        self.default_lang= default_lang
+        self.root = root
+        self.sample_rate = sample_rate
+        self.default_speaker = default_speaker
+        self.default_lang = default_lang
 
-        self.logger= logging.getLogger(__name__)
-        self.normalizer= {}
+        self.logger = logging.getLogger(__name__)
+        self.normalizer = {}
 
-        self.tokenizer= tokenizer
-        self.vocos= vocos_model
-        self.vocos_device= None if self.vocos is None else next(self.vocos.parameters()).device
-        self.device= device or self.vocos_device
+        self.tokenizer = tokenizer
+        self.vocos = vocos_model
+        self.vocos_device = None if self.vocos is None else next(self.vocos.parameters()).device
+        self.device = device or self.vocos_device
 
         # tar -cvf ../Xz.tar *
         # tar -xf Xz.tar -C ./Xz
-        self.tar_path= tar_path
-        self.tar_file= None
+        self.tar_path = tar_path
+        self.tar_file = None
+        self.tar_io= None
         if tar_path is not None:
             if tar_in_memory:
                 with open(tar_path, 'rb') as f:
-                    tar_bytes= f.read()
-                self.tar_file= tarfile.open(fileobj=io.BytesIO(tar_bytes))
+                    self.tar_io= io.BytesIO(f.read())
+                self.tar_file = tarfile.open(fileobj=self.tar_io)
             else:
-                self.tar_file= tarfile.open(tar_path)
+                self.tar_file = tarfile.open(tar_path)
 
-        self.lazy_data, self.speakers= self.get_lazy_data(root, speakers)
+        self.lazy_data, self.speakers = self.get_lazy_data(root, speakers)
 
-        self.text_input_ids: dict[int, torch.Tensor]= {}
-        self.audio_mel_specs: dict[int, torch.Tensor]= {}
+        self.text_input_ids: dict[int, torch.Tensor] = {}
+        self.audio_mel_specs: dict[int, torch.Tensor] = {}
         if process_ahead:
             for n, item in enumerate(self.lazy_data):
-                self.audio_mel_specs[n]= self.preprocess_audio(item['filepath'])
-                self.text_input_ids[n]= self.preprocess_text(item['text'], item['lang'])
+                self.audio_mel_specs[n] = self.preprocess_audio(item['filepath'])
+                self.text_input_ids[n] = self.preprocess_text(item['text'], item['lang'])
+            if self.tar_file is not None:
+                self.tar_file.close()
+            if self.tar_io is not None:
+                self.tar_io.close()
 
     @ abc.abstractmethod
     def get_raw_data(self, root: str | io.BytesIO) -> list[dict[str, str]]:
@@ -104,19 +109,22 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         return len(self.lazy_data)
 
     def __getitem__(self, n: int) -> DataType:
-        lazy_data= self.lazy_data[n]
+        lazy_data = self.lazy_data[n]
         if n in self.audio_mel_specs:
-            audio_mel_specs= self.audio_mel_specs[n]
+            audio_mel_specs = self.audio_mel_specs[n]
+            text_input_ids = self.text_input_ids[n]
         else:
-            audio_mel_specs= self.preprocess_audio(lazy_data['filepath'])
-            self.audio_mel_specs[n]= audio_mel_specs
-        if n in self.text_input_ids:
-            text_input_ids= self.text_input_ids[n]
-        else:
-            text_input_ids= self.preprocess_text(lazy_data['text'], lazy_data['lang'])
-            self.text_input_ids[n]= text_input_ids
-        text_attention_mask= torch.ones(len(text_input_ids), device=text_input_ids.device)
-        audio_attention_mask= torch.ones(
+            audio_mel_specs = self.preprocess_audio(lazy_data['filepath'])
+            text_input_ids = self.preprocess_text(lazy_data['text'], lazy_data['lang'])
+            self.audio_mel_specs[n] = audio_mel_specs
+            self.text_input_ids[n] = text_input_ids
+            if len(self.audio_mel_specs) == len(self.lazy_data):
+                if self.tar_file is not None:
+                    self.tar_file.close()
+                if self.tar_io is not None:
+                    self.tar_io.close()
+        text_attention_mask = torch.ones(len(text_input_ids), device=text_input_ids.device)
+        audio_attention_mask = torch.ones(
             (len(audio_mel_specs)+1) // 2,
             device = audio_mel_specs.device,
         )
