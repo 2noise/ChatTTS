@@ -30,6 +30,7 @@ ChatTTS is a powerful text-to-speech system. However, it is very important to ut
 ```python
 import ChatTTS
 from IPython.display import Audio
+import torchaudio
 
 chat = ChatTTS.Chat()
 chat.load_models(compile=False) # Set to True for better performance
@@ -65,12 +66,12 @@ params_refine_text = {
   'prompt': '[oral_2][laugh_0][break_6]'
 } 
 
-wav = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
+wavs = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
 
 ###################################
 # For word level manual control.
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
-wav = chat.infer(text, skip_refine_text=True, params_refine_text=params_refine_text,  params_infer_code=params_infer_code)
+wavs = chat.infer(text, skip_refine_text=True, params_refine_text=params_refine_text,  params_infer_code=params_infer_code)
 torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)
 ```
 
