@@ -68,6 +68,3 @@ class DVAEEncoder(nn.Module):
         x = self.conv_out_transpose(x)   # (batch_size, odim, audio_len*2)
         x = x.view(x.size(0), x.size(1), 2, x.size(2) // 2).permute(0, 3, 1, 2).flatten(2)
         return x   # (batch_size, audio_len, audio_dim=odim*2)
-
-    def __call__(self, audio_mel_specs: torch.Tensor, audio_attention_mask: torch.Tensor, conditioning=None) -> torch.Tensor:
-        ...
