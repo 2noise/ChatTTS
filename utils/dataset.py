@@ -140,7 +140,7 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
 
         invalid_characters = count_invalid_characters(text)
         if len(invalid_characters):
-            self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
+            # self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
             text = apply_character_map(text)
 
         # if not skip_refine_text:
@@ -343,7 +343,7 @@ def formalize_xz_list(src_folder: str):
                 XzListFolder.save_config(file_path, lazy_data, rel_path=src_folder)
 
 
-def concat_dataset(src_folder: str, save_folder: str) -> None:
+def concat_dataset(src_folder: str, save_folder: str, langs: list[str] = None) -> None:
     if os.path.isfile(save_folder):
         raise FileExistsError(f'{save_folder} already exists as a file!')
     elif not os.path.exists(save_folder):
@@ -361,6 +361,8 @@ def concat_dataset(src_folder: str, save_folder: str) -> None:
             if file.endswith('.json'):
                 print(file_path)
                 lazy_data += JsonFolder(file_path).lazy_data
+    if langs is not None:
+        lazy_data = [item for item in lazy_data if item['lang'] in langs]
     ListFolder.save_config(os.path.join(save_folder, 'all.list'), lazy_data, rel_path=save_folder)
     JsonFolder.save_config(os.path.join(save_folder, 'all.json'), lazy_data, rel_path=save_folder)
     print(f'Saved to {save_folder}')

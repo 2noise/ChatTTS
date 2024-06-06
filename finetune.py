@@ -1,7 +1,7 @@
 """
-python finetune.py --save_folder ./saved_models --data_path data/all.list --train_module encoder --decoder_type decoder
-python finetune.py --save_folder ./saved_models --data_path data/all.list --train_module encoder --decoder_type dvae
-python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
+python finetune.py --save_folder ./saved_models --data_path data/all.list --batch_size 64 --epochs 10 --train_module encoder --decoder_type decoder
+python finetune.py --save_folder ./saved_models --data_path data/all.list --batch_size 64 --epochs 10 --train_module encoder --decoder_type dvae
+python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --batch_size 64 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
 """
 
 import argparse
@@ -47,6 +47,8 @@ def train_autoencoder(
         encoder: DVAEEncoder,
         decoder: ChatTTS.model.dvae.DVAE,
         train_module: TrainModule = TrainModule.AUTOENCODER,
+        batch_size: int = 16,
+        epochs: int = 10,
 ):
     tokenizer: transformers.PreTrainedTokenizer = chat.pretrain_models['tokenizer']
     encoder: DVAEEncoder = DVAEEncoder(
@@ -68,20 +70,26 @@ def train_autoencoder(
             train_params = list(decoder.parameters())
 
     loss_fn = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(train_params, lr=1e-4)
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10, 1e-6)
+    optimizer = torch.optim.AdamW(train_params, lr=1e-4, betas=[0.8, 0.99], eps=1e-6)
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.999999)
 
     vq_layer = decoder.vq_layer
     decoder.vq_layer = None
-    loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
-    for epoch in range(10):
+    loader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id),
+        # num_workers=4,
+    )
+    for _ in range(epochs):
         for batch in tqdm(loader):
             audio_mel_specs: torch.Tensor = batch['audio_mel_specs']  # (batch_size, audio_len*2, 100)
             audio_attention_mask: torch.Tensor = batch['audio_attention_mask']  # (batch_size, audio_len)
             mel_attention_mask = audio_attention_mask.unsqueeze(-1).repeat(1, 1, 2).flatten(1)  # (batch_size, audio_len*2)
 
             # (batch_size, audio_len, audio_dim)
-            audio_latents: torch.Tensor = encoder(audio_mel_specs, audio_attention_mask) * audio_attention_mask.unsqueeze(-1)
+            audio_latents = encoder(audio_mel_specs, audio_attention_mask) * audio_attention_mask.unsqueeze(-1)
             # (batch_size, audio_len*2, 100)
             if vq_layer is not None:
                 audio_latents, _ = quantize(vq_layer.quantizer, audio_latents)  # (batch_size, audio_len, num_vq)
@@ -90,6 +98,7 @@ def train_autoencoder(
             loss: torch.Tensor = loss_fn(gen_mel_specs, audio_mel_specs)
             optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(train_params, 1.0)
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
@@ -102,6 +111,8 @@ def train_gpt(
     decoder_encoder: DVAEEncoder,
     dvae_encoder: DVAEEncoder,
     train_module: TrainModule = TrainModule.GPT_SPEAKER,
+    batch_size: int = 16,
+    epochs: int = 10,
     train_text: bool = True,
     speaker_embeds: dict[str, torch.Tensor] = {},
 ):
@@ -142,17 +153,26 @@ def train_gpt(
     match train_module:
         case TrainModule.GPT_SPEAKER:
             train_params = list(gpt.parameters()) + list(speaker_embeds.values())
+            optimizer = torch.optim.Adam(gpt.parameters(), lr=1e-5, weight_decay=0, betas=[0.9, 0.95], eps=1e-5)
+            optimizer.add_param_group({'params': speaker_embeds.values(), 'lr': 1e-2})
         case TrainModule.GPT:
             train_params = list(gpt.parameters())
         case TrainModule.SPEAKER:
             train_params = list(speaker_embeds.values())
+            optimizer = torch.optim.Adam(train_params, lr=1e-2, weight_decay=0, betas=[0.9, 0.95], eps=1e-5)
 
     loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(train_params, lr=1e-4)
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10, 1e-6)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10, 1e-7)
+    # lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=functools.partial())
 
-    loader = torch.utils.data.DataLoader(dataset, batch_size=3, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
-    for epoch in range(10):
+    loader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id),
+        # num_workers=4,
+    )
+    for _ in range(epochs):
         for batch in tqdm(loader):
             speakers: list[str] = batch['speaker']  # (batch_size,)
             text_input_ids: torch.Tensor = batch['text_input_ids']   # (batch_size, text_len)
@@ -251,8 +271,7 @@ def train_gpt(
 
             optimizer.zero_grad()
             loss.backward()
-            if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT]:
-                torch.nn.utils.clip_grad_norm_(gpt.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(train_params, 1.0)
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
@@ -272,7 +291,7 @@ def main():
     )
     parser.add_argument('--train_text', action='store_true', help='train text loss')
     parser.add_argument('--gpt_lora', action='store_true', help='train gpt with lora')
-    parser.add_argument('--gpt_kbit', type=int, default=16, help='train gpt with kbit')
+    # parser.add_argument('--gpt_kbit', type=int, default=16, help='train gpt with kbit')
     parser.add_argument('--decoder_encoder_path', type=str)
     parser.add_argument('--decoder_decoder_path', type=str)
     parser.add_argument('--dvae_encoder_path', type=str)
@@ -280,6 +299,8 @@ def main():
     parser.add_argument('--gpt_path', type=str)
     parser.add_argument('--speaker_embeds_path', type=str)
     parser.add_argument('--save_folder', type=str, default='./')
+    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--epochs', type=int, default=10)
     args = parser.parse_args()
     local_path: str | None = args.local_path
     data_path: str = args.data_path
@@ -287,8 +308,10 @@ def main():
     decoder_type: DecoderType = args.decoder_type
     train_text: bool = args.train_text
     gpt_lora: bool = args.gpt_lora
-    gpt_kbit: int = args.gpt_kbit
+    # gpt_kbit: int = args.gpt_kbit
     save_folder: str = args.save_folder
+    batch_size: int = args.batch_size
+    epochs: int = args.epochs
 
     decoder_encoder_path: str = args.decoder_encoder_path
     decoder_decoder_path: str = args.decoder_decoder_path
@@ -375,7 +398,7 @@ def main():
             encoder = dvae_encoder
             decoder = dvae_decoder
         train = functools.partial(train_autoencoder, encoder=encoder, decoder=decoder)
-    train(chat=chat, dataset=dataset, train_module=train_module)
+    train(chat=chat, dataset=dataset, train_module=train_module, batch_size=batch_size, epochs=epochs)
 
     if not os.path.isdir(save_folder):
         os.makedirs(save_folder)
