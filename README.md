@@ -2,6 +2,7 @@
 
 - 一行命令启动一个带有 Web 界面的 ChatTTS API 服务器
 - 前提条件：支持 CUDA 的 GPU，Docker, 4GB GPU 内存
+- 使用腾讯云容器镜像服务, 不用担心无法下载 Docker Image
 
 ## Usage 使用方法
 
@@ -11,7 +12,7 @@ docker run --name chat_tts \
   --gpus all --ipc=host \
   --ulimit memlock=-1 --ulimit stack=67108864 \
   -p 8080:8080 -p 8501:8501 \
-  jackiexiao/chat_tts_api_ui
+  ccr.ccs.tencentyun.com/text-to-speech/chat_tts_api_ui:latest
 ```
 
 删除服务
