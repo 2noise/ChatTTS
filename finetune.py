@@ -1,6 +1,6 @@
 """
-python finetune.py --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 64 --epochs 10 --train_module encoder --decoder_type decoder
-python finetune.py --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 64 --epochs 10 --train_module encoder --decoder_type dvae
+CUDA_VISIBLE_DEVICES=2 python finetune.py --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --batch_size 32 --epochs 10 --train_module encoder --decoder_type decoder
+CUDA_VISIBLE_DEVICES=3 python finetune.py --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --batch_size 32 --epochs 10 --train_module encoder --decoder_type dvae
 python finetune.py --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 64 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
 """
 
@@ -19,7 +19,7 @@ import numpy as np
 import ChatTTS
 import ChatTTS.model.gpt
 import ChatTTS.model.dvae
-from utils.dataset import ListFolder, AudioFolder, AudioCollator
+from utils.dataset import XzListTar, AudioFolder, AudioCollator
 from utils.model import quantize
 from utils.encoder import DVAEEncoder, get_encoder_config
 
@@ -70,7 +70,8 @@ def train_autoencoder(
             train_params = list(decoder.parameters())
 
     loss_fn = torch.nn.MSELoss()
-    optimizer = torch.optim.AdamW(train_params, lr=1e-4, betas=[0.8, 0.99], eps=1e-6)
+    lr = 1e-2 if train_module == TrainModule.ENCODER else 1e-4
+    optimizer = torch.optim.AdamW(train_params, lr=lr, betas=[0.8, 0.99], eps=1e-6)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.999999)
 
     vq_layer = decoder.vq_layer
@@ -282,6 +283,8 @@ def main():
     parser.add_argument('--local_path', type=str, default=None, help='the local_path if need')
     parser.add_argument('--data_path', type=str, default='dummy_data/xz_list_style/speaker_A.list', help='the data_path to json/list file')
     parser.add_argument('--tar_path', type=str, help='the tarball path with wavs')
+    parser.add_argument('--tar_in_memory', action='store_true', help='load tarball in memory')
+    parser.add_argument('--process_ahead', action='store_true', help='process all data ahead during dataset initialization')
     parser.add_argument(
         '--train_module', type=str, default='gpt',
         choices=['gpt_speaker', 'gpt', 'speaker', 'autoencoder', 'encoder', 'decoder'],
@@ -306,6 +309,8 @@ def main():
     local_path: str | None = args.local_path
     data_path: str = args.data_path
     tar_path: str | None = args.tar_path
+    tar_in_memory: bool = args.tar_in_memory
+    process_ahead: bool = args.process_ahead
     train_module: TrainModule = args.train_module
     decoder_type: DecoderType = args.decoder_type
     train_text: bool = args.train_text
@@ -328,11 +333,13 @@ def main():
         print('local model path:', local_path)
         chat.load_models('local', local_path=local_path)
 
-    dataset = ListFolder(
+    dataset = XzListTar(
         root=data_path,
         tokenizer=chat.pretrain_models['tokenizer'],
         vocos_model=chat.pretrain_models['vocos'],
         tar_path=tar_path,
+        tar_in_memory=tar_in_memory,
+        process_ahead=process_ahead,
         # device=None,
         # speakers=None,  # set(['speaker_A', 'speaker_B'])
     )
