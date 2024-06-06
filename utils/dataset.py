@@ -245,7 +245,7 @@ class AudioCollator:
     def __call__(self, batch: list[DataType]):
         batch = [x for x in batch if x is not None]
 
-        audio_maxlen = (max(len(item['audio_attention_mask']) for item in batch) + 1) // 2
+        audio_maxlen = max(len(item['audio_attention_mask']) for item in batch)
         text_maxlen = max(len(item['text_attention_mask']) for item in batch)
 
         file_path = []

@@ -141,7 +141,7 @@ class DVAE(nn.Module):
         if self.vq_layer is not None:
             vq_feats = self.vq_layer._embed(inp)
         else:
-            vq_feats = inp.detach().clone()
+            vq_feats = inp
             
         vq_feats = vq_feats.view(
             (vq_feats.size(0), 2, vq_feats.size(1)//2, vq_feats.size(2)),
@@ -151,5 +151,4 @@ class DVAE(nn.Module):
         dec_out = self.decoder(input=vq_feats)
         dec_out = self.out_conv(dec_out.transpose(1, 2))
         mel = dec_out * self.coef
-
         return mel

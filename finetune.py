@@ -1,9 +1,28 @@
-# python finetune.py --data_path data/Bekki.list --train_module autoencoder --decoder_type decoder
-# python finetune.py --data_path data/Bekki.list --train_module autoencoder --decoder_type dvae
-# python finetune.py --data_path data/Bekki.list --train_module gpt_speaker
+"""
+python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module encoder --decoder_type decoder
+python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module encoder --decoder_type dvae
+python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
+
+
+local_path: str | None = args.local_path
+data_path: str = args.data_path
+train_module: TrainModule = args.train_module
+decoder_type: DecoderType = args.decoder_type
+train_text: bool = args.train_text
+gpt_lora: bool = args.gpt_lora
+gpt_kbit: int = args.gpt_kbit
+save_folder: str = args.save_folder
+
+decoder_encoder_path: str = args.decoder_encoder_path
+decoder_decoder_path: str = args.decoder_decoder_path
+dvae_encoder_path: str = args.dvae_encoder_path
+dvae_decoder_path: str = args.dvae_decoder_path
+speaker_embeds_path: str = args.speaker_embeds_path
+"""
 
 import argparse
 import functools
+import os
 from enum import StrEnum
 from tqdm import tqdm
 
@@ -68,6 +87,8 @@ def train_autoencoder(
     optimizer = torch.optim.Adam(train_params, lr=1e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10, 1e-6)
 
+    vq_layer = decoder.vq_layer
+    decoder.vq_layer = None
     loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
     for epoch in range(10):
         for batch in tqdm(loader):
@@ -78,15 +99,17 @@ def train_autoencoder(
             # (batch_size, audio_len, audio_dim)
             audio_latents: torch.Tensor = encoder(audio_mel_specs, audio_attention_mask) * audio_attention_mask.unsqueeze(-1)
             # (batch_size, audio_len*2, 100)
+            if vq_layer is not None:
+                audio_latents, _ = quantize(vq_layer.quantizer, audio_latents)  # (batch_size, audio_len, num_vq)
             gen_mel_specs: torch.Tensor = decoder(audio_latents.transpose(1, 2)).transpose(1, 2) * mel_attention_mask.unsqueeze(-1)
 
             loss: torch.Tensor = loss_fn(gen_mel_specs, audio_mel_specs)
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
+    decoder.vq_layer = vq_layer
 
 
 def train_gpt(
@@ -113,7 +136,6 @@ def train_gpt(
     #     **get_encoder_config(dvae_decoder.decoder),
     # )
     dvae_encoder.to(device=dataset.device).eval().requires_grad_(False)
-    dvae_vq: ChatTTS.model.dvae.GFSQ = dvae_decoder.vq_layer
 
     gpt: ChatTTS.model.gpt.GPT_wrapper = chat.pretrain_models['gpt']
     if train_module == TrainModule.SPEAKER:
@@ -129,8 +151,9 @@ def train_gpt(
         ) for speaker in dataset.speakers
     } | speaker_embeds
     SPEAKER_TOKEN_ID: int = tokenizer.convert_tokens_to_ids('[spk_emb]')
-    AUDIO_EOS_TOKEN_ID: int = tokenizer.convert_tokens_to_ids('[Etts]')
-    PAD_TOKEN_ID: int = tokenizer.pad_token_id
+    AUDIO_EOS_TOKEN_ID: int = 0
+    # AUDIO_EOS_TOKEN_ID: int = tokenizer.convert_tokens_to_ids('[Etts]')
+    AUDIO_PAD_TOKEN_ID: int = AUDIO_EOS_TOKEN_ID
 
     match train_module:
         case TrainModule.GPT_SPEAKER:
@@ -144,7 +167,7 @@ def train_gpt(
     optimizer = torch.optim.Adam(train_params, lr=1e-4)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 10, 1e-6)
 
-    loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
+    loader = torch.utils.data.DataLoader(dataset, batch_size=3, shuffle=True, collate_fn=AudioCollator(text_pad=tokenizer.pad_token_id))
     for epoch in range(10):
         for batch in tqdm(loader):
             speakers: list[str] = batch['speaker']  # (batch_size,)
@@ -156,27 +179,33 @@ def train_gpt(
             batch_size, text_len = text_attention_mask.size()
 
             dvae_audio_latents = dvae_encoder(audio_mel_specs, audio_attention_mask)  # (batch_size, audio_len, audio_dim=1024)
-            _, dvae_audio_input_ids = quantize(dvae_vq, dvae_audio_latents)  # (batch_size, audio_len, num_vq)
-            dvae_audio_input_ids[~audio_attention_mask] = PAD_TOKEN_ID
+            _, dvae_audio_input_ids = quantize(dvae_decoder.vq_layer.quantizer, dvae_audio_latents)  # (batch_size, audio_len, num_vq)
+            dvae_audio_input_ids[~audio_attention_mask.bool()] = AUDIO_PAD_TOKEN_ID
 
             # add audio eos token
-            extended_audio_attention_mask = torch.cat([
-                audio_attention_mask,
-                torch.zeros(
-                    (batch_size, 1),
-                    dtype=audio_attention_mask.dtype,
-                    device=audio_attention_mask.device,
-                ),
-            ])  # (batch_size, audio_len+1)
-            extended_audio_input_ids = torch.cat([
-                dvae_audio_input_ids,
-                PAD_TOKEN_ID * torch.ones(
-                    (batch_size, 1, gpt.num_vq),
-                    dtype=dvae_audio_input_ids.dtype,
-                    device=dvae_audio_input_ids.device,
-                ),
-            ])  # (batch_size, audio_len+1, num_vq)
-            indices = audio_attention_mask.sum(dim=1)  # (batch_size,)
+            extended_audio_attention_mask = torch.cat(
+                [
+                    audio_attention_mask,
+                    torch.zeros(
+                        (batch_size, 1),
+                        dtype=audio_attention_mask.dtype,
+                        device=audio_attention_mask.device,
+                    ),
+                ],
+                dim=1,
+            )  # (batch_size, audio_len+1)
+            extended_audio_input_ids = torch.cat(
+                [
+                    dvae_audio_input_ids,
+                    AUDIO_PAD_TOKEN_ID * torch.ones(
+                        (batch_size, 1, gpt.num_vq),
+                        dtype=dvae_audio_input_ids.dtype,
+                        device=dvae_audio_input_ids.device,
+                    ),
+                ],
+                dim=1,
+            )  # (batch_size, audio_len+1, num_vq)
+            indices = audio_attention_mask.int().sum(dim=1)  # (batch_size,)
             for i in range(batch_size):
                 extended_audio_attention_mask[i, indices[i]] = 1
                 extended_audio_input_ids[i, indices[i]] = AUDIO_EOS_TOKEN_ID
@@ -202,7 +231,7 @@ def train_gpt(
             )
             # set labels
             labels = input_ids.clone()   # (batch_size, text_len + audio_len + 1, num_vq)
-            labels[~attention_mask] = IGNORE_TOKEN_ID
+            labels[~attention_mask.bool()] = IGNORE_TOKEN_ID
 
             # (batch_size, text_len + audio_len, 768)
             inputs_embeds = gpt.get_emb(input_ids=input_ids, text_mask=text_mask)
@@ -213,7 +242,7 @@ def train_gpt(
                 inputs_embeds[i, indices[i]] = torch.nn.functional.normalize(
                     speaker_embeds[speaker].to(dtype=inputs_embeds.dtype),
                     p=2.0,
-                    dim=1,
+                    dim=-1,
                     eps=1e-12,
                 ).unsqueeze(0)
             outputs = gpt.gpt.forward(inputs_embeds=inputs_embeds, attention_mask=attention_mask)
@@ -230,7 +259,7 @@ def train_gpt(
                 text_logits: torch.Tensor = gpt.head_text(text_hidden_states)  # (batch_size, text_len-1, num_class_text)
                 loss += loss_fn(text_logits.flatten(0, 1), labels[:, 1:text_len, 0].flatten(0, 1))  # text loss
 
-            gpt_gen_mel_specs = decoder_decoder(audio_hidden_states.transpose(1, 2)).transpose(1, 2)
+            gpt_gen_mel_specs = decoder_decoder(audio_hidden_states[:, :-1].transpose(1, 2)).transpose(1, 2)
             loss += 0.01 * torch.nn.functional.mse_loss(
                 gpt_gen_mel_specs,
                 audio_mel_specs,
@@ -238,7 +267,8 @@ def train_gpt(
 
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(gpt.parameters(), 1.0)
+            if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT]:
+                torch.nn.utils.clip_grad_norm_(gpt.parameters(), 1.0)
             optimizer.step()
         lr_scheduler.step()
     optimizer.zero_grad()
@@ -265,6 +295,7 @@ def main():
     parser.add_argument('--dvae_decoder_path', type=str)
     parser.add_argument('--gpt_path', type=str)
     parser.add_argument('--speaker_embeds_path', type=str)
+    parser.add_argument('--save_folder', type=str, default='./')
     args = parser.parse_args()
     local_path: str | None = args.local_path
     data_path: str = args.data_path
@@ -273,6 +304,7 @@ def main():
     train_text: bool = args.train_text
     gpt_lora: bool = args.gpt_lora
     gpt_kbit: int = args.gpt_kbit
+    save_folder: str = args.save_folder
 
     decoder_encoder_path: str = args.decoder_encoder_path
     decoder_decoder_path: str = args.decoder_decoder_path
@@ -286,30 +318,6 @@ def main():
     else:
         print('local model path:', local_path)
         chat.load_models('local', local_path=local_path)
-
-    if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT]:
-        gpt: ChatTTS.model.gpt.GPT_wrapper = chat.pretrain_models['gpt']
-        if gpt_lora:
-            import peft
-            lora_config = peft.LoraConfig(r=8, lora_alpha=16)
-            # match gpt_kbit:
-            #     case 4:
-            #         quantization_config = transformers.BitsAndBytesConfig(
-            #             load_in_4bit=True,
-            #             bnb_4bit_quant_type="nf4",
-            #             bnb_4bit_use_double_quant=True,
-            #             bnb_4bit_compute_dtype=torch.bfloat16,
-            #         )
-            #     case 8:
-            #         quantization_config = transformers.BitsAndBytesConfig(
-            #             load_in_4bit=True,
-            #             bnb_4bit_quant_type="nf4",
-            #             bnb_4bit_use_double_quant=True,
-            #             bnb_4bit_compute_dtype=torch.bfloat16,
-            #     )
-            # gpt.gpt = transformers.LlamaModel.from_pretrained()
-            # peft.prepare_model_for_gpt_kbit_training(gpt.gpt)
-            gpt.gpt = peft.get_peft_model(gpt.gpt, lora_config)
 
     dataset = XzListFolder(
         root=data_path,
@@ -346,6 +354,27 @@ def main():
             for speaker, speaker_embed in np_speaker_embeds.items()
         }
 
+    if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT]:
+        gpt: ChatTTS.model.gpt.GPT_wrapper = chat.pretrain_models['gpt']
+        if gpt_lora:
+            import peft
+            # match gpt_kbit:
+            #     case 4:
+            #         quantization_config = transformers.BitsAndBytesConfig(
+            #             load_in_4bit=True,
+            #             bnb_4bit_quant_type="nf4",
+            #             bnb_4bit_use_double_quant=True,
+            #             bnb_4bit_compute_dtype=torch.bfloat16,
+            #         )
+            #     case 8:
+            #         quantization_config = transformers.BitsAndBytesConfig(
+            #             load_in_8bit=True,
+            #     )
+            # gpt.gpt = transformers.LlamaModel.from_pretrained()
+            # peft.prepare_model_for_gpt_kbit_training(gpt.gpt)
+            lora_config = peft.LoraConfig(r=8, lora_alpha=16)
+            gpt.gpt = peft.get_peft_model(gpt.gpt, lora_config)
+
     if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT, TrainModule.SPEAKER]:
         train = functools.partial(
             train_gpt,
@@ -363,6 +392,43 @@ def main():
             decoder = dvae_decoder
         train = functools.partial(train_autoencoder, encoder=encoder, decoder=decoder)
     train(chat=chat, dataset=dataset, train_module=train_module)
+
+    if not os.path.isdir(save_folder):
+        os.makedirs(save_folder)
+    gpt_save_path = os.path.join(save_folder, 'gpt.pth')
+    speaker_embeds_save_path = os.path.join(save_folder, 'speaker_embeds.npy')
+    decoder_encoder_save_path = os.path.join(save_folder, 'decoder_encoder.pth')
+    decoder_decoder_save_path = os.path.join(save_folder, 'decoder_decoder.pth')
+    dvae_encoder_save_path = os.path.join(save_folder, 'dvae_encoder.pth')
+    dvae_decoder_save_path = os.path.join(save_folder, 'dvae_decoder.pth')
+    if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT] and gpt_lora:
+        gpt.gpt = gpt.gpt.merge_and_unload()
+    np_speaker_embeds = {speaker: speaker_embed.detach().cpu().numpy() for speaker, speaker_embed in speaker_embeds.items()}
+    match train_module:
+        case TrainModule.GPT_SPEAKER:
+            torch.save(gpt.state_dict(), gpt_save_path)
+            torch.save(np_speaker_embeds, speaker_embeds_save_path)
+        case TrainModule.GPT:
+            torch.save(gpt.state_dict(), gpt_save_path)
+        case TrainModule.SPEAKER:
+            torch.save(np_speaker_embeds, speaker_embeds_save_path)
+        case TrainModule.AUTOENCODER:
+            if decoder_type == DecoderType.DECODER:
+                torch.save(decoder_encoder.state_dict(), decoder_encoder_save_path)
+                torch.save(decoder_decoder.state_dict(), decoder_decoder_save_path)
+            else:
+                torch.save(dvae_encoder.state_dict(), dvae_encoder_save_path)
+                torch.save(dvae_decoder.state_dict(), dvae_decoder_save_path)
+        case TrainModule.ENCODER:
+            if decoder_type == DecoderType.DECODER:
+                torch.save(decoder_encoder.state_dict(), decoder_encoder_save_path)
+            else:
+                torch.save(dvae_encoder.state_dict(), dvae_encoder_save_path)
+        case TrainModule.DECODER:
+            if decoder_type == DecoderType.DECODER:
+                torch.save(decoder_decoder.state_dict(), decoder_decoder_save_path)
+            else:
+                torch.save(dvae_decoder.state_dict(), dvae_decoder_save_path)
 
 
 if __name__ == '__main__':
