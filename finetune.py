@@ -1,7 +1,7 @@
 """
-python finetune.py --save_folder ./saved_models --data_path data/all.list --batch_size 64 --epochs 10 --train_module encoder --decoder_type decoder
-python finetune.py --save_folder ./saved_models --data_path data/all.list --batch_size 64 --epochs 10 --train_module encoder --decoder_type dvae
-python finetune.py --save_folder ./saved_models --data_path data/Bekki.list --batch_size 64 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
+python finetune.py --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 64 --epochs 10 --train_module encoder --decoder_type decoder
+python finetune.py --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 64 --epochs 10 --train_module encoder --decoder_type dvae
+python finetune.py --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 64 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_encoder_path ./saved_models/decoder_encoder.pth --dvae_encoder_path ./saved_models/dvae_encoder.pth
 """
 
 import argparse
@@ -280,7 +280,8 @@ def train_gpt(
 def main():
     parser = argparse.ArgumentParser(description='ChatTTS demo Launch')
     parser.add_argument('--local_path', type=str, default=None, help='the local_path if need')
-    parser.add_argument('--data_path', type=str, default='dummy_data/xz_list_style/speaker_A.list', help='the data_path')
+    parser.add_argument('--data_path', type=str, default='dummy_data/xz_list_style/speaker_A.list', help='the data_path to json/list file')
+    parser.add_argument('--tar_path', type=str, help='the tarball path with wavs')
     parser.add_argument(
         '--train_module', type=str, default='gpt',
         choices=['gpt_speaker', 'gpt', 'speaker', 'autoencoder', 'encoder', 'decoder'],
@@ -304,6 +305,7 @@ def main():
     args = parser.parse_args()
     local_path: str | None = args.local_path
     data_path: str = args.data_path
+    tar_path: str | None = args.tar_path
     train_module: TrainModule = args.train_module
     decoder_type: DecoderType = args.decoder_type
     train_text: bool = args.train_text
@@ -330,6 +332,7 @@ def main():
         root=data_path,
         tokenizer=chat.pretrain_models['tokenizer'],
         vocos_model=chat.pretrain_models['vocos'],
+        tar_path=tar_path,
         # device=None,
         # speakers=None,  # set(['speaker_A', 'speaker_B'])
     )
