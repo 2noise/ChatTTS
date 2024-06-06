@@ -37,7 +37,7 @@ app = FastAPI(title="ChatTTS Api")
 
 logger.info("Loading models...")
 chat = ChatTTS.Chat()
-chat.load_models(source="local", local_path="tts_model", compile=True)
+chat.load_models(source="local", local_path="tts_model", compile=False)
 # compile=True is faster, but it will take longer to start
 logger.info("Models loaded, warming up...")
 chat.infer(["你好"], use_decoder=True)
@@ -65,7 +65,8 @@ def wav_to_mp3(wav_data, sample_rate=24000, bitrate="48k"):
 
 def infer(request):
     # remove invalid characters, otherwise the model will raise an error
-    text = valid_pattern.sub("", request.text)
+    # text = valid_pattern.sub("", request.text)
+    text = request.text
     logger.info(f"Text after removing invalid characters: {text}")
     deterministic(request.seed)
     rnd_spk_emb = chat.sample_random_speaker()

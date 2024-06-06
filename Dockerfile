@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY tts_model /app/tts_model
-COPY ./requirements.txt /app/requirements.txt
+# 避免跟官方仓库的 requirements 冲突
+COPY ./requirements-chat-tts.txt /app/requirements.txt
 
 RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple && \
     pip install --no-cache-dir -r /app/requirements.txt

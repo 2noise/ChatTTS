@@ -1,45 +1,54 @@
-# ChatTTS-api-ui-docker
+# ChatTTS-api-ui-docker 一键启动!
 
-One command to start a ChatTTS API server with a web interface.
-
-一行命令启动一个带有 Web 界面的 ChatTTS API 服务器。
-
-Prerequisites: GPU with CUDA support, Docker, 4GB GPU memory
-
-前提条件：支持 CUDA 的 GPU，Docker, 4GB GPU 内存
+- 一行命令启动一个带有 Web 界面的 ChatTTS API 服务器
+- 前提条件：支持 CUDA 的 GPU，Docker, 4GB GPU 内存
 
 ## Usage 使用方法
 
-Start Server 启动服务 (ps: 镜像压缩后 5.16 GB)
+启动服务 (ps: 镜像压缩后 5.16 GB)
 ```bash
 docker run --name chat_tts \
   --gpus all --ipc=host \
   --ulimit memlock=-1 --ulimit stack=67108864 \
   -p 8080:8080 -p 8501:8501 \
-  jackiexiao/chat_tts_api_ui:24.05.30
+  jackiexiao/chat_tts_api_ui
 ```
 
-Stop server 删除服务
+删除服务
 ```
 docker rm -f chat_tts
 ```
 
-- The service will take some time to start. After the service is started, visit http://localhost:8501 to view the web interface.
-- 服务启动需要一段时间，等待服务启动完成后，访问 http://localhost:8501 即可查看 Web 界面。
+- 等待服务启动完成后，访问 http://localhost:8501 即可查看 Web 界面。
 - Web UI
   - URL 网页: http://localhost:8501
   - build with streamlit
 - Api
-  - URL: http://localhost:8080
-  - Document: http://localhost:8080/docs
-  - client: `python client.py`
+  - API 地址: http://localhost:8080
+  - API 文档: http://localhost:8080/docs
+  - 客户端示例 client: `python client.py`
+  - 采样率为 24000, 默认返回 mp3
   - build with fastapi
 
-## known issues 已知问题
-1. 文本过长会有问题，不要超过100个字。
-2. 不支持并发
-3. 采样率为24000
-4. 会有幻觉, 合成效果不稳定, 很多标点符号不支持(比如感叹号, 数字), 请谨慎使用
+## 备注
+- ChatTTS 的简略流程
+    - Text -> GPT -> 离散 Token -> VAE Decoder（实际上用的 Hidden latents 不是离散 Token） -> Mel -> Vocos -> Audio
+- 优点
+    - 自回归模型：更高的自然度，可以达到类似 openai 的水平
+    - 更大的模型更大的数据：通常使用 1-10万小时训练，模型在 0.3B-1B 之间
+    - 少样本克隆：模型不需要通过微调就可以克隆新的音色（当然也可以微调获得更好的效果）但训练代码还没开源
+    - 更高的可玩性/可控性：可以通过文本或者音频 prompt 控制发音风格，合成多样性的语音
+    - 基于 token 而不基于拼音输入的方式可以非常容易扩展到多语种，不需要每个语种开发文本转拼音的工具包
+- 缺点
+    - 训练成本较高（开源版本4万小时, 275M参数量左右，据说有10万小时训练的更大参数量的版本）
+    - 推理成本较高，推理速度较慢（4090单卡 RTF 0.3），需要后续优化
+    - 目前合成不够稳定，容易出现多字，漏字，或者出现杂音。但后续迭代可解决
+    - 目前 Badcase 较多，比如数字，英文字母，标点符号，多音字，部分英文单词常常念错，停顿上错误较多
+    - 基于 token 的输入：缺点是如果训练数据量不够大，或者缺乏高质量数据，很多生僻字和特殊的人名地名将无法正确合成，多音字也容易出错。
+    - 目前开源的版本基于4万小时训练的小参数量模型，音质和稳定性上比较一般
+    - 无法生成超过 30 秒的音频，需要手动分句合成
+    - 虽然是随机音色，但年龄都在20-45岁之间。没有更年轻或者更老的音色
+
 
 ## 类似项目
 > 也提供了 UI 和 Api
