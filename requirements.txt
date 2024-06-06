@@ -6,3 +6,7 @@ vector_quantize_pytorch
 transformers~=4.41.1
 vocos
 IPython
+gradio~=4.32.2
+pynini~=2.1.5
+WeTextProcessing~=0.1.12
+nemo_text_processing~=1.0.2
