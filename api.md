@@ -41,6 +41,7 @@ transformers: 4.41
 ```bash
 pip install -r requirements.txt
 # 需要自己提前下载 https://huggingface.co/2Noise/ChatTTS
+# 想通过网盘下载的话：https://pan.baidu.com/s/1IfkPvkAqHMSZy1w5m-Paqw?pwd=psvs 
 python api.py --model-dir "本地权重路径"
 ```
 
