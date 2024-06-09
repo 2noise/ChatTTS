@@ -5,8 +5,6 @@ ChatTTS is a text-to-speech model designed specifically for dialogue scenario su
 
 For formal inquiries about model and roadmap, please contact us at **open-source@2noise.com**. You could join our QQ group: ~~808364215 (Full)~~ 230696694 (Group 2) for discussion. Adding github issues is always welcomed.
 
-[Colab Demo](https://colab.research.google.com/drive/1cpCMfnB4NOdSeTz9uRKaEl887_gn6WxD?usp=sharing)
-
 ---
 ## Highlights
 1. **Conversational TTS**: ChatTTS is optimized for dialogue-based tasks, enabling natural and expressive speech synthesis. It supports multiple speakers, facilitating interactive conversations.
