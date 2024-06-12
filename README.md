@@ -23,6 +23,11 @@ ChatTTS is a powerful text-to-speech system. However, it is very important to ut
 
 
 ---
+## Installation
+
+```
+pip install git+https://github.com/2noise/ChatTTS
+```
 ## Usage
 
 <h4>Basic usage</h4>
