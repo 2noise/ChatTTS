@@ -5,7 +5,7 @@ ChatTTS是专门为对话场景设计的文本转语音模型，例如LLM助手�
 
 如需就模型进行正式商业咨询，请发送邮件至 **open-source@2noise.com**。对于中文用户，您可以加入我们的QQ群：~~808364215 (已满)~~ ~~230696694 (二群)~~ 933639842 (三群) 进行讨论。同时欢迎在GitHub上提出问题。如果遇到无法使用 **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** 的情况,可以在 [modelscope](https://www.modelscope.cn/models/pzc163/chatTTS) 上进行下载. 
 
-[初学者视频教程](https://www.bilibili.com/video/BV1Ui421v7JU)包含环境配置、WebUI部署启动、Python代码控制、自定义音色、控制口语笑声停顿程度、自动生成语气词、接入零一万物、文心一言大模型API做多轮对话
+[初学者视频教程](https://www.bilibili.com/video/BV1Ui421v7JU)：包含环境配置、WebUI部署启动、Python代码控制、自定义音色、控制口语笑声停顿程度、自动生成语气词、接入零一万物、文心一言大模型API做多轮对话
 
 ---
 ## 亮点
