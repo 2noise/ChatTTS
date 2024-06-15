@@ -1,2 +1,2 @@
 modelscope
-sklearn
+scikit-learn
