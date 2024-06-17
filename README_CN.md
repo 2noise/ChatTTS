@@ -28,6 +28,7 @@ ChatTTS是一个强大的文本转语音系统。然而，负责任地和符合�
 ```python
 import ChatTTS
 from IPython.display import Audio
+import torchaudio
 
 chat = ChatTTS.Chat()
 chat.load_models(compile=False) # 设置为True以获得更快速度
@@ -63,13 +64,13 @@ params_refine_text = {
   'prompt': '[oral_2][laugh_0][break_6]'
 } 
 
-wav = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
+wavs = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
 
 ###################################
 # For word level manual control.
 # use_decoder=False to infer faster with a bit worse quality
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
-wav = chat.infer(text, skip_refine_text=True, params_infer_code=params_infer_code, use_decoder=False)
+wavs = chat.infer(text, skip_refine_text=True, params_infer_code=params_infer_code, use_decoder=False)
 
 torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)
 ```
