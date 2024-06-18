@@ -2,7 +2,7 @@
 > [!NOTE]
 > 以下の内容は最新情報ではない可能性がありますのでご了承ください。全ての内容は英語版に基準することになります。
 
-[![Huggingface](https://img.shields.io/badge/🤗%20-Models%20Repo-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
+[![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 
 [**English**](../../README.md) | [**简体中文**](../cn/README.md) | **日本語** | [**Русский**](../ru/README.md)
 
