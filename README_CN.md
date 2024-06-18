@@ -1,5 +1,5 @@
 # ChatTTS
-[**English**](./README.md) | [**中文简体**](./README_CN.md)
+[**English**](./README.md) | [**中文简体**](./README_CN.md) | [**日本語**](./README_JP.md)
 
 ChatTTS是专门为对话场景设计的文本转语音模型，例如LLM助手对话任务。它支持英文和中文两种语言。最大的模型使用了10万小时以上的中英文数据进行训练。在HuggingFace中开源的版本为4万小时训练且未SFT的版本.
 
