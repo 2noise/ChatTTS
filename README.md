@@ -14,10 +14,12 @@ A generative speech model for daily dialogue.
 
 ## Introduction
 ChatTTS is a text-to-speech model designed specifically for dialogue scenarios such as LLM assistant.
+
 ### Supported Languages
 - [x] English
 - [x] Chinese
 - [ ] Coming Soon...
+
 ### Highlights
 > You can refer to **[this video on Bilibili](https://www.bilibili.com/video/BV1zn4y1o7iV)** for the detailed description.
 
@@ -37,15 +39,19 @@ ChatTTS is a text-to-speech model designed specifically for dialogue scenarios s
 - [ ] ChatTTS.cpp maybe? (PR or new repo are welcomed.)
 
 ### Disclaimer
+> [!Important]
+> This repo is for academic purposes only.
 
-This repo is for academic purposes only. It is intended for educational and research use, and should not be used for any commercial or legal purposes. The authors do not guarantee the accuracy, completeness, or reliability of the information. The information and data used in this repo, are for academic and research purposes only. The data obtained from publicly available sources, and the authors do not claim any ownership or copyright over the data.
+It is intended for educational and research use, and should not be used for any commercial or legal purposes. The authors do not guarantee the accuracy, completeness, or reliability of the information. The information and data used in this repo, are for academic and research purposes only. The data obtained from publicly available sources, and the authors do not claim any ownership or copyright over the data.
 
 ChatTTS is a powerful text-to-speech system. However, it is very important to utilize this technology responsibly and ethically. To limit the use of ChatTTS, we added a small amount of high-frequency noise during the training of the 40,000-hour model, and compressed the audio quality as much as possible using MP3 format, to prevent malicious actors from potentially using it for criminal purposes. At the same time, we have internally trained a detection model and plan to open-source it in the future.
 
 ### Contact
-GitHub issues/PRs are always welcomed.
+> GitHub issues/PRs are always welcomed.
+
 #### Formal Inquiries
 For formal inquiries about the model and roadmap, please contact us at **open-source@2noise.com**.
+
 #### Online Chat
 ##### 1. QQ Group (Chinese Social APP)
 - **Group 1**, 808364215 (Full)
@@ -137,20 +143,16 @@ torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 
 ## FAQ
 
-##### 1. How much VRAM do I need? How about infer speed?
+#### 1. How much VRAM do I need? How about infer speed?
 For a 30-second audio clip, at least 4GB of GPU memory is required. For the 4090 GPU, it can generate audio corresponding to approximately 7 semantic tokens per second. The Real-Time Factor (RTF) is around 0.3.
 
-##### 2. Model stability is not good enough, with issues such as multi speakers or poor audio quality.
+#### 2. Model stability is not good enough, with issues such as multi speakers or poor audio quality.
 
 This is a problem that typically occurs with autoregressive models (for bark and valle). It's generally difficult to avoid. One can try multiple samples to find a suitable result.
 
-##### 3. Besides laughter, can we control anything else? Can we control other emotions?
+#### 3. Besides laughter, can we control anything else? Can we control other emotions?
 
 In the current released model, the only token-level control units are `[laugh]`, `[uv_break]`, and `[lbreak]`. In future versions, we may open-source models with additional emotional control capabilities.
-
-## Starchart
-
-[![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
 
 ## Acknowledgements
 - [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by an autoregressive-style system.
@@ -162,3 +164,7 @@ In the current released model, the only token-level control units are `[laugh]`,
 
 ## Thanks to all contributors for their efforts
 [![contributors](https://contrib.rocks/image?repo=2noise/ChatTTS)](https://github.com/2noise/ChatTTS/graphs/contributors)
+
+## Starchart
+
+[![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
