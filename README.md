@@ -2,11 +2,11 @@
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models%20Repo-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 
-[**English**](./README.md) | [**中文简体**](./README_CN.md)
+[**English**](./README.md) | [**中文简体**](./README_CN.md) | [**日本語**](./README_JP.md)
 
-ChatTTS is a text-to-speech model designed specifically for dialogue scenario such as LLM assistant. It supports both English and Chinese languages. Our model is trained with 100,000+ hours composed of chinese and english. The open-source version on HuggingFace is a 40,000 hours pre trained model without SFT.
+ChatTTS is a text-to-speech model designed specifically for dialogue scenarios such as LLM assistant. It supports both English and Chinese languages. Our model is trained with 100,000+ hours composed of Chinese and English. The open-source version on **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** is a 40,000 hours pre-trained model without SFT.
 
-For formal inquiries about model and roadmap, please contact us at open-source@2noise.com. You could join our QQ group: 808364215 for discussion. Adding github issues is always welcomed.
+For formal inquiries about model and roadmap, please contact us at **open-source@2noise.com**. You could join our QQ group: ~~808364215 (Full)~~  ~~230696694 (Group 2)~~ 933639842 (Group 3) for discussion. Adding github issues is always welcomed.
 
 ---
 ## Highlights
@@ -14,7 +14,7 @@ For formal inquiries about model and roadmap, please contact us at open-source@2
 2. **Fine-grained Control**: The model could predict and control fine-grained prosodic features, including laughter, pauses, and interjections. 
 3. **Better Prosody**: ChatTTS surpasses most of open-source TTS models in terms of prosody. We provide pretrained models to support further research and development.
 
-For the detailed description of the model, you can refer to [video on Bilibili](https://www.bilibili.com/video/BV1zn4y1o7iV) 
+For the detailed description of the model, you can refer to **[video on Bilibili](https://www.bilibili.com/video/BV1zn4y1o7iV)**
 
 ---
 
@@ -26,31 +26,37 @@ ChatTTS is a powerful text-to-speech system. However, it is very important to ut
 
 
 ---
+## Installation
+
+```
+pip install git+https://github.com/2noise/ChatTTS
+```
 ## Usage
 
-<h4>basic usage</h4>
+<h4>Basic usage</h4>
 
 ```python
 import ChatTTS
 from IPython.display import Audio
+import torchaudio
 
 chat = ChatTTS.Chat()
-chat.load_models()
+chat.load_models(compile=False) # Set to True for better performance
 
-texts = ["<PUT YOUR TEXT HERE>",]
+texts = ["PUT YOUR TEXT HERE",]
 
-wavs = chat.infer(texts, use_decoder=True)
-Audio(wavs[0], rate=24_000, autoplay=True)
+wavs = chat.infer(texts, )
+
+torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
 ```
 
-<h4>advanced usage</h4>
+<h4>Advanced usage</h4>
 
 ```python
 ###################################
 # Sample a speaker from Gaussian.
-import torch
-std, mean = torch.load('ChatTTS/asset/spk_stat.pt').chunk(2)
-rand_spk = torch.randn(768) * std + mean
+
+rand_spk = chat.sample_random_speaker()
 
 params_infer_code = {
   'spk_emb': rand_spk, # add sampled speaker 
@@ -68,13 +74,13 @@ params_refine_text = {
   'prompt': '[oral_2][laugh_0][break_6]'
 } 
 
-wav = chat.infer("<PUT YOUR TEXT HERE>", params_refine_text=params_refine_text, params_infer_code=params_infer_code)
+wavs = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
 
 ###################################
 # For word level manual control.
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
-wav = chat.infer(text, skip_refine_text=True, params_infer_code=params_infer_code)
-
+wavs = chat.infer(text, skip_refine_text=True, params_refine_text=params_refine_text,  params_infer_code=params_infer_code)
+torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)
 ```
 
 <details open>
@@ -93,8 +99,9 @@ capabilities with precise control over prosodic elements [laugh]like like
 params_refine_text = {
   'prompt': '[oral_2][laugh_0][break_4]'
 } 
-audio_array_cn = chat.infer(inputs_cn, params_refine_text=params_refine_text)
+# audio_array_cn = chat.infer(inputs_cn, params_refine_text=params_refine_text)
 audio_array_en = chat.infer(inputs_en, params_refine_text=params_refine_text)
+torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 ```
 [male speaker](https://github.com/2noise/ChatTTS/assets/130631963/e0f51251-db7f-4d39-a0e9-3e095bb65de1)
 
@@ -113,19 +120,26 @@ audio_array_en = chat.infer(inputs_en, params_refine_text=params_refine_text)
 ## FAQ
 
 ##### How much VRAM do I need? How about infer speed?
-For a 30-second audio clip, at least 4GB of GPU memory is required. For the 4090D GPU, it can generate audio corresponding to approximately 7 semantic tokens per second. The Real-Time Factor (RTF) is around 0.65.
+For a 30-second audio clip, at least 4GB of GPU memory is required. For the 4090 GPU, it can generate audio corresponding to approximately 7 semantic tokens per second. The Real-Time Factor (RTF) is around 0.3.
 
 ##### model stability is not good enough, with issues such as multi speakers or poor audio quality.
 
-This is a problem that typically occurs with autoregressive models(for bark and valle). It's generally difficult to avoid. One can try multiple samples to find a suitable result.
+This is a problem that typically occurs with autoregressive models (for bark and valle). It's generally difficult to avoid. One can try multiple samples to find a suitable result.
 
 ##### Besides laughter, can we control anything else? Can we control other emotions?
 
 In the current released model, the only token-level control units are [laugh], [uv_break], and [lbreak]. In future versions, we may open-source models with additional emotional control capabilities.
 
+## Starchart
+
+[![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
+
 ---
 ## Acknowledgements
-- [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by a autoregressive-style system.
+- [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by an autoregressive-style system.
 - [fish-speech](https://github.com/fishaudio/fish-speech) reveals capability of GVQ as audio tokenizer for LLM modeling.
 - [vocos](https://github.com/gemelo-ai/vocos) which is used as a pretrained vocoder.
 
+---
+## Special Appreciation
+- [wlu-audio lab](https://audio.westlake.edu.cn/) for early algorithm experiments.
