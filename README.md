@@ -66,12 +66,6 @@ pip install git+https://github.com/2noise/ChatTTS
 
 ### Basic
 
-## Quick Start
-```
-pip install --upgrade -r requirements.txt 
-python3 app.py "your text"
-```
-
 ```python
 import ChatTTS
 from IPython.display import Audio
@@ -144,6 +138,13 @@ torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 
 [female speaker](https://github.com/2noise/ChatTTS/assets/130631963/f5dcdd01-1091-47c5-8241-c4f6aaaa8bbd)
 </details>
+
+### Quick Start with command line 
+```
+pip install --upgrade -r requirements.txt 
+python3 cmd.py "your text"
+```
+It will save the audio to local output_audio.wav
 
 ## FAQ
 
