@@ -1,5 +1,5 @@
 # ChatTTS
-> [!注意]
+> [!NOTE]
 > 以下内容可能不是最新，一切请以英文版为准。
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models%20Repo-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
