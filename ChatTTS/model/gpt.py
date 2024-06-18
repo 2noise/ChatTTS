@@ -184,11 +184,17 @@ class GPT_warpper(nn.Module):
             if attention_mask is not None:
                 attention_mask_cache[:, :attention_mask.shape[1]] = attention_mask
             
+            past_key_values = None
+
             for i in tqdm(range(max_new_token)):
         
-                model_input = self.prepare_inputs_for_generation(inputs_ids, 
-                    outputs.past_key_values if i!=0 else None, 
-                    attention_mask_cache[:, :inputs_ids.shape[1]], use_cache=True)
+                model_input = self.prepare_inputs_for_generation(
+                    inputs_ids, 
+                    past_key_values, 
+                    attention_mask_cache[:, :inputs_ids.shape[1]],
+                    use_cache=True,
+                )
+
             
                 if i == 0:
                     model_input['inputs_embeds'] = emb
@@ -201,8 +207,11 @@ class GPT_warpper(nn.Module):
                 
                 model_input['input_ids'] = None
                 outputs = self.gpt.forward(**model_input, output_attentions=return_attn)
+                del model_input
                 attentions.append(outputs.attentions)
                 hidden_states = outputs[0] # 🐻
+                past_key_values = outputs.past_key_values
+                del outputs
                 if return_hidden:
                     hiddens.append(hidden_states[:, -1])
 
@@ -227,23 +236,31 @@ class GPT_warpper(nn.Module):
                     
                 for logitsWarpers in LogitsWarpers:
                     logits = logitsWarpers(logits_token, logits)
+                del logits_token
                     
                 if i < min_new_token:
                     logits[:, eos_token] = -torch.inf
                 
                 scores = F.softmax(logits, dim=-1)
-            
+                del logits
+
                 idx_next = torch.multinomial(scores, num_samples=1)
                 
                 if not infer_text:
                     idx_next = rearrange(idx_next, "(b n) 1 -> b n", n=self.num_vq)
-                    finish = finish | (idx_next == eos_token).any(1)
+                    finish_or = (idx_next == eos_token).any(1)
+                    finish |= finish_or
+                    del finish_or
                     inputs_ids = torch.cat([inputs_ids, idx_next.unsqueeze(1)], 1)
                 else:
-                    finish = finish | (idx_next == eos_token).any(1)
+                    finish_or = (idx_next == eos_token).any(1)
+                    finish |= finish_or
+                    del finish_or
                     inputs_ids = torch.cat([inputs_ids, idx_next.unsqueeze(-1).expand(-1, -1, self.num_vq)], 1)
 
-                end_idx = end_idx + (~finish).int()
+                del idx_next
+
+                end_idx += (~finish).int().to(end_idx.device)
             
                 if finish.all():
                     break
@@ -256,7 +273,9 @@ class GPT_warpper(nn.Module):
                 hiddens = [hiddens[idx, :i] for idx, i in enumerate(end_idx.int())]
                     
             if not finish.all():
-                self.logger.warn(f'Incomplete result. hit max_new_token: {max_new_token}')    
+                self.logger.warn(f'Incomplete result. hit max_new_token: {max_new_token}')   
+
+            del finish 
                    
             return {
                 'ids': inputs_ids, 
