@@ -121,6 +121,10 @@ This is a problem that typically occurs with autoregressive models(for bark and 
 
 In the current released model, the only token-level control units are [laugh], [uv_break], and [lbreak]. In future versions, we may open-source models with additional emotional control capabilities.
 
+## Starchart
+
+[![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
+
 ---
 ## Acknowledgements
 - [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by a autoregressive-style system.
