@@ -2,7 +2,7 @@
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models%20Repo-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 
-[**English**](./README.md) | [**中文简体**](./README_CN.md) | [**日本語**](./README_JP.md)
+[**English**](README.md) | [**简体中文**](docs/cn/README.md) | [**日本語**](docs/jp/README.md) | [**Русский**](docs/ru/README.md)
 
 ChatTTS is a text-to-speech model designed specifically for dialogue scenarios such as LLM assistant. It supports both English and Chinese languages. Our model is trained with 100,000+ hours composed of Chinese and English. The open-source version on **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** is a 40,000 hours pre-trained model without SFT.
 
