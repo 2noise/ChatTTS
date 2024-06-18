@@ -3,8 +3,6 @@
 # ChatTTS
 A generative speech model for daily dialogue.
 
-![counter](https://counter.seku.su/cmoe?name=chattts&theme=r34)
-
 [![Licence](https://img.shields.io/badge/LICENSE-CC%20BY--NC%204.0-green.svg?style=for-the-badge)](https://github.com/2noise/ChatTTS/blob/main/LICENSE)
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 
@@ -168,3 +166,11 @@ In the current released model, the only token-level control units are `[laugh]`,
 ## Starchart
 
 [![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
+
+## Visit Count
+
+<div align="center">
+
+![counter](https://counter.seku.su/cmoe?name=chattts&theme=r34)
+
+</div>
