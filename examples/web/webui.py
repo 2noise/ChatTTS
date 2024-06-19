@@ -1,4 +1,11 @@
-import os
+import os, sys
+
+if sys.platform == "darwin":
+    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+
+now_dir = os.getcwd()
+sys.path.append(now_dir)
+
 import random
 import argparse
 
