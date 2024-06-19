@@ -59,8 +59,18 @@ For formal inquiries about the model and roadmap, please contact us at **open-so
 
 ## Installation (WIP)
 > Will be uploaded to pypi soon according to https://github.com/2noise/ChatTTS/issues/269
+#### 1. Install Directly
 ```bash
 pip install git+https://github.com/2noise/ChatTTS
+```
+
+#### 2. Install from conda
+```bash
+git clone https://github.com/2noise/ChatTTS
+cd ChatTTS
+conda create -n chattts
+conda activate chattts
+pip install -r requirements.txt
 ```
 
 ## Get Started
