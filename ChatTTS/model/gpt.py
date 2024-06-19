@@ -36,8 +36,7 @@ class GPT_warpper(nn.Module):
         num_audio_tokens,
         num_text_tokens,
         num_vq=4,
-        **kwargs,
-        ):
+    ):
         super().__init__()
 
         self.logger = logging.getLogger(__name__)
@@ -291,7 +290,7 @@ class GPT_warpper(nn.Module):
                 hiddens = [hiddens[idx, :i] for idx, i in enumerate(end_idx.int())]
                     
             if not finish.all():
-                self.logger.warn(f'Incomplete result. hit max_new_token: {max_new_token}')    
+                self.logger.warn(f'Incomplete result. hit max_new_token: {max_new_token}')
 
             del finish
 
