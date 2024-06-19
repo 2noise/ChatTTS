@@ -1,3 +1,4 @@
+numpy<2.0.0
 omegaconf~=2.3.0
 torch~=2.1.0
 tqdm
@@ -5,3 +6,8 @@ einops
 vector_quantize_pytorch
 transformers~=4.41.1
 vocos
+IPython
+gradio
+pynini==2.1.5
+WeTextProcessing
+nemo_text_processing

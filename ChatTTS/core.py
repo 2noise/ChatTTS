@@ -1,6 +1,7 @@
 
 import os
 import logging
+from functools import partial
 from omegaconf import OmegaConf
 
 import torch
@@ -8,7 +9,7 @@ from vocos import Vocos
 from .model.dvae import DVAE
 from .model.gpt import GPT_warpper
 from .utils.gpu_utils import select_device
-from .utils.infer_utils import count_invalid_characters, detect_language
+from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map
 from .utils.io_utils import get_latest_modified_file
 from .infer.api import refine_text, infer_code
 
@@ -79,7 +80,10 @@ class Chat:
             self.logger.log(logging.INFO, f'use {device}')
             
         if vocos_config_path:
-            vocos = Vocos.from_hparams(vocos_config_path).to(device).eval()
+            vocos = Vocos.from_hparams(vocos_config_path).to(
+                # vocos on mps will crash, use cpu fallback
+                "cpu" if torch.backends.mps.is_available() else device
+            ).eval()
             assert vocos_ckpt_path, 'vocos_ckpt_path should not be None'
             vocos.load_state_dict(torch.load(vocos_ckpt_path))
             self.pretrain_models['vocos'] = vocos
@@ -89,7 +93,7 @@ class Chat:
             cfg = OmegaConf.load(dvae_config_path)
             dvae = DVAE(**cfg).to(device).eval()
             assert dvae_ckpt_path, 'dvae_ckpt_path should not be None'
-            dvae.load_state_dict(torch.load(dvae_ckpt_path, map_location='cpu'))
+            dvae.load_state_dict(torch.load(dvae_ckpt_path))
             self.pretrain_models['dvae'] = dvae
             self.logger.log(logging.INFO, 'dvae loaded.')
             
@@ -97,8 +101,8 @@ class Chat:
             cfg = OmegaConf.load(gpt_config_path)
             gpt = GPT_warpper(**cfg).to(device).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
-            gpt.load_state_dict(torch.load(gpt_ckpt_path, map_location='cpu'))
-            if compile:
+            gpt.load_state_dict(torch.load(gpt_ckpt_path))
+            if compile and 'cuda' in str(device):
                 gpt.gpt.forward = torch.compile(gpt.gpt.forward,  backend='inductor', dynamic=True)
             self.pretrain_models['gpt'] = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), 'spk_stat.pt')
@@ -130,7 +134,7 @@ class Chat:
         params_refine_text={}, 
         params_infer_code={'prompt':'[speed_5]'}, 
         use_decoder=True,
-        do_text_normalization=False,
+        do_text_normalization=True,
         lang=None,
     ):
         
@@ -138,18 +142,21 @@ class Chat:
         
         if not isinstance(text, list): 
             text = [text]
-        
+
         if do_text_normalization:
             for i, t in enumerate(text):
                 _lang = detect_language(t) if lang is None else lang
-                self.init_normalizer(_lang)
-                text[i] = self.normalizer[_lang].normalize(t, verbose=False, punct_post_process=True)
-            
-        for i in text:
-            invalid_characters = count_invalid_characters(i)
+                if self.init_normalizer(_lang):
+                    text[i] = self.normalizer[_lang](t)
+                    if _lang == 'zh':
+                        text[i] = apply_half2full_map(text[i])
+
+        for i, t in enumerate(text):
+            invalid_characters = count_invalid_characters(t)
             if len(invalid_characters):
                 self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
-                
+                text[i] = apply_character_map(t)
+
         if not skip_refine_text:
             text_tokens = refine_text(self.pretrain_models, text, **params_refine_text)['ids']
             text_tokens = [i[i < self.pretrain_models['tokenizer'].convert_tokens_to_ids('[break_0]')] for i in text_tokens]
@@ -166,7 +173,9 @@ class Chat:
         else:
             mel_spec = [self.pretrain_models['dvae'](i[None].permute(0,2,1)) for i in result['ids']]
             
-        wav = [self.pretrain_models['vocos'].decode(i).cpu().numpy() for i in mel_spec]
+        wav = [self.pretrain_models['vocos'].decode(
+            i.cpu() if torch.backends.mps.is_available() else i
+        ).cpu().numpy() for i in mel_spec]
         
         return wav
     
@@ -176,9 +185,37 @@ class Chat:
         std, mean = self.pretrain_models['spk_stat'].chunk(2)
         return torch.randn(dim, device=std.device) * std + mean
     
-    def init_normalizer(self, lang):
-        
-        if lang not in self.normalizer:
-            from nemo_text_processing.text_normalization.normalize import Normalizer
-            self.normalizer[lang] = Normalizer(input_case='cased', lang=lang)
+    def init_normalizer(self, lang) -> bool:
 
+        if lang in self.normalizer:
+            return True
+
+        if lang == 'zh':
+            try:
+                from tn.chinese.normalizer import Normalizer
+                self.normalizer[lang] = Normalizer().normalize
+                return True
+            except:
+                self.logger.log(
+                    logging.WARNING,
+                    'Package WeTextProcessing not found!',
+                )
+                self.logger.log(
+                    logging.WARNING,
+                    'Run: conda install -c conda-forge pynini=2.1.5 && pip install WeTextProcessing',
+                )   
+        else:
+            try:
+                from nemo_text_processing.text_normalization.normalize import Normalizer
+                self.normalizer[lang] = partial(Normalizer(input_case='cased', lang=lang).normalize, verbose=False, punct_post_process=True)
+                return True
+            except:
+                self.logger.log(
+                    logging.WARNING,
+                    'Package nemo_text_processing not found!',
+                )
+                self.logger.log(
+                    logging.WARNING,
+                    'Run: conda install -c conda-forge pynini=2.1.5 && pip install nemo_text_processing',
+                )
+        return False

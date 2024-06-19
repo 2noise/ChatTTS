@@ -1,9 +1,14 @@
 # ChatTTS
-[**English**](./README.md) | [**中文简体**](./README_CN.md)
+> [!NOTE]
+> 以下内容可能不是最新，一切请以英文版为准。
+
+[![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
+
+[**English**](../../README.md) | **简体中文** | [**日本語**](../jp/README.md) | [**Русский**](../ru/README.md)
 
 ChatTTS是专门为对话场景设计的文本转语音模型，例如LLM助手对话任务。它支持英文和中文两种语言。最大的模型使用了10万小时以上的中英文数据进行训练。在HuggingFace中开源的版本为4万小时训练且未SFT的版本.
 
-如需就模型进行正式商业咨询，请发送邮件至 **open-source@2noise.com**。对于中文用户，您可以加入我们的QQ群：808364215 进行讨论。同时欢迎在GitHub上提出问题。如果遇到无法使用 **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** 的情况,可以在 [modelscope](https://www.modelscope.cn/models/pzc163/chatTTS) 上进行下载. 
+如需就模型进行正式商业咨询，请发送邮件至 **open-source@2noise.com**。对于中文用户，您可以加入我们的QQ群：~~808364215 (已满)~~ ~~230696694 (二群)~~ 933639842 (三群) 进行讨论。同时欢迎在GitHub上提出问题。如果遇到无法使用 **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** 的情况,可以在 [modelscope](https://www.modelscope.cn/models/pzc163/chatTTS) 上进行下载. 
 
 ---
 ## 亮点
@@ -21,6 +26,11 @@ ChatTTS是专门为对话场景设计的文本转语音模型，例如LLM助手�
 ChatTTS是一个强大的文本转语音系统。然而，负责任地和符合伦理地利用这项技术是非常重要的。为了限制ChatTTS的使用，我们在4w小时模型的训练过程中添加了少量额外的高频噪音，并用mp3格式尽可能压低了音质，以防不法分子用于潜在的犯罪可能。同时我们在内部训练了检测模型，并计划在未来开放。
 
 ---
+## 安装
+
+```
+pip install git+https://github.com/2noise/ChatTTS
+```
 ## 用法
 
 <h4>基本用法</h4>
@@ -28,6 +38,7 @@ ChatTTS是一个强大的文本转语音系统。然而，负责任地和符合�
 ```python
 import ChatTTS
 from IPython.display import Audio
+import torchaudio
 
 chat = ChatTTS.Chat()
 chat.load_models(compile=False) # 设置为True以获得更快速度
@@ -63,13 +74,13 @@ params_refine_text = {
   'prompt': '[oral_2][laugh_0][break_6]'
 } 
 
-wav = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
+wavs = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
 
 ###################################
 # For word level manual control.
 # use_decoder=False to infer faster with a bit worse quality
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
-wav = chat.infer(text, skip_refine_text=True, params_infer_code=params_infer_code, use_decoder=False)
+wavs = chat.infer(text, skip_refine_text=True, params_infer_code=params_infer_code, use_decoder=False)
 
 torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)
 ```
@@ -124,6 +135,10 @@ chat.load_models(source='local', local_path='你的下载位置')
 
 ##### 除了笑声还能控制什么吗? 还能控制其他情感吗?
 在现在放出的模型版本中, 只有[laugh]和[uv_break], [lbreak]作为字级别的控制单元. 在未来的版本中我们可能会开源其他情感控制的版本.
+
+## Starchart
+
+[![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
 
 ---
 ## 致谢
