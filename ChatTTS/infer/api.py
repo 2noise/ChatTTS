@@ -13,6 +13,7 @@ def infer_code(
     temperature = 0.3, 
     repetition_penalty = 1.05,
     max_new_token = 2048,
+    stream=False,
     **kwargs
 ):
     
@@ -66,6 +67,7 @@ def infer_code(
         eos_token = num_code, 
         max_new_token = max_new_token, 
         infer_text = False,
+        stream = stream,
         **kwargs
     )
     
