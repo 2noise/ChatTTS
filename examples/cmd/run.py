@@ -6,6 +6,9 @@ if sys.platform == "darwin":
 now_dir = os.getcwd()
 sys.path.append(now_dir)
 
+from dotenv import load_dotenv
+load_dotenv("sha256.env")
+
 import wave
 import ChatTTS
 from IPython.display import Audio

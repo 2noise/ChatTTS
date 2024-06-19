@@ -3,18 +3,21 @@ import os
 import json
 import logging
 from functools import partial
-from omegaconf import OmegaConf
+from typing import Literal
+import tempfile
 
 import torch
+from omegaconf import OmegaConf
 from vocos import Vocos
+from huggingface_hub import snapshot_download
+
 from .model.dvae import DVAE
 from .model.gpt import GPT_warpper
 from .utils.gpu_utils import select_device
 from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
 from .utils.io_utils import get_latest_modified_file
 from .infer.api import refine_text, infer_code
-
-from huggingface_hub import snapshot_download
+from .utils.download import check_all_assets, download_all_assets
 
 logging.basicConfig(level = logging.INFO)
 
@@ -44,9 +47,23 @@ class Chat:
             self.logger.log(level, f'All initialized.')
             
         return not not_finish
-        
-    def load_models(self, source='huggingface', force_redownload=False, local_path='<LOCAL_PATH>', **kwargs):
-        if source == 'huggingface':
+
+    def load_models(
+        self,
+        source: Literal['huggingface', 'local', 'custom']='local',
+        force_redownload=False,
+        custom_path='<LOCAL_PATH>',
+        **kwargs,
+    ):
+        if source == 'local':
+            download_path = os.getcwd()
+            if not check_all_assets(update=True):
+                with tempfile.TemporaryDirectory() as tmp:
+                    download_all_assets(tmpdir=tmp)
+                if not check_all_assets(update=False):
+                    logging.error("counld not satisfy all assets needed.")
+                    exit(1)
+        elif source == 'huggingface':
             hf_home = os.getenv('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
             try:
                 download_path = get_latest_modified_file(os.path.join(hf_home, 'hub/models--2Noise--ChatTTS/snapshots'))
@@ -57,9 +74,9 @@ class Chat:
                 download_path = snapshot_download(repo_id="2Noise/ChatTTS", allow_patterns=["*.pt", "*.yaml"])
             else:
                 self.logger.log(logging.INFO, f'Load from cache: {download_path}')
-        elif source == 'local':
-            self.logger.log(logging.INFO, f'Load from local: {local_path}')
-            download_path = local_path
+        elif source == 'custom':
+            self.logger.log(logging.INFO, f'Load from local: {custom_path}')
+            download_path = custom_path
 
         self._load(**{k: os.path.join(download_path, v) for k, v in OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()}, **kwargs)
         

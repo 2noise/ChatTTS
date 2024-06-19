@@ -1,0 +1,45 @@
+name: Calculate and Sync SHA256
+on:
+  push:
+    branches:
+      - main
+      - dev
+jobs:
+  checksum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Setup Go Environment
+        uses: actions/setup-go@master
+
+      - name: Run RVC-Models-Downloader
+        run: |
+          wget https://github.com/fumiama/RVC-Models-Downloader/releases/download/v0.2.5/rvcmd_linux_amd64.deb
+          sudo apt -y install ./rvcmd_linux_amd64.deb
+          rm -f ./rvcmd_linux_amd64.deb
+          rvcmd -notrs -w 1 -notui assets/chtts
+
+      - name: Calculate all Checksums
+        run: go run tools/checksum/*.go
+
+      - name: Commit back
+        if: ${{ !github.head_ref }}
+        id: commitback
+        continue-on-error: true
+        run: |
+          git config --local user.name 'github-actions[bot]'
+          git config --local user.email 'github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m "chore(env): sync checksum on ${{github.ref_name}}"
+
+      - name: Create Pull Request
+        if: steps.commitback.outcome == 'success'
+        continue-on-error: true
+        uses: peter-evans/create-pull-request@v5
+        with:
+          delete-branch: true
+          body: "Automatically sync checksum in .env"
+          title: "chore(env): sync checksum on ${{github.ref_name}}"
+          commit-message: "chore(env): sync checksum on ${{github.ref_name}}"
+          branch: checksum-${{github.ref_name}}
