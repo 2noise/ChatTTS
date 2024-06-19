@@ -1,5 +1,6 @@
 
 import os
+import json
 import logging
 from functools import partial
 from omegaconf import OmegaConf
@@ -9,7 +10,7 @@ from vocos import Vocos
 from .model.dvae import DVAE
 from .model.gpt import GPT_warpper
 from .utils.gpu_utils import select_device
-from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, apply_homophones_map
+from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
 from .utils.io_utils import get_latest_modified_file
 from .infer.api import refine_text, infer_code
 
@@ -22,6 +23,7 @@ class Chat:
     def __init__(self, ):
         self.pretrain_models = {}
         self.normalizer = {}
+        self.homophones_replacer = None
         self.logger = logging.getLogger(__name__)
         
     def check_model(self, level = logging.INFO, use_decoder = False):
@@ -157,8 +159,8 @@ class Chat:
             if len(invalid_characters):
                 self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
                 text[i] = apply_character_map(t)
-            if do_homophone_replacement:
-                text[i] = apply_homophones_map(t)
+            if do_homophone_replacement and self.init_homophones_replacer():
+                text[i] = self.homophones_replacer.replace(t)
                 if t != text[i]:
                     self.logger.log(logging.INFO, f'Homophones replace: {t} -> {text[i]}')
 
@@ -223,4 +225,18 @@ class Chat:
                     logging.WARNING,
                     'Run: conda install -c conda-forge pynini=2.1.5 && pip install nemo_text_processing',
                 )
+        return False
+
+    def init_homophones_replacer(self):
+        if self.homophones_replacer:
+            return True
+        else:
+            try:
+                self.homophones_replacer = HomophonesReplacer(os.path.join(os.path.dirname(__file__), 'res', 'homophones_map.json'))
+                self.logger.log(logging.INFO, 'homophones_replacer loaded.')
+                return True
+            except (IOError, json.JSONDecodeError) as e:
+                self.logger.log(logging.WARNING, f'Error loading homophones map: {e}')
+            except Exception as e:
+                self.logger.log(logging.WARNING, f'Error loading homophones_replacer: {e}')
         return False
