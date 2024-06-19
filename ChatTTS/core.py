@@ -1,19 +1,23 @@
 
 import os
+import json
 import logging
 from functools import partial
-from omegaconf import OmegaConf
+from typing import Literal
+import tempfile
 
 import torch
+from omegaconf import OmegaConf
 from vocos import Vocos
+from huggingface_hub import snapshot_download
+
 from .model.dvae import DVAE
 from .model.gpt import GPT_warpper
 from .utils.gpu_utils import select_device
-from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map
+from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
 from .utils.io_utils import get_latest_modified_file
 from .infer.api import refine_text, infer_code
-
-from huggingface_hub import snapshot_download
+from .utils.download import check_all_assets, download_all_assets
 
 logging.basicConfig(level = logging.INFO)
 
@@ -22,6 +26,7 @@ class Chat:
     def __init__(self, ):
         self.pretrain_models = {}
         self.normalizer = {}
+        self.homophones_replacer = None
         self.logger = logging.getLogger(__name__)
         
     def check_model(self, level = logging.INFO, use_decoder = False):
@@ -42,9 +47,23 @@ class Chat:
             self.logger.log(level, f'All initialized.')
             
         return not not_finish
-        
-    def load_models(self, source='huggingface', force_redownload=False, local_path='<LOCAL_PATH>', **kwargs):
-        if source == 'huggingface':
+
+    def load_models(
+        self,
+        source: Literal['huggingface', 'local', 'custom']='local',
+        force_redownload=False,
+        custom_path='<LOCAL_PATH>',
+        **kwargs,
+    ):
+        if source == 'local':
+            download_path = os.getcwd()
+            if not check_all_assets(update=True):
+                with tempfile.TemporaryDirectory() as tmp:
+                    download_all_assets(tmpdir=tmp)
+                if not check_all_assets(update=False):
+                    logging.error("counld not satisfy all assets needed.")
+                    exit(1)
+        elif source == 'huggingface':
             hf_home = os.getenv('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
             try:
                 download_path = get_latest_modified_file(os.path.join(hf_home, 'hub/models--2Noise--ChatTTS/snapshots'))
@@ -55,9 +74,9 @@ class Chat:
                 download_path = snapshot_download(repo_id="2Noise/ChatTTS", allow_patterns=["*.pt", "*.yaml"])
             else:
                 self.logger.log(logging.INFO, f'Load from cache: {download_path}')
-        elif source == 'local':
-            self.logger.log(logging.INFO, f'Load from local: {local_path}')
-            download_path = local_path
+        elif source == 'custom':
+            self.logger.log(logging.INFO, f'Load from local: {custom_path}')
+            download_path = custom_path
 
         self._load(**{k: os.path.join(download_path, v) for k, v in OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()}, **kwargs)
         
@@ -137,6 +156,7 @@ class Chat:
         do_text_normalization=True,
         lang=None,
         stream=False,
+        do_homophone_replacement=True
     ):
         
         assert self.check_model(use_decoder=use_decoder)
@@ -155,7 +175,11 @@ class Chat:
             if len(invalid_characters):
                 self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
                 text[i] = apply_character_map(t)
-                
+            if do_homophone_replacement and self.init_homophones_replacer():
+                text[i] = self.homophones_replacer.replace(t)
+                if t != text[i]:
+                    self.logger.log(logging.INFO, f'Homophones replace: {t} -> {text[i]}')
+
         if not skip_refine_text:
             text_tokens = refine_text(self.pretrain_models, text, **params_refine_text)['ids']
             text_tokens = [i[i < self.pretrain_models['tokenizer'].convert_tokens_to_ids('[break_0]')] for i in text_tokens]
@@ -243,4 +267,18 @@ class Chat:
                     logging.WARNING,
                     'Run: conda install -c conda-forge pynini=2.1.5 && pip install nemo_text_processing',
                 )
+        return False
+
+    def init_homophones_replacer(self):
+        if self.homophones_replacer:
+            return True
+        else:
+            try:
+                self.homophones_replacer = HomophonesReplacer(os.path.join(os.path.dirname(__file__), 'res', 'homophones_map.json'))
+                self.logger.log(logging.INFO, 'homophones_replacer loaded.')
+                return True
+            except (IOError, json.JSONDecodeError) as e:
+                self.logger.log(logging.WARNING, f'Error loading homophones map: {e}')
+            except Exception as e:
+                self.logger.log(logging.WARNING, f'Error loading homophones_replacer: {e}')
         return False

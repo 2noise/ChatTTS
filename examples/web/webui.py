@@ -13,6 +13,9 @@ import torch
 import gradio as gr
 import numpy as np
 
+from dotenv import load_dotenv
+load_dotenv("sha256.env")
+
 import ChatTTS
 
 # 音色选项：用于预置合适的音色
@@ -132,18 +135,18 @@ def main():
     parser.add_argument('--server_name', type=str, default='0.0.0.0', help='Server name')
     parser.add_argument('--server_port', type=int, default=8080, help='Server port')
     parser.add_argument('--root_path', type=str, default=None, help='Root Path')
-    parser.add_argument('--local_path', type=str, default=None, help='the local_path if need')
+    parser.add_argument('--custom_path', type=str, default=None, help='the custom model path')
     args = parser.parse_args()
 
     print("loading ChatTTS model...")
     global chat
     chat = ChatTTS.Chat()
 
-    if args.local_path == None:
+    if args.custom_path == None:
         chat.load_models()
     else:
-        print('local model path:', args.local_path)
-        chat.load_models('local', local_path=args.local_path)
+        print('local model path:', args.custom_path)
+        chat.load_models('custom', custom_path=args.custom_path)
 
     demo.launch(server_name=args.server_name, server_port=args.server_port, root_path=args.root_path, inbrowser=True)
 
