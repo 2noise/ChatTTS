@@ -144,7 +144,7 @@ def apply_character_map(text):
 
 def load_homophones_map():
     package_dir = os.path.dirname(__file__)
-    mapping_path = os.path.join(package_dir, '..', 'homophones_map.json')
+    mapping_path = os.path.join(package_dir, '..', 'res', 'homophones_map.json')
     with open(mapping_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
