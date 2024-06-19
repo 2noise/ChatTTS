@@ -12,6 +12,7 @@ load_dotenv("sha256.env")
 import wave
 import ChatTTS
 from IPython.display import Audio
+import numpy as np
 
 def save_wav_file(wav, index):
     wav_filename = f"output_audio_{index}.wav"
@@ -26,20 +27,37 @@ def save_wav_file(wav, index):
 
 def main():
     # Retrieve text from command line argument
+    try:
+        sys.argv.remove('--stream')
+        stream = True
+    except:
+        stream = False
     text_input = sys.argv[1] if len(sys.argv) > 1 else "<YOUR TEXT HERE>"
     print("Received text input:", text_input)
 
     chat = ChatTTS.Chat()
     print("Initializing ChatTTS...")
+    # if using macbook(M1), I suggest you set `device='cpu', compile=False`
     chat.load_models()
     print("Models loaded successfully.")
 
     texts = [text_input]
     print("Text prepared for inference:", texts)
 
-    wavs = chat.infer(texts, use_decoder=True)
+    wavs_gen = chat.infer(texts, use_decoder=True, stream=stream)
     print("Inference completed. Audio generation successful.")
     # Save each generated wav file to a local file
+
+    if stream:
+        print('generate with stream mode ..')
+        wavs = [np.array([[]])]
+        for gen in wavs_gen:
+            print('got new chunk', gen)
+            wavs[0] = np.hstack([wavs[0], np.array(gen[0])])
+    else:
+        print('generate without stream mode ..')
+        wavs = wavs_gen
+
     for index, wav in enumerate(wavs):
         save_wav_file(wav, index)
 
