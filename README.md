@@ -167,6 +167,17 @@ In the current released model, the only token-level control units are `[laugh]`,
 ## Special Appreciation
 - [wlu-audio lab](https://audio.westlake.edu.cn/) for early algorithm experiments.
 
+## Related Resources
+- [ChatTTS-ui](https://github.com/jianchang512/ChatTTS-ui)
+- [ChatTTS-API](https://github.com/CyberWon/ChatTTS-API)
+- [ChatTTS-api-ui-docker](https://github.com/Jackiexiao/ChatTTS-api-ui-docker)
+- [ChatTTS-manager](https://github.com/MaterialShadow/ChatTTS-manager)
+- [ChatTTS_colab](https://github.com/6drf21e/ChatTTS_colab)
+- [ComfyUI-ChatTTS](https://github.com/AIFSH/ComfyUI-ChatTTS)
+- [ChatTTS-OpenVoice](https://github.com/HKoon/ChatTTS-OpenVoice)
+- [ChatTTS_Speaker](https://github.com/6drf21e/ChatTTS_Speaker)
+- [ChatTTS-Forge](https://github.com/lenML/ChatTTS-Forge)
+
 ## Thanks to all contributors for their efforts
 [![contributors](https://contrib.rocks/image?repo=2noise/ChatTTS)](https://github.com/2noise/ChatTTS/graphs/contributors)
 
