@@ -56,10 +56,19 @@ For formal inquiries about the model and roadmap, please contact us at **open-so
 - **Group 2**, 230696694 (Full)
 - **Group 3**, 933639842
 
-## Installation
+## Requirements and Installation
 > Will be uploaded to pypi soon according to https://github.com/2noise/ChatTTS/issues/269
 ```
 pip install git+https://github.com/2noise/ChatTTS
+```
+
+> Or install required packages
+```
+git clone https://github.com/2noise/ChatTTS
+cd ChatTTS
+conda create -n chattts
+conda activate chattts
+pip install -r requirements.txt
 ```
 
 ## Get Started
