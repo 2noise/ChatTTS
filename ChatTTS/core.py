@@ -181,12 +181,17 @@ class Chat:
                     self.logger.log(logging.INFO, f'Homophones replace: {t} -> {text[i]}')
 
         if not skip_refine_text:
-            text_tokens = refine_text(self.pretrain_models, text, **params_refine_text)['ids']
+            text_tokens = refine_text(
+                self.pretrain_models,
+                text,
+                **params_refine_text,
+            )['ids']
             text_tokens = [i[i < self.pretrain_models['tokenizer'].convert_tokens_to_ids('[break_0]')] for i in text_tokens]
             text = self.pretrain_models['tokenizer'].batch_decode(text_tokens)
             if refine_text_only:
-                return text
-            
+                yield text
+                return
+
         text = [params_infer_code.get('prompt', '') + i for i in text]
         params_infer_code.pop('prompt', '')
         result_gen = infer_code(self.pretrain_models, text, **params_infer_code, return_hidden=use_decoder, stream=stream)
@@ -220,9 +225,31 @@ class Chat:
         mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1)) for i in next(result_gen)[field]]
         yield vocos_decode(mel_spec)
 
-    def infer(self, *args, **kwargs):
-        stream = kwargs.setdefault('stream', False)
-        res_gen = self._infer(*args, **kwargs)
+    def infer(
+        self, 
+        text, 
+        skip_refine_text=False, 
+        refine_text_only=False, 
+        params_refine_text={}, 
+        params_infer_code={'prompt':'[speed_5]'}, 
+        use_decoder=True,
+        do_text_normalization=True,
+        lang=None,
+        stream=False,
+        do_homophone_replacement=True,
+    ):
+        res_gen = self._infer(
+            text,
+            skip_refine_text,
+            refine_text_only,
+            params_refine_text,
+            params_infer_code,
+            use_decoder,
+            do_text_normalization,
+            lang,
+            stream,
+            do_homophone_replacement,
+        )
         if stream:
             return res_gen
         else:
