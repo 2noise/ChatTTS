@@ -143,9 +143,9 @@ class DVAE(nn.Module):
         else:
             vq_feats = inp.detach().clone()
             
-        temp = torch.chunk(vq_feats, 2, dim=1) # flatten trick :)
-        temp = torch.stack(temp, -1)
-        vq_feats = temp.reshape(*temp.shape[:2], -1)
+        vq_feats = vq_feats.view(
+            (vq_feats.size(0), 2, vq_feats.size(1)//2, vq_feats.size(2)),
+        ).permute(0, 2, 3, 1).flatten(2)
 
         vq_feats = vq_feats.transpose(1, 2)
         dec_out = self.decoder(input=vq_feats)

@@ -1,10 +1,14 @@
 <div align="center">
 
+<a href="https://trendshift.io/repositories/10489" target="_blank"><img src="https://trendshift.io/api/badge/repositories/10489" alt="2noise%2FChatTTS | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+
 # ChatTTS
 A generative speech model for daily dialogue.
 
 [![Licence](https://img.shields.io/badge/LICENSE-CC%20BY--NC%204.0-green.svg?style=for-the-badge)](https://github.com/2noise/ChatTTS/blob/main/LICENSE)
+
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
+[![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
 
 **English** | [**简体中文**](docs/cn/README.md) | [**日本語**](docs/jp/README.md) | [**Русский**](docs/ru/README.md)
 
@@ -56,13 +60,40 @@ For formal inquiries about the model and roadmap, please contact us at **open-so
 - **Group 2**, 230696694 (Full)
 - **Group 3**, 933639842
 
-## Installation
+## Installation (WIP)
 > Will be uploaded to pypi soon according to https://github.com/2noise/ChatTTS/issues/269
-```
+#### 1. Install Directly
+```bash
 pip install git+https://github.com/2noise/ChatTTS
 ```
 
+#### 2. Install from conda
+```bash
+git clone https://github.com/2noise/ChatTTS
+cd ChatTTS
+conda create -n chattts
+conda activate chattts
+pip install -r requirements.txt
+```
+
 ## Get Started
+### Install requirements
+```bash
+pip install --upgrade -r requirements.txt
+```
+
+### Quick Start
+#### 1. Launch WebUI
+```bash
+python examples/web/webui.py
+```
+
+#### 2. Infer by Command Line
+> It will save audio to `./output_audio_xxx.wav`
+
+```bash
+python examples/cmd/run.py "Please input your text."
+```
 
 ### Basic
 
@@ -139,13 +170,6 @@ torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 [female speaker](https://github.com/2noise/ChatTTS/assets/130631963/f5dcdd01-1091-47c5-8241-c4f6aaaa8bbd)
 </details>
 
-### Quick Start with command line 
-```
-pip install --upgrade -r requirements.txt 
-python3 cmd.py "your text"
-```
-It will save the audio to local output_audio.wav
-
 ## FAQ
 
 #### 1. How much VRAM do I need? How about infer speed?
@@ -166,6 +190,9 @@ In the current released model, the only token-level control units are `[laugh]`,
 
 ## Special Appreciation
 - [wlu-audio lab](https://audio.westlake.edu.cn/) for early algorithm experiments.
+
+## Related Resources
+- [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS)
 
 ## Thanks to all contributors for their efforts
 [![contributors](https://contrib.rocks/image?repo=2noise/ChatTTS)](https://github.com/2noise/ChatTTS/graphs/contributors)
