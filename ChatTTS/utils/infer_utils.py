@@ -2,6 +2,8 @@
 import re
 import torch
 import torch.nn.functional as F
+import os
+import json
 
     
 class CustomRepetitionPenaltyLogitsProcessorRepeat():
@@ -138,4 +140,15 @@ def apply_half2full_map(text):
 
 def apply_character_map(text):
     translation_table = str.maketrans(character_map)
+    return text.translate(translation_table)
+
+def load_homophones_map():
+    package_dir = os.path.dirname(__file__)
+    mapping_path = os.path.join(package_dir, '..', 'homophones_map.json')
+    with open(mapping_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def apply_homophones_map(text):
+    homophones_map = load_homophones_map()
+    translation_table = str.maketrans(homophones_map)
     return text.translate(translation_table)
