@@ -22,6 +22,7 @@ class CustomRepetitionPenaltyLogitsProcessorRepeat():
         freq = F.one_hot(input_ids, scores.size(1)).sum(1)
         freq[self.max_input_ids:] = 0
         alpha = self.penalty**freq
+        scores = scores.contiguous()
         scores = torch.where(scores < 0, scores*alpha, scores/alpha)
 
         return scores
