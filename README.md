@@ -200,3 +200,9 @@ In the current released model, the only token-level control units are `[laugh]`,
 ## Starchart
 
 [![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
+
+<div align="center">
+
+![counter](https://counter.seku.su/cmoe?name=chattts&theme=nix)
+
+</div>
