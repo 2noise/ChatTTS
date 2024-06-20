@@ -13,12 +13,8 @@ import wave
 import ChatTTS
 from IPython.display import Audio
 import numpy as np
+import argparse
 
-try:
-    from fire import Fire
-except ImportError:
-    print('import fire failed, try `pip install fire` to install it.')
-    exit()
 
 def save_wav_file(wav, index):
     wav_filename = f"output_audio_{index}.wav"
@@ -32,17 +28,12 @@ def save_wav_file(wav, index):
     print(f"Audio saved to {wav_filename}")
 
 def main(text="<YOUR TEXT HERE>", stream=False):
-    """
-    usage:
-        python examples/cmd/run.py --stream --text=hello
-        python examples/cmd/run.py hello
-    """
     print(f"{stream=} Received text input: {text}")
 
     chat = ChatTTS.Chat()
     print("Initializing ChatTTS...")
     # if using macbook(M1), I suggest you set `device='cpu', compile=False`
-    chat.load_models(device='cpu', compile=False)
+    chat.load_models()
     print("Models loaded successfully.")
 
     texts = [text]
@@ -70,5 +61,10 @@ def main(text="<YOUR TEXT HERE>", stream=False):
 
 if __name__ == "__main__":
     print("Starting the TTS application...")
-    Fire(main)
+
+    parser = argparse.ArgumentParser(description='ChatTTS cmd demo', usage="--stream hello, my name is bob.")
+    parser.add_argument("--stream", action="store_true", default=False, help="Use stream infer")
+    parser.add_argument("text", help="Original text", default='YOUR TEXT HERE', nargs='*')
+    args = parser.parse_args()
+    main(text=' '.join(args.text), stream=args.stream)
     print("TTS application finished.")
