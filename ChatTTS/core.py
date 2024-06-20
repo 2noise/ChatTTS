@@ -145,7 +145,7 @@ class Chat:
             
         self.check_model()
     
-    def infer(
+    def _infer(
         self, 
         text, 
         skip_refine_text=False, 
@@ -155,6 +155,7 @@ class Chat:
         use_decoder=True,
         do_text_normalization=True,
         lang=None,
+        stream=False,
         do_homophone_replacement=True
     ):
         
@@ -162,7 +163,6 @@ class Chat:
         
         if not isinstance(text, list): 
             text = [text]
-
         if do_text_normalization:
             for i, t in enumerate(text):
                 _lang = detect_language(t) if lang is None else lang
@@ -170,7 +170,6 @@ class Chat:
                     text[i] = self.normalizer[_lang](t)
                     if _lang == 'zh':
                         text[i] = apply_half2full_map(text[i])
-
         for i, t in enumerate(text):
             invalid_characters = count_invalid_characters(t)
             if len(invalid_characters):
@@ -182,26 +181,79 @@ class Chat:
                     self.logger.log(logging.INFO, f'Homophones replace: {t} -> {text[i]}')
 
         if not skip_refine_text:
-            text_tokens = refine_text(self.pretrain_models, text, **params_refine_text)['ids']
+            text_tokens = refine_text(
+                self.pretrain_models,
+                text,
+                **params_refine_text,
+            )['ids']
             text_tokens = [i[i < self.pretrain_models['tokenizer'].convert_tokens_to_ids('[break_0]')] for i in text_tokens]
             text = self.pretrain_models['tokenizer'].batch_decode(text_tokens)
             if refine_text_only:
-                return text
-            
+                yield text
+                return
+
         text = [params_infer_code.get('prompt', '') + i for i in text]
         params_infer_code.pop('prompt', '')
-        result = infer_code(self.pretrain_models, text, **params_infer_code, return_hidden=use_decoder)
-        
+        result_gen = infer_code(self.pretrain_models, text, **params_infer_code, return_hidden=use_decoder, stream=stream)
         if use_decoder:
-            mel_spec = [self.pretrain_models['decoder'](i[None].permute(0,2,1)) for i in result['hiddens']]
+            field = 'hiddens'
+            docoder_name = 'decoder'
         else:
-            mel_spec = [self.pretrain_models['dvae'](i[None].permute(0,2,1)) for i in result['ids']]
-            
-        wav = [self.pretrain_models['vocos'].decode(
-            i.cpu() if torch.backends.mps.is_available() else i
-        ).cpu().numpy() for i in mel_spec]
-        
-        return wav
+            field = 'ids'
+            docoder_name = 'dvae'
+        vocos_decode = lambda spec: [self.pretrain_models['vocos'].decode(
+                    i.cpu() if torch.backends.mps.is_available() else i
+                ).cpu().numpy() for i in spec]
+        if stream:
+
+            length = 0
+            for result in result_gen:
+                chunk_data = result[field][0]
+                assert len(result[field]) == 1
+                start_seek = length
+                length = len(chunk_data)
+                self.logger.debug(f'{start_seek=} total len: {length}, new len: {length - start_seek = }')
+                chunk_data = chunk_data[start_seek:]
+                if not len(chunk_data):
+                    continue
+                self.logger.debug(f'new hidden {len(chunk_data)=}')
+                mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1)) for i in [chunk_data]]
+                wav = vocos_decode(mel_spec)
+                self.logger.debug(f'yield wav chunk {len(wav[0])=} {len(wav[0][0])=}')
+                yield wav
+            return
+        mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1)) for i in next(result_gen)[field]]
+        yield vocos_decode(mel_spec)
+
+    def infer(
+        self, 
+        text, 
+        skip_refine_text=False, 
+        refine_text_only=False, 
+        params_refine_text={}, 
+        params_infer_code={'prompt':'[speed_5]'}, 
+        use_decoder=True,
+        do_text_normalization=True,
+        lang=None,
+        stream=False,
+        do_homophone_replacement=True,
+    ):
+        res_gen = self._infer(
+            text,
+            skip_refine_text,
+            refine_text_only,
+            params_refine_text,
+            params_infer_code,
+            use_decoder,
+            do_text_normalization,
+            lang,
+            stream,
+            do_homophone_replacement,
+        )
+        if stream:
+            return res_gen
+        else:
+            return next(res_gen)
     
     def sample_random_speaker(self, ):
         

@@ -13,6 +13,7 @@ def infer_code(
     temperature = 0.3, 
     repetition_penalty = 1.05,
     max_new_token = 2048,
+    stream=False,
     **kwargs
 ):
     
@@ -66,9 +67,10 @@ def infer_code(
         eos_token = num_code, 
         max_new_token = max_new_token, 
         infer_text = False,
+        stream = stream,
         **kwargs
     )
-    
+
     return result
 
 
@@ -120,6 +122,7 @@ def refine_text(
         eos_token = torch.tensor(models['tokenizer'].convert_tokens_to_ids('[Ebreak]'), device=device)[None], 
         max_new_token = max_new_token, 
         infer_text = True,
+        stream = False,
         **kwargs
     )
-    return result
+    return next(result)

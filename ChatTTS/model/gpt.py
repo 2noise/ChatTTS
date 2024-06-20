@@ -36,8 +36,7 @@ class GPT_warpper(nn.Module):
         num_audio_tokens,
         num_text_tokens,
         num_vq=4,
-        **kwargs,
-        ):
+    ):
         super().__init__()
 
         self.logger = logging.getLogger(__name__)
@@ -167,6 +166,7 @@ class GPT_warpper(nn.Module):
         infer_text=False,
         return_attn=False,
         return_hidden=False,
+        stream=False,
     ):
         
         with torch.no_grad():   
@@ -264,7 +264,20 @@ class GPT_warpper(nn.Module):
                     del idx_next
 
                     end_idx += (~finish).int().to(end_idx.device)
-
+                    if stream:
+                        if end_idx % 24 and not finish.all():
+                            continue
+                        y_inputs_ids = [inputs_ids[idx, start_idx: start_idx+i] for idx, i in enumerate(end_idx.int())]
+                        y_inputs_ids = [i[:, 0] for i in y_inputs_ids] if infer_text else y_inputs_ids
+                        y_hiddens = [[]]
+                        if return_hidden:
+                            y_hiddens = torch.stack(hiddens, 1)
+                            y_hiddens = [y_hiddens[idx, :i] for idx, i in enumerate(end_idx.int())]
+                        yield {
+                            'ids': y_inputs_ids, 
+                            'attentions': attentions,
+                            'hiddens':y_hiddens,
+                        }
                     if finish.all():
                         pbar.update(max_new_token-i-1)
                         break
@@ -277,11 +290,11 @@ class GPT_warpper(nn.Module):
                 hiddens = [hiddens[idx, :i] for idx, i in enumerate(end_idx.int())]
                     
             if not finish.all():
-                self.logger.warn(f'Incomplete result. hit max_new_token: {max_new_token}')   
+                self.logger.warn(f'Incomplete result. hit max_new_token: {max_new_token}')
 
-            del finish 
-                   
-            return {
+            del finish
+
+            yield {
                 'ids': inputs_ids, 
                 'attentions': attentions,
                 'hiddens':hiddens,
