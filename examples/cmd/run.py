@@ -14,6 +14,12 @@ import ChatTTS
 from IPython.display import Audio
 import numpy as np
 
+try:
+    from fire import Fire
+except ImportError:
+    print('import fire failed, try `pip install fire` to install it.')
+    exit()
+
 def save_wav_file(wav, index):
     wav_filename = f"output_audio_{index}.wav"
     # Convert numpy array to bytes and write to WAV file
@@ -25,23 +31,21 @@ def save_wav_file(wav, index):
         wf.writeframes(wav_bytes)
     print(f"Audio saved to {wav_filename}")
 
-def main():
-    # Retrieve text from command line argument
-    try:
-        sys.argv.remove('--stream')
-        stream = True
-    except:
-        stream = False
-    text_input = sys.argv[1] if len(sys.argv) > 1 else "<YOUR TEXT HERE>"
-    print("Received text input:", text_input)
+def main(text="<YOUR TEXT HERE>", stream=False):
+    """
+    usage:
+        python examples/cmd/run.py --stream --text=hello
+        python examples/cmd/run.py hello
+    """
+    print(f"{stream=} Received text input: {text}")
 
     chat = ChatTTS.Chat()
     print("Initializing ChatTTS...")
     # if using macbook(M1), I suggest you set `device='cpu', compile=False`
-    chat.load_models()
+    chat.load_models(device='cpu', compile=False)
     print("Models loaded successfully.")
 
-    texts = [text_input]
+    texts = [text]
     print("Text prepared for inference:", texts)
 
     wavs_gen = chat.infer(texts, use_decoder=True, stream=stream)
@@ -53,6 +57,7 @@ def main():
         wavs = [np.array([[]])]
         for gen in wavs_gen:
             print('got new chunk', gen)
+            # play chunk or combine into one complete audio;
             wavs[0] = np.hstack([wavs[0], np.array(gen[0])])
     else:
         print('generate without stream mode ..')
@@ -65,5 +70,5 @@ def main():
 
 if __name__ == "__main__":
     print("Starting the TTS application...")
-    main()
+    Fire(main)
     print("TTS application finished.")
