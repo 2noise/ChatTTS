@@ -14,6 +14,9 @@
 
 </div>
 
+> [!NOTE]
+> 请注意以下内容可能不是最新版，所有内容以英文版为准。
+
 ## 简介
 
 ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转语音模型。
@@ -26,7 +29,7 @@ ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转�
 
 ### 亮点
 
-> 你可以参考 **[Bilibili](https://www.bilibili.com/video/BV1zn4y1o7iV)** 上的这个视频了解详细的介绍.
+> 你可以参考 **[Bilibili](https://www.bilibili.com/video/BV1zn4y1o7iV)** 上的这个视频，了解本项目的详细情况。
 
 1. **对话式 TTS**: ChatTTS 针对对话式任务进行了优化，能够实现自然且富有表现力的合成语音。它支持多个说话者，便于生成互动式对话。
 2. **精细的控制**: 该模型可以预测和控制精细的韵律特征，包括笑声、停顿和插入语。
@@ -35,7 +38,7 @@ ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转�
 ### 数据集和模型
 
 - 主要模型使用 100,000+ 小时的中文和英文音频数据进行训练。
-- **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** 上的开源版本是一个在 40,000 小时数据上进行无监督微调的预训练模型。。
+- **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** 上的开源版本是一个在 40,000 小时数据上进行无监督微调的预训练模型。
 
 ### 路线图
 
@@ -50,7 +53,7 @@ ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转�
 > [!Important]
 > 此仓库仅供学术用途。
 
-本项目旨在用于教育和研究目的，不应用于任何商业或法律目的。作者不保证信息的准确性、完整性或可靠性。此仓库中使用的信息和数据仅供学术和研究目的。数据来自公开来源，作者不声称对数据拥有任何所有权或版权。
+本项目旨在用于教育和研究目的，不适用于任何商业或法律目的。作者不保证信息的准确性、完整性或可靠性。此仓库中使用的信息和数据仅供学术和研究目的。数据来自公开来源，作者不声称对数据拥有任何所有权或版权。
 
 ChatTTS 是一款强大的文本转语音系统。但是，负责任和道德地使用这项技术非常重要。为了限制 ChatTTS 的使用，我们在 40,000 小时模型的训练过程中添加了少量高频噪声，并使用 MP3 格式尽可能压缩音频质量，以防止恶意行为者将其用于犯罪目的。同时，我们内部训练了一个检测模型，并计划在未来开源它。
 
@@ -60,7 +63,7 @@ ChatTTS 是一款强大的文本转语音系统。但是，负责任和道德地
 
 #### 合作洽谈
 
-如就模型和路线图进行合作洽谈，请发送邮件至 **open-source@2noise.com**。
+如需就模型和路线图进行合作洽谈，请发送邮件至 **open-source@2noise.com**。
 
 #### 线上讨论
 
@@ -219,10 +222,10 @@ torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 
 - [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS) 一个 ChatTTS 的资源汇总列表。
 
-## 感谢所有贡献者的付出
+## 贡献者列表
 
 [![contributors](https://contrib.rocks/image?repo=2noise/ChatTTS)](https://github.com/2noise/ChatTTS/graphs/contributors)
 
-## Star 趋势
+## 项目趋势
 
 [![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
