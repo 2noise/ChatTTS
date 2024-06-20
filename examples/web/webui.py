@@ -78,6 +78,40 @@ def generate_audio(text, temperature, top_P, top_K, audio_seed_input, text_seed_
 
     return [(sample_rate, audio_data), text_data]
 
+def generate_audio_stream(text, temperature, top_P, top_K, audio_seed_input, text_seed_input, refine_text_flag):
+
+    torch.manual_seed(audio_seed_input)
+    rand_spk = chat.sample_random_speaker()
+    params_infer_code = {
+        'spk_emb': rand_spk,
+        'temperature': temperature,
+        'top_P': top_P,
+        'top_K': top_K,
+        }
+    params_refine_text = {'prompt': '[oral_2][laugh_0][break_6]'}
+
+    torch.manual_seed(text_seed_input)
+
+
+    wavs_gen = chat.infer(text,
+                     skip_refine_text=True,
+                     params_refine_text=params_refine_text,
+                     params_infer_code=params_infer_code,
+                     stream=True)
+        
+    for gen in wavs_gen:
+        wavs = [np.array([[]])]
+        wavs[0] = np.hstack([wavs[0], np.array(gen[0])])
+        audio = wavs[0][0]
+        
+        max_audio = np.abs(audio).max()  # 简单防止16bit爆音
+        if max_audio > 1:
+            audio /= max_audio
+
+        yield 24000,(audio * 32768).astype(np.int16)
+
+
+
 
 def main():
 
@@ -103,9 +137,10 @@ def main():
             generate_text_seed = gr.Button("\U0001F3B2")
 
         generate_button = gr.Button("Generate")
+        stream_generate_button = gr.Button("Streaming Generate")
 
         text_output = gr.Textbox(label="Output Text", interactive=False)
-        audio_output = gr.Audio(label="Output Audio")
+        audio_output = gr.Audio(label="Output Audio",value=None,streaming=True,autoplay=True,interactive=False,show_label=True)
 
         # 使用Gradio的回调功能来更新数值输入框
         voice_selection.change(fn=on_voice_change, inputs=voice_selection, outputs=audio_seed_input)
@@ -121,6 +156,10 @@ def main():
         generate_button.click(generate_audio,
                               inputs=[text_input, temperature_slider, top_p_slider, top_k_slider, audio_seed_input, text_seed_input, refine_text_checkbox],
                               outputs=[audio_output, text_output])
+        
+        stream_generate_button.click(generate_audio_stream,
+                              inputs=[text_input, temperature_slider, top_p_slider, top_k_slider, audio_seed_input, text_seed_input, refine_text_checkbox],
+                              outputs=[audio_output])
 
         gr.Examples(
             examples=[
