@@ -8,6 +8,6 @@ vocos
 IPython
 gradio
 python-dotenv
-pynini==2.1.5
-WeTextProcessing
-nemo_text_processing
+pynini==2.1.5; sys_platform == 'linux'
+WeTextProcessing; sys_platform == 'linux'
+nemo_text_processing; sys_platform == 'linux'
