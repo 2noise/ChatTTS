@@ -95,7 +95,7 @@ class Chat:
         compile: bool = True,
     ):
         if not device:
-            device = select_device(4096)
+            device = select_device(4095)
             self.logger.log(logging.INFO, f'use {device}')
             
         if vocos_config_path:
