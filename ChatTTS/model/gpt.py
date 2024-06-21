@@ -41,10 +41,11 @@ class GPT_warpper(nn.Module):
         num_text_tokens,
         num_vq=4,
         device="cpu",
+        logger=logging.getLogger(__name__)
     ):
         super().__init__()
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
         self.device = device
         self.device_gpt = device if "mps" not in str(device) else "cpu"
         self.num_vq = num_vq

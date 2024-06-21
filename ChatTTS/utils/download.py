@@ -3,10 +3,8 @@ from pathlib import Path
 import hashlib
 import requests
 from io import BytesIO
-import logging
 
-logger = logging.getLogger(__name__)
-
+from .log import logger
 
 def sha256(f) -> str:
     sha256_hash = hashlib.sha256()

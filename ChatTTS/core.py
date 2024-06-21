@@ -1,11 +1,9 @@
-
-import os, sys
+import os
 import json
 import logging
-from functools import partial
-from typing import Literal
 import tempfile
-from typing import Optional
+from functools import partial
+from typing import Literal, Optional
 
 import torch
 from omegaconf import OmegaConf
@@ -19,16 +17,16 @@ from .utils.infer_utils import count_invalid_characters, detect_language, apply_
 from .utils.io import get_latest_modified_file, del_all
 from .infer.api import refine_text, infer_code
 from .utils.download import check_all_assets, download_all_assets
-
-logging.basicConfig(level = logging.INFO)
+from .utils.log import set_utils_logger
 
 
 class Chat:
-    def __init__(self, ):
+    def __init__(self, logger=logging.getLogger(__name__)):
         self.pretrain_models = {}
         self.normalizer = {}
         self.homophones_replacer = None
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
+        set_utils_logger(logger)
         
     def check_model(self, level = logging.INFO, use_decoder = False):
         not_finish = False
@@ -46,7 +44,7 @@ class Chat:
                 
         if not not_finish:
             self.logger.log(level, f'All initialized.')
-            
+
         return not not_finish
 
     def load_models(
@@ -62,7 +60,7 @@ class Chat:
                 with tempfile.TemporaryDirectory() as tmp:
                     download_all_assets(tmpdir=tmp)
                 if not check_all_assets(update=False):
-                    logging.error("counld not satisfy all assets needed.")
+                    self.logger.error("counld not satisfy all assets needed.")
                     return False
         elif source == 'huggingface':
             hf_home = os.getenv('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
@@ -120,14 +118,14 @@ class Chat:
             
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
-            gpt = GPT_warpper(**cfg, device=device).eval()
+            gpt = GPT_warpper(**cfg, device=device, logger=self.logger).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
             gpt.load_state_dict(torch.load(gpt_ckpt_path))
             if compile and 'cuda' in str(device):
                 try:
                     gpt.gpt.forward = torch.compile(gpt.gpt.forward, backend='inductor', dynamic=True)
                 except RuntimeError as e:
-                    logging.warning(f'Compile failed,{e}. fallback to normal mode.')
+                    self.logger.warning(f'Compile failed,{e}. fallback to normal mode.')
             self.pretrain_models['gpt'] = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), 'spk_stat.pt')
             assert os.path.exists(spk_stat_path), f'Missing spk_stat.pt: {spk_stat_path}'

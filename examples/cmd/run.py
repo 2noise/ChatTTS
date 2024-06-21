@@ -13,6 +13,10 @@ import wave
 import ChatTTS
 from IPython.display import Audio
 
+from tools.logger import get_logger
+
+logger = get_logger("Command")
+
 def save_wav_file(wav, index):
     wav_filename = f"output_audio_{index}.wav"
     # Convert numpy array to bytes and write to WAV file
@@ -22,26 +26,26 @@ def save_wav_file(wav, index):
         wf.setsampwidth(2)  # Sample width in bytes
         wf.setframerate(24000)  # Sample rate in Hz
         wf.writeframes(wav_bytes)
-    print(f"Audio saved to {wav_filename}")
+    logger.info(f"Audio saved to {wav_filename}")
 
 def main():
     # Retrieve text from command line argument
     text_input = sys.argv[1] if len(sys.argv) > 1 else "<YOUR TEXT HERE>"
-    print("Received text input:", text_input)
+    logger.info("Received text input: %s", text_input)
 
-    chat = ChatTTS.Chat()
-    print("Initializing ChatTTS...")
+    chat = ChatTTS.Chat(get_logger("ChatTTS"))
+    logger.info("Initializing ChatTTS...")
     if chat.load_models():
-        print("Models loaded successfully.")
+        logger.info("Models loaded successfully.")
     else:
-        print("Models load failed.")
+        logger.error("Models load failed.")
         sys.exit(1)
 
     texts = [text_input]
-    print("Text prepared for inference:", texts)
+    logger.info("Text prepared for inference: %s", texts)
 
     wavs = chat.infer(texts, use_decoder=True)
-    print("Inference completed. Audio generation successful.")
+    logger.info("Inference completed. Audio generation successful.")
     # Save each generated wav file to a local file
     for index, wav in enumerate(wavs):
         save_wav_file(wav, index)
@@ -49,6 +53,6 @@ def main():
     return Audio(wavs[0], rate=24_000, autoplay=True)
 
 if __name__ == "__main__":
-    print("Starting the TTS application...")
+    logger.info("Starting the TTS application...")
     main()
-    print("TTS application finished.")
+    logger.info("TTS application finished.")
