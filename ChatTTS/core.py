@@ -179,9 +179,10 @@ class Chat:
                 self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
                 text[i] = apply_character_map(t)
             if do_homophone_replacement and self.init_homophones_replacer():
-                text[i] = self.homophones_replacer.replace(t)
-                if t != text[i]:
-                    self.logger.log(logging.INFO, f'Homophones replace: {t} -> {text[i]}')
+                text[i], replaced_words = self.homophones_replacer.replace(text[i])
+                if replaced_words:
+                    repl_res = ', '.join([f'{_[0]}->{_[1]}' for _ in replaced_words])
+                    self.logger.log(logging.INFO, f'Homophones replace: {repl_res}')
 
         if not skip_refine_text:
             text_tokens = refine_text(
