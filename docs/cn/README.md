@@ -3,7 +3,7 @@
 <a href="https://trendshift.io/repositories/10489" target="_blank"><img src="https://trendshift.io/api/badge/repositories/10489" alt="2noise%2FChatTTS | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 # ChatTTS
-一款用于日常对话的生成式语音模型。
+一款适用于日常对话的生成式语音模型。
 
 [![Licence](https://img.shields.io/badge/LICENSE-CC%20BY--NC%204.0-green.svg?style=for-the-badge)](https://github.com/2noise/ChatTTS/blob/main/LICENSE)
 
@@ -15,7 +15,7 @@
 </div>
 
 > [!NOTE]
-> 请注意以下内容可能不是最新版，所有内容以英文版为准。
+> 注意此版本可能不是最新版，所有内容请以英文版为准。
 
 ## 简介
 
@@ -37,7 +37,7 @@ ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转�
 
 ### 数据集和模型
 
-- 主要模型使用 100,000+ 小时的中文和英文音频数据进行训练。
+- 主模型使用了 100,000+ 小时的中文和英文音频数据进行训练。
 - **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** 上的开源版本是一个在 40,000 小时数据上进行无监督微调的预训练模型。
 
 ### 路线图
@@ -53,7 +53,7 @@ ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转�
 > [!Important]
 > 此仓库仅供学术用途。
 
-本项目旨在用于教育和研究目的，不适用于任何商业或法律目的。作者不保证信息的准确性、完整性或可靠性。此仓库中使用的信息和数据仅供学术和研究目的。数据来自公开来源，作者不声称对数据拥有任何所有权或版权。
+本项目旨在用于教育和研究目的，不适用于任何商业或法律目的。作者不保证信息的准确性、完整性和可靠性。此仓库中使用的信息和数据仅供学术和研究目的。数据来自公开来源，作者不声称对数据拥有任何所有权或版权。
 
 ChatTTS 是一款强大的文本转语音系统。但是，负责任和道德地使用这项技术非常重要。为了限制 ChatTTS 的使用，我们在 40,000 小时模型的训练过程中添加了少量高频噪声，并使用 MP3 格式尽可能压缩音频质量，以防止恶意行为者将其用于犯罪目的。同时，我们内部训练了一个检测模型，并计划在未来开源它。
 
@@ -134,7 +134,7 @@ wavs = chat.infer(texts, )
 torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
 ```
 
-### 高级用法
+### 进阶用法
 
 ```python
 ###################################
@@ -226,6 +226,10 @@ torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 
 [![contributors](https://contrib.rocks/image?repo=2noise/ChatTTS)](https://github.com/2noise/ChatTTS/graphs/contributors)
 
-## 项目趋势
+## 项目浏览量
 
-[![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
+<div align="center">
+
+![counter](https://counter.seku.su/cmoe?name=chattts&theme=mbs)
+
+</div>
