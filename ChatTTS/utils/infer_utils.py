@@ -22,6 +22,7 @@ class CustomRepetitionPenaltyLogitsProcessorRepeat():
         freq = F.one_hot(input_ids, scores.size(1)).sum(1)
         freq[self.max_input_ids:] = 0
         alpha = self.penalty**freq
+        scores = scores.contiguous()
         scores = torch.where(scores < 0, scores*alpha, scores/alpha)
 
         return scores
@@ -75,12 +76,15 @@ class HomophonesReplacer:
 
     def replace(self, text):
         result = []
+        replaced_words = []
         for char in text:
             if char in self.homophones_map:
-                result.append(self.homophones_map[char])
+                repl_char = self.homophones_map[char]
+                result.append(repl_char)
+                replaced_words.append((char, repl_char))
             else:
                 result.append(char)
-        return ''.join(result)
+        return ''.join(result), replaced_words
 
 def count_invalid_characters(s):
     
