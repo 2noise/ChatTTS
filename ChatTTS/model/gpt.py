@@ -92,7 +92,9 @@ class GPT_warpper(nn.Module):
         emb_code = [self.emb_code[i](masked_input_ids[:, i]) for i in range(self.num_vq)]
         emb_code = torch.stack(emb_code, 2).sum(2)
 
-        emb = torch.cat((emb_text, emb_code)).unsqueeze_(0)
+        emb = torch.zeros((input_ids.shape[:-1])+(emb_text.shape[-1],), device=emb_text.device, dtype=emb_text.dtype)
+        emb[text_mask] = emb_text
+        emb[~text_mask] = emb_code.to(emb.dtype)
 
         del emb_text, emb_code
 
@@ -263,10 +265,10 @@ class GPT_warpper(nn.Module):
                     if not infer_text:
                         # logits = rearrange(logits, "b c n -> (b n) c")
                         logits = logits.permute(0, 2, 1)
-                        logits = logits.view(-1, logits.size(2))
+                        logits = logits.reshape(-1, logits.size(2))
                         # logits_token = rearrange(inputs_ids[:, start_idx:], "b c n -> (b n) c")
                         inputs_ids_sliced = inputs_ids[:, start_idx:].permute(0, 2, 1)
-                        logits_token = inputs_ids_sliced.view(
+                        logits_token = inputs_ids_sliced.reshape(
                             inputs_ids_sliced.size(0)*inputs_ids_sliced.size(1), -1,
                         )
                     else:

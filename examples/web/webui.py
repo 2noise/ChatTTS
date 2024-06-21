@@ -116,10 +116,10 @@ def generate_audio_stream(text, temperature, top_P, top_K, audio_seed_input, tex
 def main():
 
     with gr.Blocks() as demo:
-        gr.Markdown("# ChatTTS Webui")
-        gr.Markdown("ChatTTS Model: [2noise/ChatTTS](https://github.com/2noise/ChatTTS)")
+        gr.Markdown("# ChatTTS WebUI")
+        gr.Markdown("> ChatTTS Model: [2noise/ChatTTS](https://github.com/2noise/ChatTTS)")
 
-        default_text = "四川美食确实以辣闻名，但也有不辣的选择。[uv_break]比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。[laugh]"
+        default_text = "四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。"
         text_input = gr.Textbox(label="Input Text", lines=4, placeholder="Please Input Text...", value=default_text)
 
         with gr.Row():
