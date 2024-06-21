@@ -3,9 +3,10 @@ import os
 import logging
 from typing import Union
 
+from .log import logger
+
 def get_latest_modified_file(directory):
-    logger = logging.getLogger(__name__)
-    
+
     files = [os.path.join(directory, f) for f in os.listdir(directory)] 
     if not files:
         logger.log(logging.WARNING, f'No files found in the directory: {directory}')
