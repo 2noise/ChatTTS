@@ -1,5 +1,5 @@
 
-import os
+import os, sys
 import json
 import logging
 from functools import partial
@@ -63,7 +63,7 @@ class Chat:
                     download_all_assets(tmpdir=tmp)
                 if not check_all_assets(update=False):
                     logging.error("counld not satisfy all assets needed.")
-                    exit(1)
+                    return False
         elif source == 'huggingface':
             hf_home = os.getenv('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
             try:
@@ -79,7 +79,7 @@ class Chat:
             self.logger.log(logging.INFO, f'Load from local: {custom_path}')
             download_path = custom_path
 
-        self._load(**{k: os.path.join(download_path, v) for k, v in OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()}, **kwargs)
+        return self._load(**{k: os.path.join(download_path, v) for k, v in OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()}, **kwargs)
         
     def _load(
         self, 
@@ -148,7 +148,7 @@ class Chat:
             self.pretrain_models['tokenizer'] = tokenizer
             self.logger.log(logging.INFO, 'tokenizer loaded.')
             
-        self.check_model()
+        return self.check_model()
     
     def _infer(
         self, 
