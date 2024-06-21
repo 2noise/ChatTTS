@@ -182,10 +182,17 @@ def main():
     chat = ChatTTS.Chat()
 
     if args.custom_path == None:
-        chat.load_models()
+        ret = chat.load_models()
     else:
         print('local model path:', args.custom_path)
-        chat.load_models('custom', custom_path=args.custom_path)
+        ret = chat.load_models('custom', custom_path=args.custom_path)
+    
+    if ret:
+        print("Models loaded successfully.")
+    else:
+        print("Models load failed.")
+        sys.exit(1)
+
 
     demo.launch(server_name=args.server_name, server_port=args.server_port, root_path=args.root_path, inbrowser=True)
 

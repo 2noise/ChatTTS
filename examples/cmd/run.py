@@ -31,8 +31,11 @@ def main():
 
     chat = ChatTTS.Chat()
     print("Initializing ChatTTS...")
-    chat.load_models()
-    print("Models loaded successfully.")
+    if chat.load_models():
+        print("Models loaded successfully.")
+    else:
+        print("Models load failed.")
+        sys.exit(1)
 
     texts = [text_input]
     print("Text prepared for inference:", texts)
