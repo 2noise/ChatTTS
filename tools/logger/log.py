@@ -2,6 +2,9 @@ import platform
 import logging
 from datetime import datetime, timezone
 
+logging.getLogger("numba").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 # from https://github.com/FloatTech/ZeroBot-Plugin/blob/c70766a989698452e60e5e48fb2f802a2444330d/console/console_windows.go#L89-L96
 colorCodePanic = "\x1b[1;31m"
 colorCodeFatal = "\x1b[1;31m"
@@ -41,7 +44,7 @@ class Formatter(logging.Formatter):
         logstr += log_level_msg_str.get(record.levelno, record.levelname)
         if self.color:
             logstr += colorReset
-        logstr += f"] {str(record.name)} | {str(record.msg)}"
+        logstr += f"] {str(record.name)} | {str(record.msg)%record.args}"
         return logstr
 
 def get_logger(name: str, lv = logging.INFO):
