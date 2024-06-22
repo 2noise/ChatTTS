@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from transformers.generation import TopKLogitsWarper, TopPLogitsWarper
 
-from ..utils.infer_utils import CustomRepetitionPenaltyLogitsProcessorRepeat
+from ..utils.infer import CustomRepetitionPenaltyLogitsProcessorRepeat
 from ..utils.io import del_all
 from ..model.gpt import GPT_warpper
 
