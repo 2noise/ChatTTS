@@ -12,8 +12,8 @@ from huggingface_hub import snapshot_download
 
 from .model.dvae import DVAE
 from .model.gpt import GPT_warpper
-from .utils.gpu_utils import select_device
-from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
+from .utils.gpu import select_device
+from .utils.infer import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
 from .utils.io import get_latest_modified_file, del_all
 from .infer.api import refine_text, infer_code
 from .utils.download import check_all_assets, download_all_assets
