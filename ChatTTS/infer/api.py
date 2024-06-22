@@ -5,7 +5,7 @@ from transformers.generation import TopKLogitsWarper, TopPLogitsWarper
 
 from ..utils.infer import CustomRepetitionPenaltyLogitsProcessorRepeat
 from ..utils.io import del_all
-from ..model.gpt import GPT_warpper
+from ..model.gpt import GPT
 
 def infer_code(
     models,
@@ -21,7 +21,7 @@ def infer_code(
     **kwargs
 ):
 
-    gpt: GPT_warpper = models['gpt']
+    gpt: GPT = models['gpt']
 
     if not isinstance(text, list): 
         text = [text]
@@ -40,10 +40,7 @@ def infer_code(
     input_ids = text_token['input_ids'][...,None].expand(-1, -1, gpt.num_vq).to(gpt.device_gpt)
     text_mask = torch.ones(text_token['input_ids'].shape, dtype=bool, device=gpt.device_gpt)
 
-    emb = gpt.get_emb(
-        input_ids=input_ids,
-        text_mask=text_mask,
-    )
+    emb = gpt(input_ids, text_mask)
     del text_mask
 
     if spk_emb is not None:
@@ -98,7 +95,7 @@ def refine_text(
     **kwargs
 ):
 
-    gpt: GPT_warpper = models['gpt']
+    gpt: GPT = models['gpt']
 
     if not isinstance(text, list): 
         text = [text]
@@ -121,10 +118,7 @@ def refine_text(
     if repetition_penalty is not None and repetition_penalty != 1:
         LogitsProcessors.append(CustomRepetitionPenaltyLogitsProcessorRepeat(repetition_penalty, len(models['tokenizer']), 16))
 
-    emb = gpt.get_emb(
-        input_ids=input_ids,
-        text_mask=text_mask,
-    )
+    emb = gpt(input_ids,text_mask)
     del text_mask
 
     result = gpt.generate(

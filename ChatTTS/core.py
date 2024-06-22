@@ -11,7 +11,7 @@ from vocos import Vocos
 from huggingface_hub import snapshot_download
 
 from .model.dvae import DVAE
-from .model.gpt import GPT_warpper
+from .model.gpt import GPT
 from .utils.gpu import select_device
 from .utils.infer import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
 from .utils.io import get_latest_modified_file, del_all
@@ -126,7 +126,7 @@ class Chat:
             
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
-            gpt = GPT_warpper(**cfg, device=device, logger=self.logger).eval()
+            gpt = GPT(**cfg, device=device, logger=self.logger).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
             gpt.load_state_dict(torch.load(gpt_ckpt_path))
             if compile and 'cuda' in str(device):
@@ -196,14 +196,16 @@ class Chat:
                     self.logger.log(logging.INFO, f'Homophones replace: {repl_res}')
 
         if not skip_refine_text:
-            text_tokens = refine_text(
+            refined = refine_text(
                 self.pretrain_models,
                 text,
                 device=self.device,
                 **params_refine_text,
-            )['ids']
+            )
+            text_tokens = refined.ids
             text_tokens = [i[i < self.pretrain_models['tokenizer'].convert_tokens_to_ids('[break_0]')] for i in text_tokens]
             text = self.pretrain_models['tokenizer'].batch_decode(text_tokens)
+            del_all(refined)
             if refine_text_only:
                 yield text
                 return
@@ -219,10 +221,8 @@ class Chat:
             stream=stream,
         )
         if use_decoder:
-            field = 'hiddens'
             docoder_name = 'decoder'
         else:
-            field = 'ids'
             docoder_name = 'dvae'
         if "mps" in str(self.device):
             vocos_decode = lambda spec: [self.pretrain_models['vocos'].decode(
@@ -236,8 +236,9 @@ class Chat:
 
             length = 0
             for result in result_gen:
-                chunk_data = result[field][0]
-                assert len(result[field]) == 1
+                x = result.hiddens if use_decoder else result.ids
+                assert len(x) == 1
+                chunk_data = x[0]
                 start_seek = length
                 length = len(chunk_data)
                 self.logger.debug(f'{start_seek=} total len: {length}, new len: {length - start_seek = }')
@@ -248,14 +249,17 @@ class Chat:
                 mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1).to(self.device)) for i in [chunk_data]]
                 del_all(result)
                 del chunk_data
+                del_all(x)
                 wav = vocos_decode(mel_spec)
                 del_all(mel_spec)
                 self.logger.debug(f'yield wav chunk {len(wav[0])=} {len(wav[0][0])=}')
                 yield wav
             return
         result = next(result_gen)
-        mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1).to(self.device)) for i in result[field]]
+        x = result.hiddens if use_decoder else result.ids
+        mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1).to(self.device)) for i in x]
         del_all(result)
+        del_all(x)
         wav = vocos_decode(mel_spec)
         del_all(mel_spec)
         yield wav

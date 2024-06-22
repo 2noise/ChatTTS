@@ -2,6 +2,7 @@
 import os
 import logging
 from typing import Union
+from dataclasses import is_dataclass
 
 from .log import logger
 
@@ -16,18 +17,25 @@ def get_latest_modified_file(directory):
     return latest_file
 
 def del_all(d: Union[dict, list]):
-    if isinstance(d, dict):
+    if is_dataclass(d):
+        for k in list(vars(d).keys()):
+            x = getattr(d, k)
+            if isinstance(x, dict) or isinstance(x, list) or is_dataclass(x):
+                del_all(x)
+            del x
+            delattr(d, k)
+    elif isinstance(d, dict):
         lst = list(d.keys())
         for k in lst:
             x = d.pop(k)
-            if isinstance(x, dict) or isinstance(x, list):
+            if isinstance(x, dict) or isinstance(x, list) or is_dataclass(x):
                 del_all(x)
             del x
         return
     elif isinstance(d, list):
         while len(d):
             x = d.pop()
-            if isinstance(x, dict) or isinstance(x, list):
+            if isinstance(x, dict) or isinstance(x, list) or is_dataclass(x):
                 del_all(x)
             del x
         return
