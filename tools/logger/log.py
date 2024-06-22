@@ -1,7 +1,6 @@
 import platform
 import logging
 from datetime import datetime, timezone
-from functools import lru_cache
 
 logging.getLogger("numba").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -45,14 +44,21 @@ class Formatter(logging.Formatter):
         logstr += log_level_msg_str.get(record.levelno, record.levelname)
         if self.color:
             logstr += colorReset
-        logstr += f"] {str(record.name)} | {str(record.msg)%record.args}"
+        fn = record.filename.removesuffix(".py")
+        logstr += f"] {str(record.name)} | {fn} | {str(record.msg)%record.args}"
         return logstr
 
-@lru_cache(maxsize=None)
+for h in logging.root.handlers:
+    h.setFormatter(Formatter())
+
 def get_logger(name: str, lv = logging.INFO):
     logger = logging.getLogger(name)
-    syslog = logging.StreamHandler()
-    syslog.setFormatter(Formatter())
     logger.setLevel(lv)
-    logger.addHandler(syslog)
+    if not logger.hasHandlers():
+        syslog = logging.StreamHandler()
+        syslog.setFormatter(Formatter())
+        logger.addHandler(syslog)
+    else:
+        for h in logger.handlers:
+            h.setFormatter(Formatter())
     return logger
