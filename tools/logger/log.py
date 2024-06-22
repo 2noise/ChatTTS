@@ -1,6 +1,7 @@
 import platform
 import logging
 from datetime import datetime, timezone
+from functools import lru_cache
 
 logging.getLogger("numba").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -47,6 +48,7 @@ class Formatter(logging.Formatter):
         logstr += f"] {str(record.name)} | {str(record.msg)%record.args}"
         return logstr
 
+@lru_cache(maxsize=None)
 def get_logger(name: str, lv = logging.INFO):
     logger = logging.getLogger(name)
     syslog = logging.StreamHandler()
