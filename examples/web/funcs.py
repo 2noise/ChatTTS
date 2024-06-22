@@ -4,6 +4,7 @@ import torch
 import gradio as gr
 import numpy as np
 
+from tools.audio import unsafe_float_to_int16
 from tools.logger import get_logger
 logger = get_logger(" WebUI ")
 
@@ -74,27 +75,7 @@ def generate_audio(text, temperature, top_P, top_K, audio_seed_input, text_seed_
 
     if stream:
         for gen in wav:
-            wavs = [np.array([[]])]
-            wavs[0] = np.hstack([wavs[0], np.array(gen[0])])
-            audio = wavs[0][0]
-            
-            # normalize
-            am = np.abs(audio).max() * 32768
-            if am > 32768:
-                am = 32768 * 32768 / am
-            np.multiply(audio, am, audio)
-            audio = audio.astype(np.int16)
-
-            yield 24000, audio
+            yield 24000, unsafe_float_to_int16(gen[0][0])
         return
 
-    audio_data = np.array(wav[0]).flatten()
-    # normalize
-    am = np.abs(audio_data).max() * 32768
-    if am > 32768:
-        am = 32768 * 32768 / am
-    np.multiply(audio_data, am, audio_data)
-    audio_data = audio_data.astype(np.int16)
-    sample_rate = 24000
-
-    yield sample_rate, audio_data
+    yield 24000, unsafe_float_to_int16(np.array(wav[0]).flatten())
