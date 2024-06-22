@@ -6,10 +6,12 @@ if sys.platform == "darwin":
 now_dir = os.getcwd()
 sys.path.append(now_dir)
 
+import wave
+import argparse
+
 from dotenv import load_dotenv
 load_dotenv("sha256.env")
 
-import wave
 import ChatTTS
 
 from tools.audio import unsafe_float_to_int16
@@ -26,10 +28,8 @@ def save_wav_file(wav, index):
         wf.writeframes(unsafe_float_to_int16(wav))
     logger.info(f"Audio saved to {wav_filename}")
 
-def main():
-    # Retrieve text from command line argument
-    text_input = sys.argv[1] if len(sys.argv) > 1 else "<YOUR TEXT HERE>"
-    logger.info("Text input: %s", text_input)
+def main(texts: list[str]):
+    logger.info("Text input: %s", str(texts))
 
     chat = ChatTTS.Chat(get_logger("ChatTTS"))
     logger.info("Initializing ChatTTS...")
@@ -39,7 +39,7 @@ def main():
         logger.error("Models load failed.")
         sys.exit(1)
 
-    wavs = chat.infer((text_input), use_decoder=True)
+    wavs = chat.infer(texts, use_decoder=True)
     logger.info("Inference completed. Audio generation successful.")
     # Save each generated wav file to a local file
     for index, wav in enumerate(wavs):
@@ -47,5 +47,8 @@ def main():
 
 if __name__ == "__main__":
     logger.info("Starting the TTS application...")
-    main()
+    parser = argparse.ArgumentParser(description='ChatTTS Command', usage="--stream hello, my name is bob.")
+    parser.add_argument("text", help="Original text", default='YOUR TEXT HERE', nargs='*')
+    args = parser.parse_args()
+    main(args.text)
     logger.info("TTS application finished.")
