@@ -1,6 +1,8 @@
 import math
-from typing import List
+from typing import List, Optional
 
+import pybase16384 as b14
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -74,7 +76,7 @@ class GFSQ(nn.Module):
         
     def _embed(self, x: torch.Tensor):
         if self.transpose:
-            x.transpose_(1, 2)
+            x = x.transpose(1, 2)
         """
         x = rearrange(
             x, "b t (g r) -> g b t r", g = self.G, r = self.R,
@@ -84,9 +86,9 @@ class GFSQ(nn.Module):
         feat = self.quantizer.get_output_from_indices(x)
         return feat.transpose_(1,2) if self.transpose else feat
 
-    def forward(self, x,):
+    def forward(self, x):
         if self.transpose:
-            x.transpose_(1,2)
+            x = x.transpose(1, 2)
         feat, ind = self.quantizer(x)
         """
         ind = rearrange(
@@ -127,7 +129,7 @@ class DVAEDecoder(nn.Module):
             for _ in range(n_layer)])
         self.conv_out = nn.Conv1d(hidden, odim, kernel_size=1, bias=False)
 
-    def forward(self, input, conditioning=None):
+    def forward(self, input: torch.Tensor, conditioning=None) -> torch.Tensor:
         # B, T, C
         x = input.transpose_(1, 2)
         y = self.conv_in(x)
@@ -142,10 +144,14 @@ class DVAEDecoder(nn.Module):
 
 class DVAE(nn.Module):
     def __init__(
-        self, decoder_config, vq_config, dim=512
+        self, decoder_config, vq_config, dim=512, coef: Optional[str] = None,
     ):
         super().__init__()
-        self.register_buffer('coef', torch.randn(1, 100, 1))
+        if coef is None:
+            coef = torch.rand(100)
+        else:
+            coef = torch.from_numpy(np.frombuffer(b14.decode_from_string(coef), dtype=np.float32))
+        self.register_buffer('coef', coef.unsqueeze(0).unsqueeze_(2))
 
         self.decoder = DVAEDecoder(**decoder_config)
         self.out_conv = nn.Conv1d(dim, 100, 3, 1, 1, bias=False)
@@ -153,6 +159,9 @@ class DVAE(nn.Module):
             self.vq_layer = GFSQ(**vq_config)
         else:
             self.vq_layer = None
+    
+    def __repr__(self) -> str:
+        return b14.encode_to_string(self.coef.cpu().numpy().astype(np.float32).tobytes())
 
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
 
