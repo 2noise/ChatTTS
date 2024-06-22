@@ -197,6 +197,8 @@ In the current released model, the only token-level control units are `[laugh]`,
 ## Thanks to all contributors for their efforts
 [![contributors](https://contrib.rocks/image?repo=2noise/ChatTTS)](https://github.com/2noise/ChatTTS/graphs/contributors)
 
-## Starchart
+<div align="center">
 
-[![Star History Chart](https://api.star-history.com/svg?repos=2noise/ChatTTS&type=Date)](https://star-history.com/#2noise/ChatTTS&Date)
+  ![counter](https://counter.seku.su/cmoe?name=chattts&theme=mbs)
+
+</div>

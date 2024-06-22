@@ -1,10 +1,9 @@
-
 import os
 import json
 import logging
-from functools import partial
-from typing import Literal
 import tempfile
+from functools import partial
+from typing import Literal, Optional
 
 import torch
 from omegaconf import OmegaConf
@@ -13,21 +12,21 @@ from huggingface_hub import snapshot_download
 
 from .model.dvae import DVAE
 from .model.gpt import GPT_warpper
-from .utils.gpu_utils import select_device
-from .utils.infer_utils import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
-from .utils.io_utils import get_latest_modified_file
+from .utils.gpu import select_device
+from .utils.infer import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
+from .utils.io import get_latest_modified_file, del_all
 from .infer.api import refine_text, infer_code
 from .utils.download import check_all_assets, download_all_assets
-
-logging.basicConfig(level = logging.INFO)
+from .utils.log import set_utils_logger
 
 
 class Chat:
-    def __init__(self, ):
+    def __init__(self, logger=logging.getLogger(__name__)):
         self.pretrain_models = {}
         self.normalizer = {}
         self.homophones_replacer = None
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
+        set_utils_logger(logger)
         
     def check_model(self, level = logging.INFO, use_decoder = False):
         not_finish = False
@@ -45,7 +44,7 @@ class Chat:
                 
         if not not_finish:
             self.logger.log(level, f'All initialized.')
-            
+
         return not not_finish
 
     def load_models(
@@ -61,8 +60,8 @@ class Chat:
                 with tempfile.TemporaryDirectory() as tmp:
                     download_all_assets(tmpdir=tmp)
                 if not check_all_assets(update=False):
-                    logging.error("counld not satisfy all assets needed.")
-                    exit(1)
+                    self.logger.error("counld not satisfy all assets needed.")
+                    return False
         elif source == 'huggingface':
             hf_home = os.getenv('HF_HOME', os.path.expanduser("~/.cache/huggingface"))
             try:
@@ -78,7 +77,7 @@ class Chat:
             self.logger.log(logging.INFO, f'Load from local: {custom_path}')
             download_path = custom_path
 
-        self._load(**{k: os.path.join(download_path, v) for k, v in OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()}, **kwargs)
+        return self._load(**{k: os.path.join(download_path, v) for k, v in OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()}, **kwargs)
         
     def _load(
         self, 
@@ -91,17 +90,18 @@ class Chat:
         decoder_config_path: str = None,
         decoder_ckpt_path: str = None,
         tokenizer_path: str = None,
-        device: str = None,
+        device: Optional[torch.device] = None,
         compile: bool = True,
     ):
-        if not device:
+        if device is None:
             device = select_device(4096)
             self.logger.log(logging.INFO, f'use {device}')
-            
+        self.device = device
+
         if vocos_config_path:
             vocos = Vocos.from_hparams(vocos_config_path).to(
                 # vocos on mps will crash, use cpu fallback
-                "cpu" if torch.backends.mps.is_available() else device
+                "cpu" if "mps" in str(device) else device
             ).eval()
             assert vocos_ckpt_path, 'vocos_ckpt_path should not be None'
             vocos.load_state_dict(torch.load(vocos_ckpt_path))
@@ -118,11 +118,14 @@ class Chat:
             
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
-            gpt = GPT_warpper(**cfg).to(device).eval()
+            gpt = GPT_warpper(**cfg, device=device, logger=self.logger).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
             gpt.load_state_dict(torch.load(gpt_ckpt_path))
             if compile and 'cuda' in str(device):
-                gpt.gpt.forward = torch.compile(gpt.gpt.forward,  backend='inductor', dynamic=True)
+                try:
+                    gpt.gpt.forward = torch.compile(gpt.gpt.forward, backend='inductor', dynamic=True)
+                except RuntimeError as e:
+                    self.logger.warning(f'Compile failed,{e}. fallback to normal mode.')
             self.pretrain_models['gpt'] = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), 'spk_stat.pt')
             assert os.path.exists(spk_stat_path), f'Missing spk_stat.pt: {spk_stat_path}'
@@ -143,7 +146,7 @@ class Chat:
             self.pretrain_models['tokenizer'] = tokenizer
             self.logger.log(logging.INFO, 'tokenizer loaded.')
             
-        self.check_model()
+        return self.check_model()
     
     def _infer(
         self, 
@@ -176,14 +179,16 @@ class Chat:
                 self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
                 text[i] = apply_character_map(t)
             if do_homophone_replacement and self.init_homophones_replacer():
-                text[i] = self.homophones_replacer.replace(t)
-                if t != text[i]:
-                    self.logger.log(logging.INFO, f'Homophones replace: {t} -> {text[i]}')
+                text[i], replaced_words = self.homophones_replacer.replace(text[i])
+                if replaced_words:
+                    repl_res = ', '.join([f'{_[0]}->{_[1]}' for _ in replaced_words])
+                    self.logger.log(logging.INFO, f'Homophones replace: {repl_res}')
 
         if not skip_refine_text:
             text_tokens = refine_text(
                 self.pretrain_models,
                 text,
+                device=self.device,
                 **params_refine_text,
             )['ids']
             text_tokens = [i[i < self.pretrain_models['tokenizer'].convert_tokens_to_ids('[break_0]')] for i in text_tokens]
@@ -194,16 +199,28 @@ class Chat:
 
         text = [params_infer_code.get('prompt', '') + i for i in text]
         params_infer_code.pop('prompt', '')
-        result_gen = infer_code(self.pretrain_models, text, **params_infer_code, return_hidden=use_decoder, stream=stream)
+        result_gen = infer_code(
+            self.pretrain_models,
+            text,
+            device=self.device,
+            **params_infer_code,
+            return_hidden=use_decoder,
+            stream=stream,
+        )
         if use_decoder:
             field = 'hiddens'
             docoder_name = 'decoder'
         else:
             field = 'ids'
             docoder_name = 'dvae'
-        vocos_decode = lambda spec: [self.pretrain_models['vocos'].decode(
-                    i.cpu() if torch.backends.mps.is_available() else i
-                ).cpu().numpy() for i in spec]
+        if "mps" in str(self.device):
+            vocos_decode = lambda spec: [self.pretrain_models['vocos'].decode(
+                i.cpu()
+            ).cpu().numpy() for i in spec]
+        else:
+            vocos_decode = lambda spec: [self.pretrain_models['vocos'].decode(
+                i
+            ).cpu().numpy() for i in spec]
         if stream:
 
             length = 0
@@ -217,13 +234,20 @@ class Chat:
                 if not len(chunk_data):
                     continue
                 self.logger.debug(f'new hidden {len(chunk_data)=}')
-                mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1)) for i in [chunk_data]]
+                mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1).to(self.device)) for i in [chunk_data]]
+                del_all(result)
+                del chunk_data
                 wav = vocos_decode(mel_spec)
+                del_all(mel_spec)
                 self.logger.debug(f'yield wav chunk {len(wav[0])=} {len(wav[0][0])=}')
                 yield wav
             return
-        mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1)) for i in next(result_gen)[field]]
-        yield vocos_decode(mel_spec)
+        result = next(result_gen)
+        mel_spec = [self.pretrain_models[docoder_name](i[None].permute(0,2,1).to(self.device)) for i in result[field]]
+        del_all(result)
+        wav = vocos_decode(mel_spec)
+        del_all(mel_spec)
+        yield wav
 
     def infer(
         self, 
