@@ -150,7 +150,7 @@ class DVAE(nn.Module):
         if coef is None:
             coef = torch.rand(100)
         else:
-            coef = torch.from_numpy(np.frombuffer(b14.decode_from_string(coef), dtype=np.float32))
+            coef = torch.from_numpy(np.copy(np.frombuffer(b14.decode_from_string(coef), dtype=np.float32)))
         self.register_buffer('coef', coef.unsqueeze(0).unsqueeze_(2))
 
         self.decoder = DVAEDecoder(**decoder_config)
