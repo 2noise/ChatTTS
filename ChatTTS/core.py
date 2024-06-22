@@ -51,12 +51,15 @@ class Chat:
         self,
         source: Literal['huggingface', 'local', 'custom']='local',
         force_redownload=False,
-        custom_path='<LOCAL_PATH>',
-        **kwargs,
+        compile: bool = True,
+        custom_path: Optional[torch.serialization.FILE_LIKE]=None,
+        device: Optional[torch.device] = None,
+        coef: Optional[torch.Tensor] = None,
     ):
         if source == 'local':
+            torch.load
             download_path = os.getcwd()
-            if not check_all_assets(update=True):
+            if not check_all_assets(update=True) or force_redownload:
                 with tempfile.TemporaryDirectory() as tmp:
                     download_all_assets(tmpdir=tmp)
                 if not check_all_assets(update=False):
@@ -77,7 +80,10 @@ class Chat:
             self.logger.log(logging.INFO, f'Load from local: {custom_path}')
             download_path = custom_path
 
-        return self._load(**{k: os.path.join(download_path, v) for k, v in OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()}, **kwargs)
+        return self._load(
+            device=device, compile=compile, coef=coef,
+            **{k: os.path.join(download_path, v) for k, v in OmegaConf.load(os.path.join(download_path, 'config', 'path.yaml')).items()},
+        )
         
     def _load(
         self, 
@@ -92,6 +98,7 @@ class Chat:
         tokenizer_path: str = None,
         device: Optional[torch.device] = None,
         compile: bool = True,
+        coef: Optional[str] = None
     ):
         if device is None:
             device = select_device(4096)
@@ -110,7 +117,8 @@ class Chat:
         
         if dvae_config_path:
             cfg = OmegaConf.load(dvae_config_path)
-            dvae = DVAE(**cfg).to(device).eval()
+            dvae = DVAE(**cfg, coef=coef).to(device).eval()
+            coef = str(dvae)
             assert dvae_ckpt_path, 'dvae_ckpt_path should not be None'
             dvae.load_state_dict(torch.load(dvae_ckpt_path))
             self.pretrain_models['dvae'] = dvae
@@ -134,7 +142,8 @@ class Chat:
             
         if decoder_config_path:
             cfg = OmegaConf.load(decoder_config_path)
-            decoder = DVAE(**cfg).to(device).eval()
+            decoder = DVAE(**cfg, coef=coef).to(device).eval()
+            coef = str(decoder)
             assert decoder_ckpt_path, 'decoder_ckpt_path should not be None'
             decoder.load_state_dict(torch.load(decoder_ckpt_path, map_location='cpu'))
             self.pretrain_models['decoder'] = decoder
@@ -145,7 +154,9 @@ class Chat:
             tokenizer.padding_side = 'left'
             self.pretrain_models['tokenizer'] = tokenizer
             self.logger.log(logging.INFO, 'tokenizer loaded.')
-            
+        
+        self.coef = coef
+
         return self.check_model()
     
     def _infer(
