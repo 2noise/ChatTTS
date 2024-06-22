@@ -43,7 +43,7 @@ def check_model(
 
 
 def check_all_assets(update=False) -> bool:
-    BASE_DIR = Path(__file__).resolve().parent.parent.parent
+    BASE_DIR = Path(os.getcwd())
 
     logger.info("checking assets...")
     current_dir = BASE_DIR / "asset"
