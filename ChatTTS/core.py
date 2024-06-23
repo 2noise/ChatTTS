@@ -17,8 +17,8 @@ from .utils.gpu import select_device
 from .utils.infer import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
 from .utils.io import get_latest_modified_file, del_all
 from .infer.api import refine_text, infer_code
-from .utils.download import check_all_assets, download_all_assets
-from .utils.log import set_utils_logger
+from .utils.dl import check_all_assets, download_all_assets
+from .utils.log import logger as utils_logger
 
 
 class Chat:
@@ -27,7 +27,7 @@ class Chat:
         self.normalizer = {}
         self.homophones_replacer = None
         self.logger = logger
-        set_utils_logger(logger)
+        utils_logger.set_logger(logger)
         
     def has_loaded(self, use_decoder = False):
         not_finish = False

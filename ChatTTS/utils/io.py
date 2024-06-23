@@ -10,7 +10,7 @@ def get_latest_modified_file(directory):
 
     files = [os.path.join(directory, f) for f in os.listdir(directory)] 
     if not files:
-        logger.log(logging.WARNING, f'no files found in the directory: {directory}')
+        logger.get_logger().log(logging.WARNING, f'no files found in the directory: {directory}')
         return None
     latest_file = max(files, key=os.path.getmtime)
 

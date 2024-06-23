@@ -1,8 +1,14 @@
 import logging
 from pathlib import Path
 
-logger = logging.getLogger(Path(__file__).parent.name)
+class Logger():
+    def __init__(self, logger=logging.getLogger(Path(__file__).parent.name)):
+        self.logger = logger
 
-def set_utils_logger(l: logging.Logger):
-    global logger
-    logger = l
+    def set_logger(self, logger: logging.Logger):
+        self.logger = logger
+    
+    def get_logger(self) -> logging.Logger:
+        return self.logger
+
+logger = Logger()
