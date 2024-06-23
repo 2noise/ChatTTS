@@ -13,17 +13,16 @@ chat = ChatTTS.Chat(get_logger("ChatTTS"))
 
 # 音色选项：用于预置合适的音色
 voices = {
-    "默认": {"seed": 2},
-    "音色1": {"seed": 1111},
-    "音色2": {"seed": 2222},
-    "音色3": {"seed": 3333},
-    "音色4": {"seed": 4444},
-    "音色5": {"seed": 5555},
-    "音色6": {"seed": 6666},
-    "音色7": {"seed": 7777},
-    "音色8": {"seed": 8888},
-    "音色9": {"seed": 9999},
-    "音色10": {"seed": 11111},
+    "Default": {"seed": 2},
+    "Timbre1": {"seed": 1111},
+    "Timbre2": {"seed": 2222},
+    "Timbre3": {"seed": 3333},
+    "Timbre4": {"seed": 4444},
+    "Timbre5": {"seed": 5555},
+    "Timbre6": {"seed": 6666},
+    "Timbre7": {"seed": 7777},
+    "Timbre8": {"seed": 8888},
+    "Timbre9": {"seed": 9999},
 }
 
 def generate_seed():

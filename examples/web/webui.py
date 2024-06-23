@@ -32,7 +32,7 @@ def main():
             top_k_slider = gr.Slider(minimum=1, maximum=20, step=1, value=20, label="top_K", interactive=True)
 
         with gr.Row():
-            voice_selection = gr.Dropdown(label="音色", choices=voices.keys(), value='默认')
+            voice_selection = gr.Dropdown(label="Timbre", choices=voices.keys(), value='Default')
             audio_seed_input = gr.Number(value=2, label="Audio Seed")
             generate_audio_seed = gr.Button("\U0001F3B2")
             text_seed_input = gr.Number(value=42, label="Text Seed")
