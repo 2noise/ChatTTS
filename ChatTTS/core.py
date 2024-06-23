@@ -220,7 +220,7 @@ class Chat:
         for i, t in enumerate(text):
             invalid_characters = count_invalid_characters(t)
             if len(invalid_characters):
-                self.logger.log(logging.WARNING, f'Invalid characters found! : {invalid_characters}')
+                self.logger.warn(f'Invalid characters found! : {invalid_characters}')
                 text[i] = apply_character_map(t)
             if do_homophone_replacement and self._init_homophones_replacer():
                 text[i], replaced_words = self.homophones_replacer.replace(text[i])
@@ -357,10 +357,10 @@ class Chat:
         else:
             try:
                 self.homophones_replacer = HomophonesReplacer(os.path.join(os.path.dirname(__file__), 'res', 'homophones_map.json'))
-                self.logger.log(logging.INFO, 'homophones_replacer loaded.')
+                self.logger.log(logging.INFO, 'successfully loaded HomophonesReplacer.')
                 return True
             except (IOError, json.JSONDecodeError) as e:
-                self.logger.log(logging.WARNING, f'Error loading homophones map: {e}')
+                self.logger.log(logging.WARNING, f'error loading homophones map: {e}')
             except Exception as e:
-                self.logger.log(logging.WARNING, f'Error loading homophones_replacer: {e}')
+                self.logger.log(logging.WARNING, f'error loading HomophonesReplacer: {e}')
         return False
