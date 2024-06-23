@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 
 logging.getLogger("numba").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("wetext-zh_normalizer").setLevel(logging.WARNING)
+logging.getLogger("NeMo-text-processing").setLevel(logging.WARNING)
 
 # from https://github.com/FloatTech/ZeroBot-Plugin/blob/c70766a989698452e60e5e48fb2f802a2444330d/console/console_windows.go#L89-L96
 colorCodePanic = "\x1b[1;31m"
@@ -48,8 +50,6 @@ class Formatter(logging.Formatter):
         logstr += f"] {str(record.name)} | {fn} | {str(record.msg)%record.args}"
         return logstr
 
-for h in logging.root.handlers:
-    h.setFormatter(Formatter())
 
 def get_logger(name: str, lv = logging.INFO):
     logger = logging.getLogger(name)
