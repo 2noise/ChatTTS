@@ -288,8 +288,7 @@ class Chat:
         else:
             return next(res_gen)
     
-    def sample_random_speaker(self, ):
-        
+    def sample_random_speaker(self):
         dim = self.pretrain_models['gpt'].gpt.layers[0].mlp.gate_proj.in_features
         std, mean = self.pretrain_models['spk_stat'].chunk(2)
         return torch.randn(dim, device=std.device) * std + mean

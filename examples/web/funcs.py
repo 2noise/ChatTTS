@@ -1,4 +1,5 @@
 import random
+from typing import Optional
 
 import torch
 import gradio as gr
@@ -10,6 +11,8 @@ logger = get_logger(" WebUI ")
 
 import ChatTTS
 chat = ChatTTS.Chat(get_logger("ChatTTS"))
+
+custom_path: Optional[str] = None
 
 # 音色选项：用于预置合适的音色
 voices = {
@@ -32,13 +35,32 @@ def generate_seed():
 def on_voice_change(vocie_selection):
     return voices.get(vocie_selection)['seed']
 
-def refine_text(text, audio_seed_input, text_seed_input, refine_text_flag):
+def reload_chat(coef: Optional[str]) -> str:
+    global custom_path
+    chat.unload()
+    gr.Info("Model unloaded.")
+    try:
+        if len(coef) != 230:
+            gr.Warning("Ingore invalid DVAE coefficient.")
+            coef = None
+        if custom_path == None:
+            ret = chat.load_models(coef=coef)
+        else:
+            logger.info('local model path: %s', custom_path)
+            ret = chat.load_models('custom', custom_path=custom_path, coef=coef)
+        if not ret:
+            raise gr.Error("Unable to load model.")
+        gr.Info("Reload succeess.")
+        return chat.coef
+    except Exception as e:
+        raise gr.Error(str(e))
+
+def refine_text(text, text_seed_input, refine_text_flag):
     if not refine_text_flag:
         return text
 
     global chat
 
-    torch.manual_seed(audio_seed_input)
     params_refine_text = {'prompt': '[oral_2][laugh_0][break_6]'}
 
     torch.manual_seed(text_seed_input)
@@ -50,7 +72,7 @@ def refine_text(text, audio_seed_input, text_seed_input, refine_text_flag):
                         )
     return text[0] if isinstance(text, list) else text
 
-def generate_audio(text, temperature, top_P, top_K, audio_seed_input, text_seed_input, stream):
+def generate_audio(text, temperature, top_P, top_K, audio_seed_input, stream):
     if not text: return None
 
     global chat
@@ -62,8 +84,7 @@ def generate_audio(text, temperature, top_P, top_K, audio_seed_input, text_seed_
         'temperature': temperature,
         'top_P': top_P,
         'top_K': top_K,
-        }
-    torch.manual_seed(text_seed_input)
+    }
 
     wav = chat.infer(
         text,
