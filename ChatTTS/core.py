@@ -3,8 +3,9 @@ import json
 import logging
 import tempfile
 from functools import partial
-from typing import Literal, Optional, List
+from typing import Literal, Optional, List, Callable
 
+import numpy as np
 import torch
 from omegaconf import OmegaConf
 from vocos import Vocos
@@ -134,11 +135,11 @@ class Chat:
             vocos.load_state_dict(torch.load(vocos_ckpt_path))
             self.vocos = vocos
             if "mps" in str(self.device):
-                self._vocos_decode = lambda spec: self.vocos.decode(
+                self._vocos_decode: Callable[[torch.Tensor], np.ndarray] = lambda spec: self.vocos.decode(
                     spec.cpu()
                 ).cpu().numpy()
             else:
-                self._vocos_decode = lambda spec: self.vocos.decode(
+                self._vocos_decode: Callable[[torch.Tensor], np.ndarray]  = lambda spec: self.vocos.decode(
                     spec
                 ).cpu().numpy()
             self.logger.log(logging.INFO, 'vocos loaded.')
@@ -295,7 +296,7 @@ class Chat:
 
     def decode_to_wavs(self, result: GPT.GenerationOutputs, start_seeks: List[int], use_decoder: bool):
         x = result.hiddens if use_decoder else result.ids
-        wavs = []
+        wavs: List[np.ndarray] = []
         for i, chunk_data in enumerate(x):
             start_seek = start_seeks[i]
             length = len(chunk_data)
