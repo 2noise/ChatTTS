@@ -47,7 +47,7 @@ def main():
         with gr.Row():
             auto_play_checkbox = gr.Checkbox(label="Auto Play", value=False, scale=1)
             stream_mode_checkbox = gr.Checkbox(label="Stream Mode", value=False, scale=1)
-            generate_button = gr.Button("Generate", scale=2)
+            generate_button = gr.Button("Generate", scale=2, variant="primary")
 
         text_output = gr.Textbox(label="Output Text", interactive=False)
 
