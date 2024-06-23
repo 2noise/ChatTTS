@@ -3,15 +3,15 @@ from pathlib import Path
 import hashlib
 import requests
 from io import BytesIO
+from mmap import mmap, ACCESS_READ
 
 from .log import logger
 
-def sha256(f) -> str:
-    sha256_hash = hashlib.sha256()
-    # Read and update hash in chunks of 4M
-    for byte_block in iter(lambda: f.read(4 * 1024 * 1024), b""):
-        sha256_hash.update(byte_block)
-    return sha256_hash.hexdigest()
+def sha256(fileno: int) -> str:
+    data = mmap(fileno, 0, access=ACCESS_READ)
+    h = hashlib.sha256(data).hexdigest()
+    del data
+    return h
 
 
 def check_model(
@@ -24,7 +24,7 @@ def check_model(
         logger.info(f"{target} not exist.")
         return False
     with open(target, "rb") as f:
-        digest = sha256(f)
+        digest = sha256(f.fileno())
         bakfile = f"{target}.bak"
         if digest != hash:
             logger.warn(f"{target} sha256 hash mismatch.")
