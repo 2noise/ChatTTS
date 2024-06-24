@@ -1,5 +1,4 @@
 import os
-import json
 import logging
 import tempfile
 from functools import partial
@@ -23,15 +22,17 @@ from .utils.log import logger as utils_logger
 
 class Chat:
     def __init__(self, logger=logging.getLogger(__name__)):
-        self.pretrain_models = {}
-        self.normalizer = {}
-        self.homophones_replacer = None
         self.logger = logger
         utils_logger.set_logger(logger)
-        
+
+        self.pretrain_models = {}
+        self.normalizer = {}
+        self.homophones_replacer = self.homophones_replacer = HomophonesReplacer(os.path.join(os.path.dirname(__file__), 'res', 'homophones_map.json'))
+
+
     def has_loaded(self, use_decoder = False):
         not_finish = False
-        check_list = ['gpt', 'tokenizer']
+        check_list = ["vocos", "_vocos_decode", 'gpt', 'tokenizer']
         
         if use_decoder:
             check_list.append('decoder')
@@ -39,13 +40,9 @@ class Chat:
             check_list.append('dvae')
 
         for module in check_list:
-            if module not in self.pretrain_models:
+            if not hasattr(self, module) and module not in self.pretrain_models:
                 self.logger.warn(f'{module} not initialized.')
                 not_finish = True
-
-        if not hasattr(self, "_vocos_decode") or not hasattr(self, "vocos"):
-            self.logger.warn('vocos not initialized.')
-            not_finish = True
 
         if not not_finish:
             self.logger.info('all models has been initialized.')
@@ -149,24 +146,24 @@ class Chat:
             dvae = DVAE(**cfg, coef=coef).to(device).eval()
             coef = str(dvae)
             assert dvae_ckpt_path, 'dvae_ckpt_path should not be None'
-            dvae.load_state_dict(torch.load(dvae_ckpt_path))
-            self.pretrain_models['dvae'] = dvae
+            dvae.load_state_dict(torch.load(dvae_ckpt_path, map_location=device))
+            self.dvae = dvae
             self.logger.log(logging.INFO, 'dvae loaded.')
             
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
             gpt = GPT(**cfg, device=device, logger=self.logger).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
-            gpt.load_state_dict(torch.load(gpt_ckpt_path))
+            gpt.load_state_dict(torch.load(gpt_ckpt_path, map_location=device))
             if compile and 'cuda' in str(device):
                 try:
                     gpt.gpt.forward = torch.compile(gpt.gpt.forward, backend='inductor', dynamic=True)
                 except RuntimeError as e:
                     self.logger.warning(f'Compile failed,{e}. fallback to normal mode.')
-            self.pretrain_models['gpt'] = gpt
+            self.gpt = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), 'spk_stat.pt')
             assert os.path.exists(spk_stat_path), f'Missing spk_stat.pt: {spk_stat_path}'
-            self.pretrain_models['spk_stat'] = torch.load(spk_stat_path).to(device)
+            self.pretrain_models['spk_stat'] = torch.load(spk_stat_path, map_location=device).to(device)
             self.logger.log(logging.INFO, 'gpt loaded.')
             
         if decoder_config_path:
@@ -174,12 +171,12 @@ class Chat:
             decoder = DVAE(**cfg, coef=coef).to(device).eval()
             coef = str(decoder)
             assert decoder_ckpt_path, 'decoder_ckpt_path should not be None'
-            decoder.load_state_dict(torch.load(decoder_ckpt_path, map_location='cpu'))
-            self.pretrain_models['decoder'] = decoder
+            decoder.load_state_dict(torch.load(decoder_ckpt_path, map_location=device))
+            self.decoder = decoder
             self.logger.log(logging.INFO, 'decoder loaded.')
         
         if tokenizer_path:
-            tokenizer = torch.load(tokenizer_path, map_location='cpu')
+            tokenizer = torch.load(tokenizer_path, map_location=device)
             tokenizer.padding_side = 'left'
             self.pretrain_models['tokenizer'] = tokenizer
             self.logger.log(logging.INFO, 'tokenizer loaded.')
@@ -223,7 +220,7 @@ class Chat:
             if len(invalid_characters):
                 self.logger.warn(f'Invalid characters found! : {invalid_characters}')
                 text[i] = apply_character_map(t)
-            if do_homophone_replacement and self._init_homophones_replacer():
+            if do_homophone_replacement:
                 text[i], replaced_words = self.homophones_replacer.replace(text[i])
                 if replaced_words:
                     repl_res = ', '.join([f'{_[0]}->{_[1]}' for _ in replaced_words])
@@ -231,7 +228,7 @@ class Chat:
 
         if not skip_refine_text:
             refined = refine_text(
-                self.pretrain_models,
+                self.gpt, self.pretrain_models['tokenizer'],
                 text,
                 device=self.device,
                 **params_refine_text,
@@ -249,7 +246,7 @@ class Chat:
 
         length = [0 for _ in range(len(text))]
         for result in infer_code(
-            self.pretrain_models,
+            self.gpt, self.pretrain_models['tokenizer'],
             text,
             device=self.device,
             **params_infer_code,
@@ -290,7 +287,7 @@ class Chat:
             return next(res_gen)
     
     def sample_random_speaker(self):
-        dim = self.pretrain_models['gpt'].gpt.layers[0].mlp.gate_proj.in_features
+        dim = self.gpt.gpt.layers[0].mlp.gate_proj.in_features
         std, mean = self.pretrain_models['spk_stat'].chunk(2)
         return torch.randn(dim, device=std.device) * std + mean
 
@@ -305,10 +302,7 @@ class Chat:
                 continue
             start_seeks[i] = length
             chunk_data = chunk_data[start_seek:]
-            if use_decoder:
-                decoder = self.pretrain_models['decoder']
-            else:
-                decoder = self.pretrain_models['dvae']
+            decoder = self.decoder if use_decoder else self.dvae
             mel_spec = decoder(chunk_data[None].permute(0,2,1).to(self.device))
             del chunk_data
             wavs.append(self._vocos_decode(mel_spec))
@@ -350,18 +344,4 @@ class Chat:
                     logging.WARNING,
                     'Run: conda install -c conda-forge pynini=2.1.5 && pip install nemo_text_processing',
                 )
-        return False
-
-    def _init_homophones_replacer(self):
-        if self.homophones_replacer:
-            return True
-        else:
-            try:
-                self.homophones_replacer = HomophonesReplacer(os.path.join(os.path.dirname(__file__), 'res', 'homophones_map.json'))
-                self.logger.log(logging.INFO, 'successfully loaded HomophonesReplacer.')
-                return True
-            except (IOError, json.JSONDecodeError) as e:
-                self.logger.log(logging.WARNING, f'error loading homophones map: {e}')
-            except Exception as e:
-                self.logger.log(logging.WARNING, f'error loading HomophonesReplacer: {e}')
         return False
