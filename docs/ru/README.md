@@ -36,7 +36,7 @@ import ChatTTS
 from IPython.display import Audio
 
 chat = ChatTTS.Chat()
-chat.load_models(compile=False) # Установите значение True для лучшей производительности
+chat.load(compile=False) # Установите значение True для лучшей производительности
 
 texts = ["ВВЕДИТЕ ВАШ ТЕКСТ ЗДЕСЬ",]
 

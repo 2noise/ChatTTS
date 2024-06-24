@@ -33,7 +33,7 @@ def main(texts: list[str]):
 
     chat = ChatTTS.Chat(get_logger("ChatTTS"))
     logger.info("Initializing ChatTTS...")
-    if chat.load_models():
+    if chat.load():
         logger.info("Models loaded successfully.")
     else:
         logger.error("Models load failed.")

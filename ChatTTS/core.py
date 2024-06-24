@@ -87,7 +87,7 @@ class Chat:
         
         return download_path
 
-    def load_models(
+    def load(
         self,
         source: Literal['huggingface', 'local', 'custom']='local',
         force_redownload=False,
