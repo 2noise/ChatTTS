@@ -104,10 +104,10 @@ def main():
     global chat, custom_path
 
     if args.custom_path == None:
-        ret = chat.load_models()
+        ret = chat.load_models(compile=sys.platform != 'win32')
     else:
         logger.info('local model path: %s', args.custom_path)
-        ret = chat.load_models('custom', custom_path=args.custom_path)
+        ret = chat.load_models('custom', custom_path=args.custom_path, compile=sys.platform != 'win32')
 
     if ret:
         logger.info("Models loaded successfully.")
