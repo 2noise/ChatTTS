@@ -1,4 +1,3 @@
-
 from openai import OpenAI
  
 prompt_dict = {
@@ -22,7 +21,7 @@ prompt_dict = {
         ],
 }          
                 
-class llm_api:
+class ChatOpenAI:
     def __init__(self, api_key, base_url, model):
         self.client =  OpenAI(
             api_key = api_key,

@@ -412,7 +412,7 @@ class GPT(nn.Module):
                     pbar.update(1)
 
             if not finish.all():
-                self.logger.warn(f'Incomplete result. hit max_new_token: {max_new_token}')
+                self.logger.warning(f'incomplete result. hit max_new_token: {max_new_token}')
 
             del finish
 

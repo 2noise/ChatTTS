@@ -112,7 +112,7 @@ chat.load_models(compile=False) # Set to True for better performance
 
 texts = ["PUT YOUR TEXT HERE",]
 
-wavs = chat.infer(texts, )
+wavs = chat.infer(texts)
 
 torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
 ```
@@ -125,23 +125,27 @@ torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
 
 rand_spk = chat.sample_random_speaker()
 
-params_infer_code = {
-  'spk_emb': rand_spk, # add sampled speaker 
-  'temperature': .3, # using custom temperature
-  'top_P': 0.7, # top P decode
-  'top_K': 20, # top K decode
-}
+params_infer_code = ChatTTS.Chat.InferCodeParams(
+    spk_emb = rand_spk, # add sampled speaker 
+    temperature = .3,   # using custom temperature
+    top_P = 0.7,        # top P decode
+    top_K = 20,         # top K decode
+)
 
 ###################################
 # For sentence level manual control.
 
 # use oral_(0-9), laugh_(0-2), break_(0-7) 
 # to generate special token in text to synthesize.
-params_refine_text = {
-  'prompt': '[oral_2][laugh_0][break_6]'
-} 
+params_refine_text = ChatTTS.Chat.RefineTextParams(
+    prompt='[oral_2][laugh_0][break_6]',
+)
 
-wavs = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
+wavs = chat.infer(
+    texts,
+    params_refine_text=params_refine_text,
+    params_infer_code=params_infer_code,
+)
 
 ###################################
 # For word level manual control.
@@ -163,16 +167,42 @@ capabilities with precise control over prosodic elements [laugh]like like
 [uv_break] use the project responsibly at your own risk.[uv_break]
 """.replace('\n', '') # English is still experimental.
 
-params_refine_text = {
-  'prompt': '[oral_2][laugh_0][break_4]'
-} 
-# audio_array_cn = chat.infer(inputs_cn, params_refine_text=params_refine_text)
+params_refine_text = ChatTTS.Chat.RefineTextParams(
+    prompt='[oral_2][laugh_0][break_4]',
+)
+
 audio_array_en = chat.infer(inputs_en, params_refine_text=params_refine_text)
 torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 ```
+
+<table>
+<tr>
+<td align="center">
+
+**male speaker**
+
+</td>
+<td align="center">
+
+**female speaker**
+
+</td>
+</tr>
+<tr>
+<td align="center">
+
 [male speaker](https://github.com/2noise/ChatTTS/assets/130631963/e0f51251-db7f-4d39-a0e9-3e095bb65de1)
 
+</td>
+<td align="center">
+
 [female speaker](https://github.com/2noise/ChatTTS/assets/130631963/f5dcdd01-1091-47c5-8241-c4f6aaaa8bbd)
+
+</td>
+</tr>
+</table>
+
+
 </details>
 
 ## FAQ
