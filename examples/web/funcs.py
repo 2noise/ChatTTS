@@ -50,15 +50,15 @@ def load_chat(cust_path: Optional[str], coef: Optional[str]) -> bool:
         try:
             chat.normalizer.register("en", normalizer_en_nemo_text())
         except:
-            logger.warn('Package nemo_text_processing not found!')
-            logger.warn(
+            logger.warning('Package nemo_text_processing not found!')
+            logger.warning(
                 'Run: conda install -c conda-forge pynini=2.1.5 && pip install nemo_text_processing',
             )
         try:
             chat.normalizer.register("zh", normalizer_zh_tn())
         except:
-            logger.warn('Package WeTextProcessing not found!')
-            logger.warn(
+            logger.warning('Package WeTextProcessing not found!')
+            logger.warning(
                 'Run: conda install -c conda-forge pynini=2.1.5 && pip install WeTextProcessing',
             )
     return ret

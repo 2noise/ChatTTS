@@ -137,7 +137,7 @@ class Normalizer:
                 text = self._apply_half2full_map(text)
         invalid_characters = self._count_invalid_characters(text)
         if len(invalid_characters):
-            self.logger.warn(f'found invalid characters: {invalid_characters}')
+            self.logger.warning(f'found invalid characters: {invalid_characters}')
             text = self._apply_character_map(text)
         if do_homophone_replacement:
             arr, replaced_words = _fast_replace(
@@ -153,10 +153,10 @@ class Normalizer:
 
     def register(self, name: str, normalizer: Callable[[str], str]) -> bool:
         if name in self.normalizers:
-            self.logger.warn(f"name {name} has been registered")
+            self.logger.warning(f"name {name} has been registered")
             return False
         if not isinstance(normalizer, Callable[[str], str]):
-            self.logger.warn("normalizer must have caller type (str) -> str")
+            self.logger.warning("normalizer must have caller type (str) -> str")
             return False
         self.normalizers[name] = normalizer
         return True

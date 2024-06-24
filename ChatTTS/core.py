@@ -46,7 +46,7 @@ class Chat:
 
         for module in check_list:
             if not hasattr(self, module) and module not in self.pretrain_models:
-                self.logger.warn(f'{module} not initialized.')
+                self.logger.warning(f'{module} not initialized.')
                 not_finish = True
 
         if not not_finish:
@@ -75,7 +75,7 @@ class Chat:
             except:
                 download_path = None
             if download_path is None or force_redownload: 
-                self.logger.log(logging.INFO, f'Download from HF: https://huggingface.co/2Noise/ChatTTS')
+                self.logger.log(logging.INFO, f'download from HF: https://huggingface.co/2Noise/ChatTTS')
                 try:
                     download_path = snapshot_download(repo_id="2Noise/ChatTTS", allow_patterns=["*.pt", "*.yaml"])
                 except:
@@ -232,7 +232,7 @@ class Chat:
                 try:
                     gpt.gpt.forward = torch.compile(gpt.gpt.forward, backend='inductor', dynamic=True)
                 except RuntimeError as e:
-                    self.logger.warning(f'Compile failed,{e}. fallback to normal mode.')
+                    self.logger.warning(f'compile failed: {e}. fallback to normal mode.')
             self.gpt = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), 'spk_stat.pt')
             assert os.path.exists(spk_stat_path), f'Missing spk_stat.pt: {spk_stat_path}'
