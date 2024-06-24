@@ -3,6 +3,9 @@ setup(name='chattts',
       version='0.0.1',
       author='2noise',
       url='https://github.com/2noise/ChatTTS',
+      package_data={
+        'ChatTTS.res': ['homophones_map.json'],  # 指定路径和文件
+      },
       install_requires=['omegaconf>=2.3.0',
                         'numpy<2.0.0',
                         'numba',
