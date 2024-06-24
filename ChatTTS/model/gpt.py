@@ -97,7 +97,7 @@ class GPT(nn.Module):
 
         emb_text: torch.Tensor = self.emb_text(input_ids[text_mask].narrow(1, 0, 1).squeeze_(1).to(self.device_gpt))
 
-        text_mask_inv = ~(text_mask.to(self.device_gpt))
+        text_mask_inv = text_mask.logical_not().to(self.device_gpt)
         masked_input_ids: torch.Tensor = input_ids[text_mask_inv].to(self.device_gpt)
 
         emb_code = [self.emb_code[i](masked_input_ids[:, i]) for i in range(self.num_vq)]
@@ -260,8 +260,8 @@ class GPT(nn.Module):
         attention_mask = None,
         max_new_token = 2048, 
         min_new_token = 0,
-        LogitsWarpers: List[LogitsWarper] = [],
-        LogitsProcessors: List[CustomRepetitionPenaltyLogitsProcessorRepeat] = [],
+        logits_warpers: List[LogitsWarper] = [],
+        logits_processors: List[CustomRepetitionPenaltyLogitsProcessorRepeat] = [],
         infer_text=False,
         return_attn=False,
         return_hidden=False,
@@ -355,16 +355,16 @@ class GPT(nn.Module):
                         inputs_ids_sliced = inputs_ids[:, start_idx:].permute(0, 2, 1)
                         logits_token = inputs_ids_sliced.reshape(
                             inputs_ids_sliced.size(0)*inputs_ids_sliced.size(1), -1,
-                        )
+                        ).to(self.device)
                     else:
-                        logits_token = inputs_ids[:, start_idx:, 0]
+                        logits_token = inputs_ids[:, start_idx:, 0].to(self.device)
 
                     logits /= temperature
 
-                    for logitsProcessors in LogitsProcessors:
+                    for logitsProcessors in logits_processors:
                         logits = logitsProcessors(logits_token, logits)
 
-                    for logitsWarpers in LogitsWarpers:
+                    for logitsWarpers in logits_warpers:
                         logits = logitsWarpers(logits_token, logits)
 
                     del logits_token
@@ -382,12 +382,12 @@ class GPT(nn.Module):
                         # idx_next = rearrange(idx_next, "(b n) 1 -> b n", n=self.num_vq)
                         idx_next = idx_next.view(-1, self.num_vq)
                         finish_or = (idx_next == eos_token).any(1)
-                        finish |= finish_or
+                        finish.logical_or_(finish_or)
                         del finish_or
                         inputs_ids_tmp = torch.cat([inputs_ids, idx_next.unsqueeze_(1)], 1)
                     else:
                         finish_or = (idx_next == eos_token).any(1)
-                        finish |= finish_or
+                        finish.logical_or_(finish_or)
                         del finish_or
                         inputs_ids_tmp = torch.cat([inputs_ids, idx_next.unsqueeze_(-1).expand(-1, -1, self.num_vq)], 1)
 
@@ -396,10 +396,10 @@ class GPT(nn.Module):
                     del inputs_ids_tmp, idx_next
 
                     if stream:
-                        minus_prev_end_index = -end_idx
-                    end_idx += (~finish.to(end_idx.device)).int()
+                        minus_prev_end_index = end_idx.neg()
+                    end_idx.add_((finish.logical_not().to(end_idx.device)).int())
                     if stream:
-                        if end_idx.all() and (end_idx%24 == 0).any() and torch.add(end_idx, minus_prev_end_index, out=minus_prev_end_index).any():
+                        if end_idx.all() and (end_idx%24 == 0).any() and minus_prev_end_index.add_(end_idx).any():
                             self.logger.debug("yield stream result, end: %d", end_idx)
                             yield self._prepare_generation_outputs(
                                 inputs_ids, start_idx, end_idx, attentions, hiddens,
