@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 setup(name='chattts',
-      version='0.0.1',
+      version='0.1.0',
       author='2noise',
       url='https://github.com/2noise/ChatTTS',
       package_data={
