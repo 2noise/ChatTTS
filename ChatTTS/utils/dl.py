@@ -30,7 +30,6 @@ def check_model(
             logger.get_logger().warn(f"{target} sha256 hash mismatch.")
             logger.get_logger().info(f"expected: {hash}")
             logger.get_logger().info(f"real val: {digest}")
-            logger.get_logger().warn("please add parameter --update to download the latest assets.")
             if remove_incorrect:
                 if not os.path.exists(bakfile):
                     os.rename(str(target), bakfile)

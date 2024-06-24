@@ -79,13 +79,15 @@ def generate_audio(text, temperature, top_P, top_K, audio_seed_input, stream):
 
     with TorchSeedContext(audio_seed_input):
         rand_spk = chat.sample_random_speaker()
-        params_infer_code = {
-            'spk_emb': rand_spk,
-            'temperature': temperature,
-            'top_P': top_P,
-            'top_K': top_K,
-        }
 
+    params_infer_code = {
+        'spk_emb': rand_spk,
+        'temperature': temperature,
+        'top_P': top_P,
+        'top_K': top_K,
+    }
+
+    with TorchSeedContext(audio_seed_input):
         wav = chat.infer(
             text,
             skip_refine_text=True,
