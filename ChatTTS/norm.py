@@ -155,8 +155,13 @@ class Normalizer:
         if name in self.normalizers:
             self.logger.warning(f"name {name} has been registered")
             return False
-        if not isinstance(normalizer, Callable[[str], str]):
-            self.logger.warning("normalizer must have caller type (str) -> str")
+        try:
+            val = normalizer("test string 测试字符串")
+            if not isinstance(val, str):
+                self.logger.warning("normalizer must have caller type (str) -> str")
+                return False
+        except Exception as e:
+            self.logger.warning(e)
             return False
         self.normalizers[name] = normalizer
         return True

@@ -49,6 +49,8 @@ def load_chat(cust_path: Optional[str], coef: Optional[str]) -> bool:
     if ret:
         try:
             chat.normalizer.register("en", normalizer_en_nemo_text())
+        except ValueError as e:
+            logger.error(e)
         except:
             logger.warning('Package nemo_text_processing not found!')
             logger.warning(
@@ -56,6 +58,8 @@ def load_chat(cust_path: Optional[str], coef: Optional[str]) -> bool:
             )
         try:
             chat.normalizer.register("zh", normalizer_zh_tn())
+        except ValueError as e:
+            logger.error(e)
         except:
             logger.warning('Package WeTextProcessing not found!')
             logger.warning(
