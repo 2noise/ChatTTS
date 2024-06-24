@@ -1,7 +1,6 @@
 import os
 import logging
 import tempfile
-from functools import partial
 from typing import Literal, Optional, List, Callable
 
 import numpy as np
@@ -13,11 +12,12 @@ from huggingface_hub import snapshot_download
 from .model.dvae import DVAE
 from .model.gpt import GPT
 from .utils.gpu import select_device
-from .utils.infer import count_invalid_characters, detect_language, apply_character_map, apply_half2full_map, HomophonesReplacer
 from .utils.io import get_latest_modified_file, del_all
 from .infer.api import refine_text, infer_code
 from .utils.dl import check_all_assets, download_all_assets
 from .utils.log import logger as utils_logger
+
+from .norm import Normalizer
 
 
 class Chat:
@@ -26,9 +26,10 @@ class Chat:
         utils_logger.set_logger(logger)
 
         self.pretrain_models = {}
-        self.normalizer = {}
-        self.homophones_replacer = self.homophones_replacer = HomophonesReplacer(os.path.join(os.path.dirname(__file__), 'res', 'homophones_map.json'))
-
+        self.normalizer = Normalizer(
+            os.path.join(os.path.dirname(__file__), 'res', 'homophones_map.json'),
+            logger,
+        )
 
     def has_loaded(self, use_decoder = False):
         not_finish = False
@@ -188,6 +189,8 @@ class Chat:
     def unload(self):
         logger = self.logger
         del_all(self.pretrain_models)
+        self.normalizer.destroy()
+        del self.normalizer
         del_list = ["vocos", "_vocos_decode", 'gpt', 'decoder', 'dvae']
         for module in del_list:
             if hasattr(self, module):
@@ -212,23 +215,10 @@ class Chat:
         
         if not isinstance(text, list): 
             text = [text]
-        if do_text_normalization:
-            for i, t in enumerate(text):
-                _lang = detect_language(t) if lang is None else lang
-                if self._init_normalizer(_lang):
-                    text[i] = self.normalizer[_lang](t)
-                    if _lang == 'zh':
-                        text[i] = apply_half2full_map(text[i])
-        for i, t in enumerate(text):
-            invalid_characters = count_invalid_characters(t)
-            if len(invalid_characters):
-                self.logger.warn(f'Invalid characters found! : {invalid_characters}')
-                text[i] = apply_character_map(t)
-            if do_homophone_replacement:
-                text[i], replaced_words = self.homophones_replacer.replace(text[i])
-                if replaced_words:
-                    repl_res = ', '.join([f'{_[0]}->{_[1]}' for _ in replaced_words])
-                    self.logger.log(logging.INFO, f'Homophones replace: {repl_res}')
+
+        text = [self.normalizer(
+            t, do_text_normalization, do_homophone_replacement, lang,
+        ) for t in text]
 
         if not skip_refine_text:
             refined = refine_text(
@@ -314,38 +304,3 @@ class Chat:
         result.destroy()
         del_all(x)
         return wavs
-
-    def _init_normalizer(self, lang) -> bool:
-
-        if lang in self.normalizer:
-            return True
-
-        if lang == 'zh':
-            try:
-                from tn.chinese.normalizer import Normalizer
-                self.normalizer[lang] = Normalizer().normalize
-                return True
-            except:
-                self.logger.log(
-                    logging.WARNING,
-                    'Package WeTextProcessing not found!',
-                )
-                self.logger.log(
-                    logging.WARNING,
-                    'Run: conda install -c conda-forge pynini=2.1.5 && pip install WeTextProcessing',
-                )   
-        else:
-            try:
-                from nemo_text_processing.text_normalization.normalize import Normalizer
-                self.normalizer[lang] = partial(Normalizer(input_case='cased', lang=lang).normalize, verbose=False, punct_post_process=True)
-                return True
-            except:
-                self.logger.log(
-                    logging.WARNING,
-                    'Package nemo_text_processing not found!',
-                )
-                self.logger.log(
-                    logging.WARNING,
-                    'Run: conda install -c conda-forge pynini=2.1.5 && pip install nemo_text_processing',
-                )
-        return False

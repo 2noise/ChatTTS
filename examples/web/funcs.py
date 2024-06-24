@@ -10,6 +10,7 @@ from tools.logger import get_logger
 logger = get_logger(" WebUI ")
 
 from tools.seeder import TorchSeedContext
+from tools.normalizer import normalizer_en_nemo_text, normalizer_zh_tn
 
 import ChatTTS
 chat = ChatTTS.Chat(get_logger("ChatTTS"))
@@ -37,25 +38,47 @@ def generate_seed():
 def on_voice_change(vocie_selection):
     return voices.get(vocie_selection)['seed']
 
+def load_chat(cust_path: Optional[str], coef: Optional[str]) -> bool:
+    if cust_path == None:
+        ret = chat.load_models(coef=coef, compile=sys.platform != 'win32')
+    else:
+        logger.info('local model path: %s', cust_path)
+        ret = chat.load_models('custom', custom_path=cust_path, coef=coef, compile=sys.platform != 'win32')
+        global custom_path
+        custom_path = cust_path
+    if ret:
+        try:
+            chat.normalizer.register("en", normalizer_en_nemo_text())
+        except:
+            logger.warn('Package nemo_text_processing not found!')
+            logger.warn(
+                'Run: conda install -c conda-forge pynini=2.1.5 && pip install nemo_text_processing',
+            )
+        try:
+            chat.normalizer.register("zh", normalizer_zh_tn())
+        except:
+            logger.warn('Package WeTextProcessing not found!')
+            logger.warn(
+                'Run: conda install -c conda-forge pynini=2.1.5 && pip install WeTextProcessing',
+            )
+    return ret
+
 def reload_chat(coef: Optional[str]) -> str:
-    global custom_path
     chat.unload()
     gr.Info("Model unloaded.")
+    if len(coef) != 230:
+        gr.Warning("Ingore invalid DVAE coefficient.")
+        coef = None
     try:
-        if len(coef) != 230:
-            gr.Warning("Ingore invalid DVAE coefficient.")
-            coef = None
-        if custom_path == None:
-            ret = chat.load_models(coef=coef, compile=sys.platform != 'win32')
-        else:
-            logger.info('local model path: %s', custom_path)
-            ret = chat.load_models('custom', custom_path=custom_path, coef=coef, compile=sys.platform != 'win32')
-        if not ret:
-            raise gr.Error("Unable to load model.")
-        gr.Info("Reload succeess.")
-        return chat.coef
+        global custom_path
+        ret = load_chat(custom_path, coef)
     except Exception as e:
         raise gr.Error(str(e))
+    if not ret:
+        raise gr.Error("Unable to load model.")
+    gr.Info("Reload succeess.")
+    return chat.coef
+
 
 def refine_text(text, text_seed_input, refine_text_flag):
     if not refine_text_flag:
