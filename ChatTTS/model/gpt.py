@@ -16,7 +16,7 @@ from transformers import LlamaModel, LlamaConfig, LogitsWarper
 from transformers.cache_utils import Cache
 from transformers.modeling_outputs import BaseModelOutputWithPast
 
-from ..utils.infer import CustomRepetitionPenaltyLogitsProcessorRepeat
+from .processors import CustomRepetitionPenaltyLogitsProcessorRepeat
 from ..utils.io import del_all
 
 

@@ -3,7 +3,7 @@ import torch
 
 from .log import logger
 
-def select_device(min_memory=2048):
+def select_device(min_memory=2047):
     if torch.cuda.is_available():
         available_gpus = []
         for i in range(torch.cuda.device_count()):
