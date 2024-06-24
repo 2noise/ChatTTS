@@ -31,6 +31,8 @@ class Chat:
             logger,
         )
 
+        self.context = GPT.Context()
+
     def has_loaded(self, use_decoder = False):
         not_finish = False
         check_list = ["vocos", "_vocos_decode", 'gpt', 'tokenizer']
@@ -155,6 +157,7 @@ class Chat:
         params_refine_text = RefineTextParams(), 
         params_infer_code = InferCodeParams(), 
     ):
+        self.context.set(False)
         res_gen = self._infer(
             text,
             stream,
@@ -171,6 +174,9 @@ class Chat:
             return res_gen
         else:
             return next(res_gen)
+    
+    def interrupt(self):
+        self.context.set(True)
 
     def _load(
         self, 
@@ -422,6 +428,7 @@ class Chat:
             infer_text = False,
             return_hidden=return_hidden,
             stream = stream,
+            context=self.context,
         )
 
         del_all(text_token)
@@ -467,6 +474,7 @@ class Chat:
             logits_processors = logits_processors,
             infer_text = True,
             stream = False,
+            context=self.context,
         )
 
         del_all(text_token)

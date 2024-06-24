@@ -48,8 +48,10 @@ class GPT(nn.Module):
         super().__init__()
 
         self.logger = logger
+
         self.device = device
         self.device_gpt = device if "mps" not in str(device) else torch.device("cpu")
+
         self.num_vq = num_vq
         self.num_audio_tokens = num_audio_tokens
 
@@ -76,6 +78,17 @@ class GPT(nn.Module):
                 name='weight',
             ) for _ in range(self.num_vq)],
         )
+    
+    class Context:
+        def __init__(self):
+            self._interrupt = False
+
+        def set(self, v: bool):
+            self._interrupt = v
+        
+        def get(self) -> bool:
+            return self._interrupt
+
 
     def _build_llama(self, config: omegaconf.DictConfig, device: torch.device) -> LlamaModel:
 
@@ -266,6 +279,7 @@ class GPT(nn.Module):
         return_attn=False,
         return_hidden=False,
         stream=False,
+        context=Context(),
     ):
         
         with torch.no_grad():
@@ -407,12 +421,15 @@ class GPT(nn.Module):
                             )
                         del minus_prev_end_index
 
-                    if finish.all(): break
+                    if finish.all() or context.get(): break
 
                     pbar.update(1)
 
             if not finish.all():
-                self.logger.warning(f'incomplete result. hit max_new_token: {max_new_token}')
+                if context.get():
+                    self.logger.warning('generation is interrupted')
+                else:
+                    self.logger.warning(f'incomplete result. hit max_new_token: {max_new_token}')
 
             del finish
 
