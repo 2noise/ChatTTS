@@ -45,10 +45,10 @@ def reload_chat(coef: Optional[str]) -> str:
             gr.Warning("Ingore invalid DVAE coefficient.")
             coef = None
         if custom_path == None:
-            ret = chat.load_models(coef=coef)
+            ret = chat.load_models(coef=coef, compile=sys.platform != 'win32')
         else:
             logger.info('local model path: %s', custom_path)
-            ret = chat.load_models('custom', custom_path=custom_path, coef=coef)
+            ret = chat.load_models('custom', custom_path=custom_path, coef=coef, compile=sys.platform != 'win32')
         if not ret:
             raise gr.Error("Unable to load model.")
         gr.Info("Reload succeess.")
