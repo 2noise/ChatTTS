@@ -119,7 +119,7 @@ class Chat:
         coef: Optional[str] = None
     ):
         if device is None:
-            device = select_device(4096)
+            device = select_device()
             self.logger.log(logging.INFO, f'use {device}')
         self.device = device
 
