@@ -108,7 +108,7 @@ from IPython.display import Audio
 import torchaudio
 
 chat = ChatTTS.Chat()
-chat.load_models(compile=False) # Set to True for better performance
+chat.load(compile=False) # Set to True for better performance
 
 texts = ["PUT YOUR TEXT HERE",]
 

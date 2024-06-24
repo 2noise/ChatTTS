@@ -40,10 +40,10 @@ def on_voice_change(vocie_selection):
 
 def load_chat(cust_path: Optional[str], coef: Optional[str]) -> bool:
     if cust_path == None:
-        ret = chat.load_models(coef=coef, compile=sys.platform != 'win32')
+        ret = chat.load(coef=coef, compile=sys.platform != 'win32')
     else:
         logger.info('local model path: %s', cust_path)
-        ret = chat.load_models('custom', custom_path=cust_path, coef=coef, compile=sys.platform != 'win32')
+        ret = chat.load('custom', custom_path=cust_path, coef=coef, compile=sys.platform != 'win32')
         global custom_path
         custom_path = cust_path
     if ret:

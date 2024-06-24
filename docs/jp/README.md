@@ -36,7 +36,7 @@ import ChatTTS
 from IPython.display import Audio
 
 chat = ChatTTS.Chat()
-chat.load_models(compile=False) # より良いパフォーマンスのためにTrueに設定
+chat.load(compile=False) # より良いパフォーマンスのためにTrueに設定
 
 texts = ["ここにテキストを入力してください",]
 
