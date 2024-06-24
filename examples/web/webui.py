@@ -32,16 +32,22 @@ def main():
             top_k_slider = gr.Slider(minimum=1, maximum=20, step=1, value=20, label="top_K", interactive=True)
 
         with gr.Row():
-            voice_selection = gr.Dropdown(label="音色", choices=voices.keys(), value='默认')
+            voice_selection = gr.Dropdown(label="Timbre", choices=voices.keys(), value='Default')
             audio_seed_input = gr.Number(value=2, label="Audio Seed")
             generate_audio_seed = gr.Button("\U0001F3B2")
             text_seed_input = gr.Number(value=42, label="Text Seed")
             generate_text_seed = gr.Button("\U0001F3B2")
+        
+        with gr.Row():
+            dvae_coef_text = gr.Textbox(
+                label="DVAE Coefficient", max_lines=3, show_copy_button=True, scale=4,
+            )
+            reload_chat_button = gr.Button("Reload", scale=1)
 
         with gr.Row():
             auto_play_checkbox = gr.Checkbox(label="Auto Play", value=False, scale=1)
             stream_mode_checkbox = gr.Checkbox(label="Stream Mode", value=False, scale=1)
-            generate_button = gr.Button("Generate", scale=2)
+            generate_button = gr.Button("Generate", scale=2, variant="primary")
 
         text_output = gr.Textbox(label="Output Text", interactive=False)
 
@@ -56,9 +62,11 @@ def main():
                                  inputs=[],
                                  outputs=text_seed_input)
         
+        reload_chat_button.click(reload_chat, inputs=dvae_coef_text, outputs=dvae_coef_text)
+        
         generate_button.click(fn=lambda: "", outputs=text_output)
         generate_button.click(refine_text,
-                              inputs=[text_input, audio_seed_input, text_seed_input, refine_text_checkbox],
+                              inputs=[text_input, text_seed_input, refine_text_checkbox],
                               outputs=text_output)
 
         @gr.render(inputs=[auto_play_checkbox, stream_mode_checkbox])
@@ -72,14 +80,14 @@ def main():
                 show_label=True,
             )
             text_output.change(generate_audio,
-                                inputs=[text_output, temperature_slider, top_p_slider, top_k_slider, audio_seed_input, text_seed_input, stream_mode_checkbox],
+                                inputs=[text_output, temperature_slider, top_p_slider, top_k_slider, audio_seed_input, stream_mode_checkbox],
                                 outputs=audio_output)
 
         gr.Examples(
             examples=[
                 ["四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。", 0.3, 0.7, 20, 2, 42, True],
-                ["What is [uv_break]your favorite english food?[laugh][lbreak]", 0.5, 0.5, 10, 245, 531, True],
-                ["chat T T S is a text to speech model designed for dialogue applications. [uv_break]it supports mixed language input [uv_break]and offers multi speaker capabilities with precise control over prosodic elements [laugh]like like [uv_break]laughter[laugh], [uv_break]pauses, [uv_break]and intonation. [uv_break]it delivers natural and expressive speech,[uv_break]so please[uv_break] use the project responsibly at your own risk.[uv_break]", 0.2, 0.6, 15, 67, 165, True],
+                ["What is [uv_break]your favorite english food?[laugh][lbreak]", 0.5, 0.5, 10, 245, 531, False],
+                ["chat T T S is a text to speech model designed for dialogue applications. [uv_break]it supports mixed language input [uv_break]and offers multi speaker capabilities with precise control over prosodic elements [laugh]like like [uv_break]laughter[laugh], [uv_break]pauses, [uv_break]and intonation. [uv_break]it delivers natural and expressive speech,[uv_break]so please[uv_break] use the project responsibly at your own risk.[uv_break]", 0.2, 0.6, 15, 67, 165, False],
             ],
             inputs=[text_input, temperature_slider, top_p_slider, top_k_slider, audio_seed_input, text_seed_input, refine_text_checkbox],
         )
@@ -93,7 +101,7 @@ def main():
 
     logger.info("loading ChatTTS model...")
 
-    global chat
+    global chat, custom_path
 
     if args.custom_path == None:
         ret = chat.load_models(compile=sys.platform != 'win32')
@@ -106,7 +114,9 @@ def main():
     else:
         logger.error("Models load failed.")
         sys.exit(1)
-
+    
+    custom_path = args.custom_path
+    dvae_coef_text.value = chat.coef
 
     demo.launch(server_name=args.server_name, server_port=args.server_port, root_path=args.root_path, inbrowser=True)
 
