@@ -51,7 +51,7 @@ class Formatter(logging.Formatter):
         return logstr
 
 
-def get_logger(name: str, lv = logging.INFO, remove_exist=False):
+def get_logger(name: str, lv = logging.INFO, remove_exist=False, format_root=False):
     logger = logging.getLogger(name)
     logger.setLevel(lv)
     if remove_exist and logger.hasHandlers():
@@ -62,5 +62,8 @@ def get_logger(name: str, lv = logging.INFO, remove_exist=False):
         logger.addHandler(syslog)
     else:
         for h in logger.handlers:
+            h.setFormatter(Formatter())
+    if format_root:
+        for h in logger.root.handlers:
             h.setFormatter(Formatter())
     return logger
