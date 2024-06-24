@@ -13,13 +13,9 @@ from vocos import Vocos
 from huggingface_hub import snapshot_download
 from transformers.generation import TopKLogitsWarper, TopPLogitsWarper
 
-from .model.dvae import DVAE
-from .model.gpt import GPT
-from .utils.gpu import select_device
-from .model.processors import CustomRepetitionPenaltyLogitsProcessorRepeat
-from .utils.io import get_latest_modified_file, del_all
-from .utils.dl import check_all_assets, download_all_assets
-from .utils.log import logger as utils_logger
+from .model import DVAE, GPT, CustomRepetitionPenaltyLogitsProcessorRepeat
+from .utils import check_all_assets, download_all_assets, select_device, get_latest_modified_file, del_all
+from .utils import logger as utils_logger
 
 from .norm import Normalizer
 

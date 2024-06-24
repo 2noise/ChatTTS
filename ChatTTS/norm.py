@@ -7,7 +7,7 @@ import sys
 from numba import jit
 import numpy as np
 
-from .utils.io import del_all
+from .utils import del_all
 
 
 @jit
