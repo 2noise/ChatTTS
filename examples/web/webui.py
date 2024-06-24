@@ -93,29 +93,21 @@ def main():
         )
     
     parser = argparse.ArgumentParser(description='ChatTTS demo Launch')
-    parser.add_argument('--server_name', type=str, default='0.0.0.0', help='Server name')
-    parser.add_argument('--server_port', type=int, default=8080, help='Server port')
-    parser.add_argument('--root_path', type=str, default=None, help='Root Path')
-    parser.add_argument('--custom_path', type=str, default=None, help='the custom model path')
+    parser.add_argument('--server_name', type=str, default='0.0.0.0', help='server name')
+    parser.add_argument('--server_port', type=int, default=8080, help='server port')
+    parser.add_argument('--root_path', type=str, default=None, help='root path')
+    parser.add_argument('--custom_path', type=str, default=None, help='custom model path')
+    parser.add_argument('--coef', type=str, default=None, help='custom dvae coefficient')
     args = parser.parse_args()
 
     logger.info("loading ChatTTS model...")
 
-    global chat, custom_path
-
-    if args.custom_path == None:
-        ret = chat.load_models(compile=sys.platform != 'win32')
-    else:
-        logger.info('local model path: %s', args.custom_path)
-        ret = chat.load_models('custom', custom_path=args.custom_path, compile=sys.platform != 'win32')
-
-    if ret:
+    if load_chat(args.custom_path, args.coef):
         logger.info("Models loaded successfully.")
     else:
         logger.error("Models load failed.")
         sys.exit(1)
-    
-    custom_path = args.custom_path
+
     dvae_coef_text.value = chat.coef
 
     demo.launch(server_name=args.server_name, server_port=args.server_port, root_path=args.root_path, inbrowser=True)
