@@ -129,7 +129,7 @@ class Chat:
                 "cpu" if "mps" in str(device) else device
             ).eval()
             assert vocos_ckpt_path, 'vocos_ckpt_path should not be None'
-            vocos.load_state_dict(torch.load(vocos_ckpt_path))
+            vocos.load_state_dict(torch.load(vocos_ckpt_path, weights_only=True, mmap=True))
             self.vocos = vocos
             if "mps" in str(self.device):
                 self._vocos_decode: Callable[[torch.Tensor], np.ndarray] = lambda spec: self.vocos.decode(
@@ -146,7 +146,7 @@ class Chat:
             dvae = DVAE(**cfg, coef=coef).to(device).eval()
             coef = str(dvae)
             assert dvae_ckpt_path, 'dvae_ckpt_path should not be None'
-            dvae.load_state_dict(torch.load(dvae_ckpt_path, map_location=device))
+            dvae.load_state_dict(torch.load(dvae_ckpt_path, weights_only=True, mmap=True))
             self.dvae = dvae
             self.logger.log(logging.INFO, 'dvae loaded.')
             
@@ -154,7 +154,7 @@ class Chat:
             cfg = OmegaConf.load(gpt_config_path)
             gpt = GPT(**cfg, device=device, logger=self.logger).eval()
             assert gpt_ckpt_path, 'gpt_ckpt_path should not be None'
-            gpt.load_state_dict(torch.load(gpt_ckpt_path, map_location=device))
+            gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
             if compile and 'cuda' in str(device):
                 try:
                     gpt.gpt.forward = torch.compile(gpt.gpt.forward, backend='inductor', dynamic=True)
@@ -163,7 +163,7 @@ class Chat:
             self.gpt = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), 'spk_stat.pt')
             assert os.path.exists(spk_stat_path), f'Missing spk_stat.pt: {spk_stat_path}'
-            self.pretrain_models['spk_stat'] = torch.load(spk_stat_path, map_location=device).to(device)
+            self.pretrain_models['spk_stat'] = torch.load(spk_stat_path, weights_only=True, mmap=True).to(device)
             self.logger.log(logging.INFO, 'gpt loaded.')
             
         if decoder_config_path:
@@ -171,12 +171,12 @@ class Chat:
             decoder = DVAE(**cfg, coef=coef).to(device).eval()
             coef = str(decoder)
             assert decoder_ckpt_path, 'decoder_ckpt_path should not be None'
-            decoder.load_state_dict(torch.load(decoder_ckpt_path, map_location=device))
+            decoder.load_state_dict(torch.load(decoder_ckpt_path, weights_only=True, mmap=True))
             self.decoder = decoder
             self.logger.log(logging.INFO, 'decoder loaded.')
         
         if tokenizer_path:
-            tokenizer = torch.load(tokenizer_path, map_location=device)
+            tokenizer = torch.load(tokenizer_path, map_location=device, mmap=True)
             tokenizer.padding_side = 'left'
             self.pretrain_models['tokenizer'] = tokenizer
             self.logger.log(logging.INFO, 'tokenizer loaded.')
@@ -187,7 +187,11 @@ class Chat:
     
     def unload(self):
         logger = self.logger
-        del_all(self)
+        del_all(self.pretrain_models)
+        del_list = ["vocos", "_vocos_decode", 'gpt', 'decoder', 'dvae']
+        for module in del_list:
+            if hasattr(self, module):
+                delattr(self, module)
         self.__init__(logger)
 
     def _infer(
