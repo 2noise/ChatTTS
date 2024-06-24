@@ -10,7 +10,7 @@ def get_latest_modified_file(directory):
 
     files = [os.path.join(directory, f) for f in os.listdir(directory)] 
     if not files:
-        logger.log(logging.WARNING, f'No files found in the directory: {directory}')
+        logger.get_logger().log(logging.WARNING, f'no files found in the directory: {directory}')
         return None
     latest_file = max(files, key=os.path.getmtime)
 
@@ -31,11 +31,12 @@ def del_all(d: Union[dict, list]):
             if isinstance(x, dict) or isinstance(x, list) or is_dataclass(x):
                 del_all(x)
             del x
-        return
     elif isinstance(d, list):
         while len(d):
             x = d.pop()
             if isinstance(x, dict) or isinstance(x, list) or is_dataclass(x):
                 del_all(x)
             del x
-        return
+    else:
+        del d
+

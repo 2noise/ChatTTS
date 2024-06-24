@@ -1,20 +1,19 @@
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+from dataclasses import dataclass
 import logging
 from typing import Union, List, Optional, Tuple
-from dataclasses import dataclass
 
-from tqdm import tqdm
-from transformers.cache_utils import Cache
 import omegaconf
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.utils.parametrize as P
 from torch.nn.utils.parametrizations import weight_norm
+from tqdm import tqdm
 from transformers import LlamaModel, LlamaConfig, LogitsWarper
+from transformers.cache_utils import Cache
 from transformers.modeling_outputs import BaseModelOutputWithPast
 
 from ..utils.infer import CustomRepetitionPenaltyLogitsProcessorRepeat
@@ -98,23 +97,22 @@ class GPT(nn.Module):
 
         emb_text: torch.Tensor = self.emb_text(input_ids[text_mask].narrow(1, 0, 1).squeeze_(1).to(self.device_gpt))
 
-        text_mask_inv = ~text_mask
+        text_mask_inv = ~(text_mask.to(self.device_gpt))
         masked_input_ids: torch.Tensor = input_ids[text_mask_inv].to(self.device_gpt)
-        del text_mask_inv
 
         emb_code = [self.emb_code[i](masked_input_ids[:, i]) for i in range(self.num_vq)]
         emb_code = torch.stack(emb_code, 2).sum(2)
 
         emb = torch.zeros((input_ids.shape[:-1])+(emb_text.shape[-1],), device=emb_text.device, dtype=emb_text.dtype)
         emb[text_mask] = emb_text
-        emb[~text_mask] = emb_code.to(emb.dtype)
+        emb[text_mask_inv] = emb_code.to(emb.dtype)
 
-        del emb_text, emb_code
+        del emb_text, emb_code, text_mask_inv
 
         return emb
     
     @dataclass(repr=False, eq=False)
-    class GenerationInputs():
+    class _GenerationInputs():
         position_ids: torch.Tensor
         cache_position: torch.Tensor
         use_cache: bool
@@ -129,7 +127,7 @@ class GPT(nn.Module):
             if self.inputs_embeds   is not None: self.inputs_embeds  = self.inputs_embeds.to(device)
             if self.cache_position  is not None: self.cache_position = self.cache_position.to(device)
 
-    def _prepare_inputs_for_generation(
+    def _prepare_generation_inputs(
         self,
         input_ids: torch.Tensor,
         past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]]=None,
@@ -138,7 +136,7 @@ class GPT(nn.Module):
         cache_position: Optional[torch.Tensor]=None,
         position_ids: Optional[torch.Tensor]=None,
         use_cache = True,
-    ) -> GenerationInputs:
+    ) -> _GenerationInputs:
         # With static cache, the `past_key_values` is None
         # TODO joao: standardize interface for the different Cache classes and remove of this if
         has_static_cache = False
@@ -197,7 +195,7 @@ class GPT(nn.Module):
         if has_static_cache:
             past_key_values = None
 
-        model_inputs = self.GenerationInputs(
+        model_inputs = self._GenerationInputs(
             position_ids=position_ids,
             cache_position=cache_position,
             use_cache=use_cache,
@@ -223,7 +221,36 @@ class GPT(nn.Module):
         attentions: List[Optional[Tuple[torch.FloatTensor, ...]]]
         hiddens: List[torch.Tensor]
 
-    
+        def destroy(self):
+            del_all(self.ids)
+            del_all(self.attentions)
+            del_all(self.hiddens)
+
+
+    def _prepare_generation_outputs(
+        self,
+        inputs_ids: torch.Tensor,
+        start_idx: int,
+        end_idx: torch.Tensor,
+        attentions: List[Optional[Tuple[torch.FloatTensor, ...]]],
+        hiddens: List[torch.Tensor],
+        infer_text: bool,
+    ) -> GenerationOutputs:
+        inputs_ids = [inputs_ids[idx].narrow(0, start_idx, i) for idx, i in enumerate(end_idx)]
+        if infer_text:
+            inputs_ids = [i.narrow(1, 0, 1).squeeze_(1) for i in inputs_ids]
+
+        if len(hiddens) > 0:
+            hiddens = torch.stack(hiddens, 1)
+            hiddens = [hiddens[idx].narrow(0, 0, i) for idx, i in enumerate(end_idx.int())]
+
+        return self.GenerationOutputs(
+            ids=inputs_ids,
+            attentions=attentions,
+            hiddens=hiddens,
+        )
+
+
     def generate(
         self, 
         emb: torch.Tensor, 
@@ -256,12 +283,16 @@ class GPT(nn.Module):
             if attention_mask is not None:
                 attention_mask_cache[:, :attention_mask.shape[1]] = attention_mask
 
-            with tqdm(total=max_new_token) as pbar:
+            with tqdm(
+                total=max_new_token,
+                desc="text" if infer_text else "code",
+                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}(max) [{elapsed}, {rate_fmt}{postfix}]',
+            ) as pbar:
 
                 past_key_values = None
 
                 for i in range(max_new_token):
-                    model_input = self._prepare_inputs_for_generation(
+                    model_input = self._prepare_generation_inputs(
                         inputs_ids, 
                         past_key_values, 
                         attention_mask_cache[:, :inputs_ids.shape[1]],
@@ -296,7 +327,7 @@ class GPT(nn.Module):
                     past_key_values = outputs.past_key_values
                     del_all(outputs)
                     if return_hidden:
-                        hiddens.append(hidden_states[:, -1])
+                        hiddens.append(hidden_states.narrow(1, -1, 1).squeeze_(1))
 
                     with P.cached():
                         if infer_text:
@@ -353,52 +384,39 @@ class GPT(nn.Module):
                         finish_or = (idx_next == eos_token).any(1)
                         finish |= finish_or
                         del finish_or
-                        inputs_ids = torch.cat([inputs_ids, idx_next.unsqueeze(1)], 1)
+                        inputs_ids_tmp = torch.cat([inputs_ids, idx_next.unsqueeze_(1)], 1)
                     else:
                         finish_or = (idx_next == eos_token).any(1)
                         finish |= finish_or
                         del finish_or
-                        inputs_ids = torch.cat([inputs_ids, idx_next.unsqueeze(-1).expand(-1, -1, self.num_vq)], 1)
+                        inputs_ids_tmp = torch.cat([inputs_ids, idx_next.unsqueeze_(-1).expand(-1, -1, self.num_vq)], 1)
 
-                    del idx_next
+                    del inputs_ids
+                    inputs_ids = inputs_ids_tmp
+                    del inputs_ids_tmp, idx_next
 
-                    end_idx += (~finish).int().to(end_idx.device)
                     if stream:
-                        if end_idx % 24 and not finish.all():
-                            continue
-                        y_inputs_ids = [inputs_ids[idx, start_idx: start_idx+i] for idx, i in enumerate(end_idx.int())]
-                        y_inputs_ids = [i[:, 0] for i in y_inputs_ids] if infer_text else y_inputs_ids
-                        y_hiddens = []
-                        if return_hidden:
-                            y_hiddens = torch.stack(hiddens, 1)
-                            y_hiddens = [y_hiddens[idx, :i] for idx, i in enumerate(end_idx.int())]
+                        minus_prev_end_index = -end_idx
+                    end_idx += (~finish.to(end_idx.device)).int()
+                    if stream:
+                        if end_idx.all() and (end_idx%24 == 0).any() and torch.add(end_idx, minus_prev_end_index, out=minus_prev_end_index).any():
+                            self.logger.debug("yield stream result, end: %d", end_idx)
+                            yield self._prepare_generation_outputs(
+                                inputs_ids, start_idx, end_idx, attentions, hiddens,
+                                infer_text,
+                            )
+                        del minus_prev_end_index
 
-                        yield self.GenerationOutputs(
-                            ids=y_inputs_ids,
-                            attentions=attentions,
-                            hiddens=y_hiddens,
-                        )
-
-                    if finish.all():
-                        pbar.update(max_new_token-i-1)
-                        break
+                    if finish.all(): break
 
                     pbar.update(1)
 
-            inputs_ids = [inputs_ids[idx, start_idx: start_idx+i] for idx, i in enumerate(end_idx.int())]
-            inputs_ids = [i[:, 0] for i in inputs_ids] if infer_text else inputs_ids
-            
-            if return_hidden:
-                hiddens = torch.stack(hiddens, 1)
-                hiddens = [hiddens[idx, :i] for idx, i in enumerate(end_idx.int())]
-                    
             if not finish.all():
                 self.logger.warn(f'Incomplete result. hit max_new_token: {max_new_token}')
 
             del finish
 
-            yield self.GenerationOutputs(
-                ids=inputs_ids,
-                attentions=attentions,
-                hiddens=hiddens,
+            yield self._prepare_generation_outputs(
+                inputs_ids, start_idx, end_idx, attentions, hiddens,
+                infer_text,
             )
