@@ -48,6 +48,7 @@ def main():
             auto_play_checkbox = gr.Checkbox(label="Auto Play", value=False, scale=1)
             stream_mode_checkbox = gr.Checkbox(label="Stream Mode", value=False, scale=1)
             generate_button = gr.Button("Generate", scale=2, variant="primary")
+            interrupt_button = gr.Button("Interrupt", scale=2, variant="stop", visible=False, interactive=False)
 
         text_output = gr.Textbox(label="Output Text", interactive=False)
 
@@ -64,10 +65,12 @@ def main():
         
         reload_chat_button.click(reload_chat, inputs=dvae_coef_text, outputs=dvae_coef_text)
         
-        generate_button.click(fn=lambda: "", outputs=text_output)
+        generate_button.click(fn=lambda: "𝕃𝕠𝕒𝕕𝕚𝕟𝕘...", outputs=text_output)
         generate_button.click(refine_text,
-                              inputs=[text_input, text_seed_input, refine_text_checkbox],
-                              outputs=text_output)
+                              inputs=[text_input, text_seed_input, refine_text_checkbox, generate_button, interrupt_button],
+                              outputs=[text_output, generate_button, interrupt_button])
+        
+        interrupt_button.click(interrupt_generate)
 
         @gr.render(inputs=[auto_play_checkbox, stream_mode_checkbox])
         def make_audio(autoplay, stream):
@@ -79,9 +82,10 @@ def main():
                 interactive=False,
                 show_label=True,
             )
+            text_output.change(text_output_listener, inputs=[generate_button, interrupt_button], outputs=[generate_button, interrupt_button])
             text_output.change(generate_audio,
                                 inputs=[text_output, temperature_slider, top_p_slider, top_k_slider, audio_seed_input, stream_mode_checkbox],
-                                outputs=audio_output)
+                                outputs=audio_output).then(fn=set_buttons_after_generate, inputs=[generate_button, interrupt_button, audio_output], outputs=[generate_button, interrupt_button])
 
         gr.Examples(
             examples=[
