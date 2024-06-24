@@ -4,7 +4,7 @@ import torch.nn.functional as F
     
 class CustomRepetitionPenaltyLogitsProcessorRepeat():
 
-    def __init__(self, penalty: float, max_input_ids, past_window):
+    def __init__(self, penalty: float, max_input_ids: int, past_window: int):
         if not isinstance(penalty, float) or not (penalty > 0):
             raise ValueError(f"`penalty` has to be a strictly positive float, but is {penalty}")
 
@@ -23,9 +23,9 @@ class CustomRepetitionPenaltyLogitsProcessorRepeat():
 
         return scores
     
-class CustomRepetitionPenaltyLogitsProcessor():
+"""class CustomRepetitionPenaltyLogitsProcessor():
 
-    def __init__(self, penalty: float, max_input_ids, past_window):
+    def __init__(self, penalty: float, max_input_ids: int, past_window: int):
         if not isinstance(penalty, float) or not (penalty > 0):
             raise ValueError(f"`penalty` has to be a strictly positive float, but is {penalty}")
 
@@ -42,4 +42,4 @@ class CustomRepetitionPenaltyLogitsProcessor():
         score[input_ids>=self.max_input_ids] = _score[input_ids>=self.max_input_ids]
         scores.scatter_(1, input_ids, score)
         
-        return scores
+        return scores"""

@@ -86,14 +86,11 @@ def refine_text(text, text_seed_input, refine_text_flag):
 
     global chat
 
-    params_refine_text = {'prompt': '[oral_2][laugh_0][break_6]'}
-
     with TorchSeedContext(text_seed_input):
         text = chat.infer(text,
                             skip_refine_text=False,
                             refine_text_only=True,
-                            params_refine_text=params_refine_text,
-                            )
+                        )
     return text[0] if isinstance(text, list) else text
 
 def generate_audio(text, temperature, top_P, top_K, audio_seed_input, stream):
@@ -104,12 +101,12 @@ def generate_audio(text, temperature, top_P, top_K, audio_seed_input, stream):
     with TorchSeedContext(audio_seed_input):
         rand_spk = chat.sample_random_speaker()
 
-    params_infer_code = {
-        'spk_emb': rand_spk,
-        'temperature': temperature,
-        'top_P': top_P,
-        'top_K': top_K,
-    }
+    params_infer_code = ChatTTS.Chat.InferCodeParams(
+        spk_emb=rand_spk,
+        temperature=temperature,
+        top_P=top_P,
+        top_K=top_K,
+    )
 
     with TorchSeedContext(audio_seed_input):
         wav = chat.infer(
