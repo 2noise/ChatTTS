@@ -11,6 +11,7 @@ import argparse
 import gradio as gr
 
 from examples.web.funcs import *
+from examples.web.ex import ex
 
 
 def main():
@@ -35,7 +36,7 @@ def main():
                 maximum=1.0,
                 step=0.00001,
                 value=0.3,
-                label="Audio temperature",
+                label="Audio Temperature",
                 interactive=True,
             )
             top_p_slider = gr.Slider(
@@ -54,7 +55,7 @@ def main():
             voice_selection = gr.Dropdown(
                 label="Timbre", choices=voices.keys(), value="Default"
             )
-            audio_seed_input = gr.Number(value=2, label="Audio Seed")
+            audio_seed_input = gr.Number(value=2, label="Audio Seed", interactive=True)
             generate_audio_seed = gr.Button("\U0001F3B2")
             text_seed_input = gr.Number(value=42, label="Text Seed")
             generate_text_seed = gr.Button("\U0001F3B2")
@@ -144,35 +145,7 @@ def main():
             )
 
         gr.Examples(
-            examples=[
-                [
-                    "四川美食确实以辣闻名，但也有不辣的选择。比如甜水面、赖汤圆、蛋烘糕、叶儿粑等，这些小吃口味温和，甜而不腻，也很受欢迎。",
-                    0.3,
-                    0.7,
-                    20,
-                    2,
-                    42,
-                    True,
-                ],
-                [
-                    "What is [uv_break]your favorite english food?[laugh][lbreak]",
-                    0.5,
-                    0.5,
-                    10,
-                    245,
-                    531,
-                    False,
-                ],
-                [
-                    "chat T T S is a text to speech model designed for dialogue applications. [uv_break]it supports mixed language input [uv_break]and offers multi speaker capabilities with precise control over prosodic elements [laugh]like like [uv_break]laughter[laugh], [uv_break]pauses, [uv_break]and intonation. [uv_break]it delivers natural and expressive speech,[uv_break]so please[uv_break] use the project responsibly at your own risk.[uv_break]",
-                    0.2,
-                    0.6,
-                    15,
-                    67,
-                    165,
-                    False,
-                ],
-            ],
+            examples=ex,
             inputs=[
                 text_input,
                 temperature_slider,
@@ -213,6 +186,7 @@ def main():
         server_port=args.server_port,
         root_path=args.root_path,
         inbrowser=True,
+        show_api=False,
     )
 
 
