@@ -1,4 +1,3 @@
-
 import os
 import logging
 from typing import Union
@@ -6,15 +5,19 @@ from dataclasses import is_dataclass
 
 from .log import logger
 
+
 def get_latest_modified_file(directory):
 
-    files = [os.path.join(directory, f) for f in os.listdir(directory)] 
+    files = [os.path.join(directory, f) for f in os.listdir(directory)]
     if not files:
-        logger.get_logger().log(logging.WARNING, f'no files found in the directory: {directory}')
+        logger.get_logger().log(
+            logging.WARNING, f"no files found in the directory: {directory}"
+        )
         return None
     latest_file = max(files, key=os.path.getmtime)
 
     return latest_file
+
 
 def del_all(d: Union[dict, list]):
     if is_dataclass(d):
@@ -39,4 +42,3 @@ def del_all(d: Union[dict, list]):
             del x
     else:
         del d
-

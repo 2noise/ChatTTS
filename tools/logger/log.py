@@ -11,11 +11,11 @@ logging.getLogger("NeMo-text-processing").setLevel(logging.WARNING)
 colorCodePanic = "\x1b[1;31m"
 colorCodeFatal = "\x1b[1;31m"
 colorCodeError = "\x1b[31m"
-colorCodeWarn  = "\x1b[33m"
-colorCodeInfo  = "\x1b[37m"
+colorCodeWarn = "\x1b[33m"
+colorCodeInfo = "\x1b[37m"
 colorCodeDebug = "\x1b[32m"
 colorCodeTrace = "\x1b[36m"
-colorReset     = "\x1b[0m"
+colorReset = "\x1b[0m"
 
 log_level_color_code = {
     logging.DEBUG: colorCodeDebug,
@@ -33,6 +33,7 @@ log_level_msg_str = {
     logging.FATAL: "FATL",
 }
 
+
 class Formatter(logging.Formatter):
     def __init__(self, color=platform.system().lower() != "windows"):
         # https://stackoverflow.com/questions/2720319/python-figure-out-local-timezone
@@ -40,7 +41,7 @@ class Formatter(logging.Formatter):
         self.color = color
 
     def format(self, record: logging.LogRecord):
-        logstr = "[" + datetime.now(self.tz).strftime('%z %Y%m%d %H:%M:%S') + "] ["
+        logstr = "[" + datetime.now(self.tz).strftime("%z %Y%m%d %H:%M:%S") + "] ["
         if self.color:
             logstr += log_level_color_code.get(record.levelno, colorCodeInfo)
         logstr += log_level_msg_str.get(record.levelno, record.levelname)
@@ -51,7 +52,7 @@ class Formatter(logging.Formatter):
         return logstr
 
 
-def get_logger(name: str, lv = logging.INFO, remove_exist=False, format_root=False):
+def get_logger(name: str, lv=logging.INFO, remove_exist=False, format_root=False):
     logger = logging.getLogger(name)
     logger.setLevel(lv)
     if remove_exist and logger.hasHandlers():
