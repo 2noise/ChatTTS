@@ -42,7 +42,7 @@ def check_model(
     return True
 
 
-def check_all_assets(sha256_map: dict[str, str], update=False, base_dir = Path(os.getcwd())) -> bool:
+def check_all_assets(base_dir: Path, sha256_map: dict[str, str], update=False) -> bool:
     logger.get_logger().info("checking assets...")
     current_dir = base_dir / "asset"
     names = [
