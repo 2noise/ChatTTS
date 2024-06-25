@@ -1,5 +1,6 @@
 import torch
 
+
 class TorchSeedContext:
     def __init__(self, seed):
         self.seed = seed

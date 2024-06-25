@@ -7,6 +7,7 @@ from mmap import mmap, ACCESS_READ
 
 from .log import logger
 
+
 def sha256(fileno: int) -> str:
     data = mmap(fileno, 0, access=ACCESS_READ)
     h = hashlib.sha256(data).hexdigest()
