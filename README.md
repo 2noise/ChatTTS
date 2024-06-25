@@ -11,7 +11,7 @@ A generative speech model for daily dialogue.
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
 [![Discord](https://img.shields.io/badge/ChatTTS-Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Ud5Jxgx5yD)
 
-**English** | [**简体中文**](docs/cn/README.md) | [**日本語**](docs/jp/README.md) | [**Русский**](docs/ru/README.md)
+**English** | [**简体中文**](docs/cn/README.md) | [**日本語**](docs/jp/README.md) | [**Русский**](docs/ru/README.md) | [**Español**](docs/es/README.md)
 
 </div>
 
@@ -93,29 +93,31 @@ pip install -r requirements.txt
 ```
 
 ### Quick Start
+> Make sure you are under the project root directory when you execute these commands below.
+
 #### 1. Launch WebUI
 ```bash
 python examples/web/webui.py
 ```
 
 #### 2. Infer by Command Line
-> It will save audio to `./output_audio_xxx.wav`
+> It will save audio to `./output_audio_n.mp3`
 
 ```bash
-python examples/cmd/run.py "Please input your text."
+python examples/cmd/run.py "Your text 1." "Your text 2."
 ```
 
 ### Basic
 
 ```python
 import ChatTTS
-from IPython.display import Audio
+import torch
 import torchaudio
 
 chat = ChatTTS.Chat()
 chat.load(compile=False) # Set to True for better performance
 
-texts = ["PUT YOUR TEXT HERE",]
+texts = ["PUT YOUR 1st TEXT HERE", "PUT YOUR 2nd TEXT HERE"]
 
 wavs = chat.infer(texts)
 
@@ -154,6 +156,7 @@ wavs = chat.infer(
 
 ###################################
 # For word level manual control.
+
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
 wavs = chat.infer(text, skip_refine_text=True, params_refine_text=params_refine_text,  params_infer_code=params_infer_code)
 torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)

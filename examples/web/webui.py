@@ -78,7 +78,7 @@ def main():
                 "Interrupt", scale=2, variant="stop", visible=False, interactive=False
             )
 
-        text_output = gr.Textbox(label="Output Text", interactive=False)
+        text_output = gr.Textbox(label="Output Text", interactive=False, show_copy_button=True)
 
         # 使用Gradio的回调功能来更新数值输入框
         voice_selection.change(
@@ -117,6 +117,7 @@ def main():
                 streaming=stream,
                 interactive=False,
                 show_label=True,
+                format="mp3",
             )
             text_output.change(
                 text_output_listener,
