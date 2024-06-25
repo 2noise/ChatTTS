@@ -1,3 +1,3 @@
 from .dvae import DVAE
 from .gpt import GPT
-from .processors import CustomRepetitionPenaltyLogitsProcessorRepeat
+from .processors import gen_logits
