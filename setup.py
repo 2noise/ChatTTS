@@ -5,7 +5,7 @@ setup(
     name="chattts",
     version=os.environ.get("CHTTS_VER", "develop"),
     description="A generative speech model for daily dialogue",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", encoding="utf8").read(),
     long_description_content_type="text/markdown",
     author="2noise",
     author_email="open-source@2noise.com",
