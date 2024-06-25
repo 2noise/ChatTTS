@@ -10,6 +10,8 @@ A generative speech model for daily dialogue.
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
 
+[![Discord](https://img.shields.io/badge/ChatTTS-Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Ud5Jxgx5yD)
+
 **English** | [**简体中文**](docs/cn/README.md) | [**日本語**](docs/jp/README.md) | [**Русский**](docs/ru/README.md)
 
 </div>
@@ -58,7 +60,11 @@ For formal inquiries about the model and roadmap, please contact us at **open-so
 ##### 1. QQ Group (Chinese Social APP)
 - **Group 1**, 808364215 (Full)
 - **Group 2**, 230696694 (Full)
-- **Group 3**, 933639842
+- **Group 3**, 933639842 (Full)
+- **Group 4**, 608667975
+
+##### 2. Discord Server
+Join by clicking [here](https://discord.gg/Ud5Jxgx5yD).
 
 ## Installation (WIP)
 > Will be uploaded to pypi soon according to https://github.com/2noise/ChatTTS/issues/269
