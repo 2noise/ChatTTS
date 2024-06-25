@@ -1,0 +1,14 @@
+{
+	"sha256_asset_Decoder_pt"   : "9964e36e840f0e3a748c5f716fe6de6490d2135a5f5155f4a642d51860e2ec38",
+	"sha256_asset_DVAE_pt"      : "613cb128adf89188c93ea5880ea0b798e66b1fe6186d0c535d99bcd87bfd6976",
+	"sha256_asset_GPT_pt"       : "d7d4ee6461ea097a2be23eb40d73fb94ad3b3d39cb64fbb50cb3357fd466cadb",
+	"sha256_asset_spk_stat_pt"  : "3228d8a4cbbf349d107a1b76d2f47820865bd3c9928c4bdfe1cefd5c7071105f",
+	"sha256_asset_tokenizer_pt" : "e911ae7c6a7c27953433f35c44227a67838fe229a1f428503bdb6cd3d1bcc69c",
+	"sha256_asset_Vocos_pt"     : "09a670eda1c08b740013679c7a90ebb7f1a97646ea7673069a6838e6b51d6c58",
+
+	"sha256_config_decoder_yaml": "0890ab719716b0ad8abcb9eba0a9bf52c59c2e45ddedbbbb5ed514ff87bff369",
+	"sha256_config_dvae_yaml"   : "1b3a5aa0c6a314f766d4432ab36f84e882e29561648d837f71c04c7bea494fc6",
+	"sha256_config_gpt_yaml"    : "0c3c7277b674094bdd00b63b18b18aa3156502101dbd03c7f802e0fcf26cff51",
+	"sha256_config_path_yaml"   : "79829705c2d2a29b3f55e3b3f228bb81875e4e265211595fb50a73eb6434684b",
+	"sha256_config_vocos_yaml"  : "1ca837ce790dd8b55bdd5a16c6af8f813926b9c9b48f2a4da305e7e9ff0c9b0c"
+}

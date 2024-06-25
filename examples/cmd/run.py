@@ -9,9 +9,6 @@ sys.path.append(now_dir)
 import wave
 import argparse
 
-from dotenv import load_dotenv
-load_dotenv("sha256.env")
-
 import ChatTTS
 
 from tools.audio import unsafe_float_to_int16

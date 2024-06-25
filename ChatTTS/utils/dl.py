@@ -41,7 +41,7 @@ def check_model(
     return True
 
 
-def check_all_assets(update=False) -> bool:
+def check_all_assets(sha256_map: dict[str, str], update=False) -> bool:
     BASE_DIR = Path(os.getcwd())
 
     logger.get_logger().info("checking assets...")
@@ -57,7 +57,7 @@ def check_all_assets(update=False) -> bool:
     for model in names:
         menv = model.replace(".", "_")
         if not check_model(
-            current_dir, model, os.environ[f"sha256_asset_{menv}"], update
+            current_dir, model, sha256_map[f"sha256_asset_{menv}"], update
         ):
             return False
 
@@ -73,7 +73,7 @@ def check_all_assets(update=False) -> bool:
     for model in names:
         menv = model.replace(".", "_")
         if not check_model(
-            current_dir, model, os.environ[f"sha256_config_{menv}"], update
+            current_dir, model, sha256_map[f"sha256_config_{menv}"], update
         ):
             return False
 
