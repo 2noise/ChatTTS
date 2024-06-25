@@ -8,23 +8,28 @@ sys.path.append(now_dir)
 
 import wave
 import argparse
+from io import BytesIO
 
 import ChatTTS
 
-from tools.audio import unsafe_float_to_int16
+from tools.audio import unsafe_float_to_int16, wav2
 from tools.logger import get_logger
 
 logger = get_logger("Command")
 
 
-def save_wav_file(wav, index):
-    wav_filename = f"output_audio_{index}.wav"
-    with wave.open(wav_filename, "wb") as wf:
+def save_mp3_file(wav, index):
+    buf = BytesIO()
+    with wave.open(buf, "wb") as wf:
         wf.setnchannels(1)  # Mono channel
         wf.setsampwidth(2)  # Sample width in bytes
         wf.setframerate(24000)  # Sample rate in Hz
         wf.writeframes(unsafe_float_to_int16(wav))
-    logger.info(f"Audio saved to {wav_filename}")
+    buf.seek(0, 0)
+    mp3_filename = f"output_audio_{index}.mp3"
+    with open(mp3_filename, "wb") as f:
+        wav2(buf, f, "mp3")
+    logger.info(f"Audio saved to {mp3_filename}")
 
 
 def main(texts: list[str]):
@@ -42,7 +47,7 @@ def main(texts: list[str]):
     logger.info("Inference completed. Audio generation successful.")
     # Save each generated wav file to a local file
     for index, wav in enumerate(wavs):
-        save_wav_file(wav, index)
+        save_mp3_file(wav, index)
 
 
 if __name__ == "__main__":
