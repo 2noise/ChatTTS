@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Literal, Optional, List, Callable, Tuple, Dict
 from functools import lru_cache
 from json import load
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -107,6 +108,11 @@ class Chat:
                 return None
         elif source == "custom":
             self.logger.log(logging.INFO, f"try to load from local: {custom_path}")
+            if not check_all_assets(self.sha256_map, update=False, base_dir=Path(custom_path)):
+                self.logger.error(
+                    "check models in custom path %s failed.", custom_path
+                )
+                return None
             download_path = custom_path
 
         return download_path
