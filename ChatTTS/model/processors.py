@@ -17,15 +17,19 @@ class CustomRepetitionPenaltyLogitsProcessorRepeat:
     def __call__(
         self, input_ids: torch.LongTensor, scores: torch.FloatTensor
     ) -> torch.FloatTensor:
-
-        input_ids = input_ids[:, -self.past_window :]
+        if input_ids.size(1) > self.past_window:
+            input_ids = input_ids.narrow(1, -self.past_window, self.past_window)
         freq = F.one_hot(input_ids, scores.size(1)).sum(1)
-        freq[self.max_input_ids :] = 0
-        alpha = self.penalty**freq
+        if freq.size(0) > self.max_input_ids:
+            freq.narrow(0, self.max_input_ids, freq.size(0)-self.max_input_ids).zero_()
+        alpha = torch.pow(self.penalty, freq)
         scores = scores.contiguous()
-        scores = torch.where(scores < 0, scores * alpha, scores / alpha)
-
-        return scores
+        inp = scores.multiply(alpha)
+        oth = scores.divide(alpha)
+        con = scores < 0
+        out = torch.where(con, inp, oth)
+        del inp, oth, scores, con, alpha
+        return out
 
 
 """class CustomRepetitionPenaltyLogitsProcessor():

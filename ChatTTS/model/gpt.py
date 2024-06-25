@@ -198,21 +198,15 @@ class GPT(nn.Module):
         if past_key_values is not None:
             if isinstance(past_key_values, Cache):
                 past_length = (
-                    cache_position[0]
+                    int(cache_position[0])
                     if cache_position is not None
                     else past_key_values.get_seq_length()
                 )
-                max_cache_length = (
-                    torch.tensor(
-                        past_key_values.get_max_length(), device=input_ids.device
-                    )
-                    if past_key_values.get_max_length() is not None
-                    else None
-                )
+                max_cache_length = past_key_values.get_max_length()
                 cache_length = (
                     past_length
                     if max_cache_length is None
-                    else torch.min(max_cache_length, past_length)
+                    else min(max_cache_length, past_length)
                 )
             # TODO joao: remove this `else` after `generate` prioritizes `Cache` objects
             else:
@@ -227,11 +221,12 @@ class GPT(nn.Module):
                 attention_mask is not None
                 and attention_mask.shape[1] > input_ids.shape[1]
             ):
-                input_ids = input_ids[:, -(attention_mask.shape[1] - past_length) :]
+                start = -(attention_mask.shape[1] - past_length)
+                input_ids = input_ids.narrow(1, start, -start)
             # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
             # input_ids based on the past_length.
             elif past_length < input_ids.shape[1]:
-                input_ids = input_ids[:, past_length:]
+                input_ids = input_ids.narrow(1, past_length, input_ids.size(1)-past_length)
             # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
 
             # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
@@ -240,14 +235,14 @@ class GPT(nn.Module):
                 and attention_mask is not None
                 and cache_length + input_ids.shape[1] > max_cache_length
             ):
-                attention_mask = attention_mask[:, -max_cache_length:]
+                attention_mask = attention_mask.narrow(1, -max_cache_length, max_cache_length)
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
             position_ids.masked_fill_(attention_mask == 0, 1)
             if past_key_values:
-                position_ids = position_ids[:, -input_ids.shape[1] :]
+                position_ids = position_ids.narrow(1, -input_ids.shape[1], input_ids.shape[1])
 
         input_length = (
             position_ids.shape[-1] if position_ids is not None else input_ids.shape[-1]
@@ -257,7 +252,7 @@ class GPT(nn.Module):
                 past_length, past_length + input_length, device=input_ids.device
             )
         else:
-            cache_position = cache_position[-input_length:]
+            cache_position = cache_position.narrow(0, -input_length, input_length)
 
         if has_static_cache:
             past_key_values = None
@@ -365,7 +360,7 @@ class GPT(nn.Module):
                 device=inputs_ids.device,
             )
             if attention_mask is not None:
-                attention_mask_cache[:, : attention_mask.shape[1]] = attention_mask
+                attention_mask_cache.narrow(1, 0, attention_mask.shape[1]).copy_(attention_mask)
 
             with tqdm(
                 total=max_new_token,
@@ -379,7 +374,7 @@ class GPT(nn.Module):
                     model_input = self._prepare_generation_inputs(
                         inputs_ids,
                         past_key_values,
-                        attention_mask_cache[:, : inputs_ids.shape[1]],
+                        attention_mask_cache.narrow(1, 0, inputs_ids.shape[1]),
                         use_cache=True,
                     )
 
