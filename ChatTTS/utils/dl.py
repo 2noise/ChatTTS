@@ -42,11 +42,9 @@ def check_model(
     return True
 
 
-def check_all_assets(sha256_map: dict[str, str], update=False) -> bool:
-    BASE_DIR = Path(os.getcwd())
-
+def check_all_assets(sha256_map: dict[str, str], update=False, base_dir = Path(os.getcwd())) -> bool:
     logger.get_logger().info("checking assets...")
-    current_dir = BASE_DIR / "asset"
+    current_dir = base_dir / "asset"
     names = [
         "Decoder.pt",
         "DVAE.pt",
@@ -63,7 +61,7 @@ def check_all_assets(sha256_map: dict[str, str], update=False) -> bool:
             return False
 
     logger.get_logger().info("checking configs...")
-    current_dir = BASE_DIR / "config"
+    current_dir = base_dir / "config"
     names = [
         "decoder.yaml",
         "dvae.yaml",
