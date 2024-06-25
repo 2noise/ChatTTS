@@ -2,8 +2,9 @@ import os
 import logging
 import tempfile
 from dataclasses import dataclass
-from typing import Literal, Optional, List, Callable, Tuple
+from typing import Literal, Optional, List, Callable, Tuple, Dict
 from functools import lru_cache
+from json import load
 
 import numpy as np
 import torch
@@ -30,6 +31,8 @@ class Chat:
             os.path.join(os.path.dirname(__file__), 'res', 'homophones_map.json'),
             logger,
         )
+        with open(os.path.join(os.path.dirname(__file__), 'res', 'sha256_map.json')) as f:
+            self.sha256_map: Dict[str, str] = load(f)
 
         self.context = GPT.Context()
 
@@ -60,10 +63,10 @@ class Chat:
     ) -> Optional[str]:
         if source == 'local':
             download_path = os.getcwd()
-            if not check_all_assets(update=True) or force_redownload:
+            if not check_all_assets(self.sha256_map, update=True) or force_redownload:
                 with tempfile.TemporaryDirectory() as tmp:
                     download_all_assets(tmpdir=tmp)
-                if not check_all_assets(update=False):
+                if not check_all_assets(self.sha256_map, update=False):
                     self.logger.error("download to local path %s failed.", download_path)
                     return None
         elif source == 'huggingface':
@@ -111,6 +114,7 @@ class Chat:
         del_all(self.pretrain_models)
         self.normalizer.destroy()
         del self.normalizer
+        del self.sha256_map
         self._gen_logits.cache_clear()
         del_list = ["vocos", "_vocos_decode", 'gpt', 'decoder', 'dvae']
         for module in del_list:

@@ -10,9 +10,6 @@ import argparse
 
 import gradio as gr
 
-from dotenv import load_dotenv
-load_dotenv("sha256.env")
-
 from examples.web.funcs import *
 
 def main():

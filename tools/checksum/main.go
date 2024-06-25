@@ -27,11 +27,11 @@ func main() {
 		h.Reset()
 		f.Close()
 	}
-	f, err := os.Create("sha256.env")
+	f, err := os.Create("ChatTTS/res/sha256_map.json")
 	if err != nil {
 		panic(err)
 	}
-	_, err = fmt.Fprintf(f, envtmpl, lst...)
+	_, err = fmt.Fprintf(f, jsontmpl, lst...)
 	if err != nil {
 		panic(err)
 	}
