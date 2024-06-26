@@ -107,7 +107,6 @@ def main():
                 streaming=stream,
                 interactive=False,
                 show_label=True,
-                format="mp3",
             )
             generate_button.click(fn=set_buttons_before_generate, inputs=[generate_button, interrupt_button], outputs=[generate_button, interrupt_button]).then(
                 refine_text,

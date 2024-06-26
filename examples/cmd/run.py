@@ -12,23 +12,17 @@ from io import BytesIO
 
 import ChatTTS
 
-from tools.audio import unsafe_float_to_int16, wav2
+from tools.audio import wav_arr_to_mp3_view
 from tools.logger import get_logger
 
 logger = get_logger("Command")
 
 
 def save_mp3_file(wav, index):
-    buf = BytesIO()
-    with wave.open(buf, "wb") as wf:
-        wf.setnchannels(1)  # Mono channel
-        wf.setsampwidth(2)  # Sample width in bytes
-        wf.setframerate(24000)  # Sample rate in Hz
-        wf.writeframes(unsafe_float_to_int16(wav))
-    buf.seek(0, 0)
+    data = wav_arr_to_mp3_view(wav)
     mp3_filename = f"output_audio_{index}.mp3"
     with open(mp3_filename, "wb") as f:
-        wav2(buf, f, "mp3")
+        f.write(data)
     logger.info(f"Audio saved to {mp3_filename}")
 
 
