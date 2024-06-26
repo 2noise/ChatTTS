@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Literal, Optional, List, Callable, Tuple, Dict
 from json import load
 from pathlib import Path
+import lzma
 
 import numpy as np
 import torch
@@ -12,6 +13,7 @@ import torch.nn.functional as F
 from omegaconf import OmegaConf
 from vocos import Vocos
 from huggingface_hub import snapshot_download
+import pybase16384 as b14
 
 from .model import DVAE, GPT, gen_logits
 from .utils import (
@@ -151,10 +153,28 @@ class Chat:
                 delattr(self, module)
         self.__init__(logger)
 
-    def sample_random_speaker(self):
-        dim = self.gpt.gpt.layers[0].mlp.gate_proj.in_features
-        std, mean = self.pretrain_models["spk_stat"].chunk(2)
-        return torch.randn(dim, device=std.device) * std + mean
+    def sample_random_speaker(self) -> str:
+        with torch.no_grad():
+            spk = self._sample_random_speaker()
+            arr: np.ndarray = spk.cpu().numpy()
+            s = b14.encode_to_string(
+                lzma.compress(
+                    arr.tobytes(),
+                    format=lzma.FORMAT_RAW,
+                    filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+                ),
+            )
+            del arr, spk
+        return s
+
+    def _sample_random_speaker(self) -> torch.Tensor:
+        with torch.no_grad():
+            dim: int = self.gpt.gpt.layers[0].mlp.gate_proj.in_features
+            out: torch.Tensor = self.pretrain_models["spk_stat"]
+            std, mean = out.chunk(2)
+            spk = torch.randn(dim, device=std.device, dtype=torch.float16).mul_(std).add_(mean)
+            del out, std, mean
+            return spk
 
     @dataclass(repr=False, eq=False)
     class RefineTextParams:
@@ -169,7 +189,7 @@ class Chat:
     @dataclass(repr=False, eq=False)
     class InferCodeParams:
         prompt: str = "[speed_5]"
-        spk_emb: Optional[torch.Tensor] = None
+        spk_emb: Optional[str] = None
         top_P: float = 0.7
         top_K: int = 20
         temperature: float = 0.3
@@ -426,12 +446,18 @@ class Chat:
     def _apply_spk_emb(
         self,
         emb: torch.Tensor,
-        spk_emb: torch.Tensor,
+        spk_emb: str,
         input_ids: torch.Tensor,
         text_len: int,
     ):
         n = F.normalize(
-            spk_emb.unsqueeze(0).expand(text_len, -1), p=2.0, dim=1, eps=1e-12
+            torch.from_numpy(
+                np.frombuffer(lzma.decompress(
+                    b14.decode_from_string(spk_emb),
+                    format=lzma.FORMAT_RAW,
+                    filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+                ), dtype=np.float16).copy(),
+            ).unsqueeze(0).expand(text_len, -1), p=2.0, dim=1, eps=1e-12
         ).to(self.gpt.device_gpt).expand(emb.shape)
         cond = input_ids.narrow(-1, 0, 1).eq(self.tokenizer_spk_emb_ids).expand(emb.shape)
         torch.where(cond, n, emb, out=emb)
