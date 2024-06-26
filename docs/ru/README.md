@@ -34,6 +34,7 @@ ChatTTS - мощная система преобразования текста 
 ```python
 import ChatTTS
 from IPython.display import Audio
+import torch
 
 chat = ChatTTS.Chat()
 chat.load(compile=False) # Установите значение True для лучшей производительности

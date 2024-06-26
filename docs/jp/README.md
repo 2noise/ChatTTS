@@ -34,6 +34,7 @@ ChatTTSは強力なテキストから音声へのシステムです。しかし�
 ```python
 import ChatTTS
 from IPython.display import Audio
+import torch
 
 chat = ChatTTS.Chat()
 chat.load(compile=False) # より良いパフォーマンスのためにTrueに設定

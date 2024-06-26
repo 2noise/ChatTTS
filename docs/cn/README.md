@@ -123,6 +123,7 @@ python examples/cmd/run.py "Please input your text."
 import ChatTTS
 from IPython.display import Audio
 import torchaudio
+import torch
 
 chat = ChatTTS.Chat()
 chat.load(compile=False) # Set to True for better performance
