@@ -95,23 +95,20 @@ def reload_chat(coef: Optional[str]) -> str:
     return chat.coef
 
 
-def set_generate_buttons(generate_button, interrupt_button, is_reset=False):
+def _set_generate_buttons(generate_button, interrupt_button, is_reset=False):
     return gr.update(
         value=generate_button, visible=is_reset, interactive=is_reset
     ), gr.update(value=interrupt_button, visible=not is_reset, interactive=not is_reset)
 
 
 def refine_text(
-    text, text_seed_input, refine_text_flag, generate_button, interrupt_button
+    text, text_seed_input, refine_text_flag,
 ):
-    global chat, has_interrupted
-    has_interrupted = False
+    global chat
 
     if not refine_text_flag:
         sleep(1) # to skip fast answer of loading mark
-        return text, *set_generate_buttons(
-            generate_button, interrupt_button, is_reset=True
-        )
+        return text
 
     with TorchSeedContext(text_seed_input):
         text = chat.infer(
@@ -119,19 +116,13 @@ def refine_text(
             skip_refine_text=False,
             refine_text_only=True,
         )
-    return text[0] if isinstance(text, list) else text, *set_generate_buttons(
-        generate_button, interrupt_button, is_reset=True
-    )
 
-
-def text_output_listener(generate_button, interrupt_button):
-    return set_generate_buttons(generate_button, interrupt_button)
-
+    return text[0] if isinstance(text, list) else text
 
 def generate_audio(text, temperature, top_P, top_K, audio_seed_input, stream):
     global chat, has_interrupted
 
-    if not text or text == "𝕃𝕠𝕒𝕕𝕚𝕟𝕘..." or has_interrupted:
+    if not text or has_interrupted:
         return None
 
     with TorchSeedContext(audio_seed_input):
@@ -157,9 +148,8 @@ def generate_audio(text, temperature, top_P, top_K, audio_seed_input, stream):
                 if audio is not None and len(audio) > 0:
                     yield 24000, unsafe_float_to_int16(audio[0])
                     del audio
-            return
-
-    yield 24000, unsafe_float_to_int16(np.array(wav[0]).flatten())
+        else:
+            yield 24000, unsafe_float_to_int16(np.array(wav[0]).flatten())
 
 
 def interrupt_generate():
@@ -168,11 +158,20 @@ def interrupt_generate():
     has_interrupted = True
     chat.interrupt()
 
+def set_buttons_before_generate(generate_button, interrupt_button):
+    global has_interrupted
+
+    has_interrupted = False
+
+    return _set_generate_buttons(
+        generate_button,
+        interrupt_button,
+    )
 
 def set_buttons_after_generate(generate_button, interrupt_button, audio_output):
     global has_interrupted
 
-    return set_generate_buttons(
+    return _set_generate_buttons(
         generate_button,
         interrupt_button,
         audio_output is not None or has_interrupted,
