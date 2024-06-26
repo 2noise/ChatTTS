@@ -96,19 +96,6 @@ def main():
             reload_chat, inputs=dvae_coef_text, outputs=dvae_coef_text
         )
 
-        generate_button.click(fn=lambda: "𝕃𝕠𝕒𝕕𝕚𝕟𝕘...", outputs=text_output)
-        generate_button.click(
-            refine_text,
-            inputs=[
-                text_input,
-                text_seed_input,
-                refine_text_checkbox,
-                generate_button,
-                interrupt_button,
-            ],
-            outputs=[text_output, generate_button, interrupt_button],
-        )
-
         interrupt_button.click(interrupt_generate)
 
         @gr.render(inputs=[auto_play_checkbox, stream_mode_checkbox])
@@ -122,12 +109,15 @@ def main():
                 show_label=True,
                 format="mp3",
             )
-            text_output.change(
-                text_output_listener,
-                inputs=[generate_button, interrupt_button],
-                outputs=[generate_button, interrupt_button],
-            )
-            text_output.change(
+            generate_button.click(fn=set_buttons_before_generate, inputs=[generate_button, interrupt_button], outputs=[generate_button, interrupt_button]).then(
+                refine_text,
+                inputs=[
+                    text_input,
+                    text_seed_input,
+                    refine_text_checkbox,
+                ],
+                outputs=text_output,
+            ).then(
                 generate_audio,
                 inputs=[
                     text_output,
