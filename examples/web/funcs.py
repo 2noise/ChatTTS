@@ -21,6 +21,10 @@ chat = ChatTTS.Chat(get_logger("ChatTTS"))
 custom_path: Optional[str] = None
 
 has_interrupted = False
+is_in_generate = False
+
+seed_min = 1
+seed_max = 4294967295
 
 # 音色选项：用于预置合适的音色
 voices = {
@@ -38,12 +42,17 @@ voices = {
 
 
 def generate_seed():
-    return gr.update(value=random.randint(1, 100000000))
+    return gr.update(value=random.randint(seed_min, seed_max))
 
 
 # 返回选择音色对应的seed
 def on_voice_change(vocie_selection):
     return voices.get(vocie_selection)["seed"]
+
+def on_audio_seed_change(audio_seed_input):
+    with TorchSeedContext(audio_seed_input):
+        rand_spk = chat.sample_random_speaker()
+    return rand_spk
 
 
 def load_chat(cust_path: Optional[str], coef: Optional[str]) -> bool:
@@ -79,6 +88,12 @@ def load_chat(cust_path: Optional[str], coef: Optional[str]) -> bool:
 
 
 def reload_chat(coef: Optional[str]) -> str:
+    global is_in_generate
+
+    if is_in_generate:
+        gr.Warning("Cannot reload when generating!")
+        return coef
+
     chat.unload()
     gr.Info("Model unloaded.")
     if len(coef) != 230:
@@ -119,37 +134,33 @@ def refine_text(
 
     return text[0] if isinstance(text, list) else text
 
-def generate_audio(text, temperature, top_P, top_K, audio_seed_input, stream):
+def generate_audio(text, temperature, top_P, top_K, spk_emb_text: str, stream):
     global chat, has_interrupted
 
-    if not text or has_interrupted:
+    if not text or has_interrupted or not spk_emb_text.startswith("蘁淰"):
         return None
 
-    with TorchSeedContext(audio_seed_input):
-        rand_spk = chat.sample_random_speaker()
-
     params_infer_code = ChatTTS.Chat.InferCodeParams(
-        spk_emb=rand_spk,
+        spk_emb=spk_emb_text,
         temperature=temperature,
         top_P=top_P,
         top_K=top_K,
     )
 
-    with TorchSeedContext(audio_seed_input):
-        wav = chat.infer(
-            text,
-            skip_refine_text=True,
-            params_infer_code=params_infer_code,
-            stream=stream,
-        )
-        if stream:
-            for gen in wav:
-                audio = gen[0]
-                if audio is not None and len(audio) > 0:
-                    yield wav_arr_to_mp3_view(audio[0]).tobytes()
-                    del audio
-        else:
-            yield wav_arr_to_mp3_view(np.array(wav[0]).flatten()).tobytes()
+    wav = chat.infer(
+        text,
+        skip_refine_text=True,
+        params_infer_code=params_infer_code,
+        stream=stream,
+    )
+    if stream:
+        for gen in wav:
+            audio = gen[0]
+            if audio is not None and len(audio) > 0:
+                yield wav_arr_to_mp3_view(audio[0]).tobytes()
+                del audio
+    else:
+        yield wav_arr_to_mp3_view(np.array(wav[0]).flatten()).tobytes()
 
 
 def interrupt_generate():
@@ -159,9 +170,10 @@ def interrupt_generate():
     chat.interrupt()
 
 def set_buttons_before_generate(generate_button, interrupt_button):
-    global has_interrupted
+    global has_interrupted, is_in_generate
 
     has_interrupted = False
+    is_in_generate = True
 
     return _set_generate_buttons(
         generate_button,
@@ -169,7 +181,9 @@ def set_buttons_before_generate(generate_button, interrupt_button):
     )
 
 def set_buttons_after_generate(generate_button, interrupt_button, audio_output):
-    global has_interrupted
+    global has_interrupted, is_in_generate
+
+    is_in_generate = False
 
     return _set_generate_buttons(
         generate_button,
