@@ -27,6 +27,7 @@ def main():
             lines=4,
             placeholder="Please Input Text...",
             value=default_text,
+            interactive=True,
         )
 
         with gr.Row():
