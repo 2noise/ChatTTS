@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="chattts",
-    version=os.environ.get("CHTTS_VER", "develop"),
+    version=os.environ.get("CHTTS_VER", "v0.0.0").lstrip("v"),
     description="A generative speech model for daily dialogue",
     long_description=open("README.md", encoding="utf8").read(),
     long_description_content_type="text/markdown",
