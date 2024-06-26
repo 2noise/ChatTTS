@@ -53,6 +53,7 @@ torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
 # ガウス分布から話者をサンプリングします。
 
 rand_spk = chat.sample_random_speaker()
+print(rand_spk) # save it for later timbre recovery
 
 params_infer_code = {
   'spk_emb': rand_spk, # サンプリングされた話者を追加
