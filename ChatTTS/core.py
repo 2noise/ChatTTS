@@ -307,6 +307,11 @@ class Chat:
             tokenizer = torch.load(tokenizer_path, map_location=device, mmap=True)
             tokenizer.padding_side = "left"
             self.pretrain_models["tokenizer"] = tokenizer
+            self.tokenizer_len = len(tokenizer)
+            self.tokenizer_spk_emb_ids: torch.Tensor = tokenizer.convert_tokens_to_ids("[spk_emb]")
+            self.tokenizer_eos_token: torch.Tensor = torch.tensor(
+                tokenizer.convert_tokens_to_ids("[Ebreak]"), device=gpt.device_gpt
+            ).unsqueeze_(0)
             self.logger.log(logging.INFO, "tokenizer loaded.")
 
         self.coef = coef
@@ -342,38 +347,40 @@ class Chat:
             for t in text
         ]
 
-        if not skip_refine_text:
-            refined = self._refine_text(
-                text,
-                self.device,
-                params_refine_text,
-            )
-            text_tokens = refined.ids
-            text_tokens = [
-                i[
-                    i
-                    < self.pretrain_models["tokenizer"].convert_tokens_to_ids(
-                        "[break_0]"
-                    )
-                ]
-                for i in text_tokens
-            ]
-            text = self.pretrain_models["tokenizer"].batch_decode(text_tokens)
-            refined.destroy()
-            if refine_text_only:
-                yield text
-                return
+        with torch.no_grad():
 
-        length = [0 for _ in range(len(text))]
-        for result in self._infer_code(
-            text,
-            stream,
-            self.device,
-            use_decoder,
-            params_infer_code,
-        ):
-            wav = self._decode_to_wavs(result, length, use_decoder)
-            yield wav
+            if not skip_refine_text:
+                refined = self._refine_text(
+                    text,
+                    self.device,
+                    params_refine_text,
+                )
+                text_tokens = refined.ids
+                text_tokens = [
+                    i[
+                        i
+                        < self.pretrain_models["tokenizer"].convert_tokens_to_ids(
+                            "[break_0]"
+                        )
+                    ]
+                    for i in text_tokens
+                ]
+                text = self.pretrain_models["tokenizer"].batch_decode(text_tokens)
+                refined.destroy()
+                if refine_text_only:
+                    yield text
+                    return
+
+            length = [0 for _ in range(len(text))]
+            for result in self._infer_code(
+                text,
+                stream,
+                self.device,
+                use_decoder,
+                params_infer_code,
+            ):
+                wav = self._decode_to_wavs(result, length, use_decoder)
+                yield wav
 
     def _decode_to_wavs(
         self, result: GPT.GenerationOutputs, start_seeks: List[int], use_decoder: bool
@@ -397,7 +404,7 @@ class Chat:
         del_all(x)
         return wavs
 
-    def _gen_gpt_inputs(self, text: str, device="cpu"):
+    def _text_to_token(self, text: str, device="cpu") -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         gpt = self.gpt
         tokenizer = self.pretrain_models["tokenizer"]
@@ -407,10 +414,14 @@ class Chat:
         )
         text_token = text_token_tmp.to(device)
         del text_token_tmp
-        input_ids = text_token["input_ids"][..., None].expand(-1, -1, gpt.num_vq)
-        text_mask = torch.ones(text_token["input_ids"].shape, dtype=bool, device=device)
 
-        return input_ids, text_token, text_mask
+        input_ids = text_token["input_ids"].unsqueeze(-1).expand(-1, -1, gpt.num_vq)
+        text_mask = torch.ones(text_token["input_ids"].shape, dtype=bool, device=device)
+        attention_mask = text_token["attention_mask"]
+
+        del_all(text_token)
+
+        return input_ids, attention_mask, text_mask
 
     def _apply_spk_emb(
         self,
@@ -419,14 +430,12 @@ class Chat:
         input_ids: torch.Tensor,
         text_len: int,
     ):
-
-        tokenizer = self.pretrain_models["tokenizer"]
-
         n = F.normalize(
-            spk_emb.to(emb.dtype)[None].expand(text_len, -1), p=2.0, dim=1, eps=1e-12
-        ).to(self.gpt.device_gpt)
-        emb[input_ids[..., 0] == tokenizer.convert_tokens_to_ids("[spk_emb]")] = n
-        del n
+            spk_emb.unsqueeze(0).expand(text_len, -1), p=2.0, dim=1, eps=1e-12
+        ).to(self.gpt.device_gpt).expand(emb.shape)
+        cond = input_ids.narrow(-1, 0, 1).eq(self.tokenizer_spk_emb_ids).expand(emb.shape)
+        torch.where(cond, n, emb, out=emb)
+        del cond, n
 
     def _infer_code(
         self,
@@ -457,7 +466,7 @@ class Chat:
         else:
             text = [f"[Stts][empty_spk]{i}[Ptts]" for i in text]
 
-        input_ids, text_token, text_mask = self._gen_gpt_inputs(text, gpt.device_gpt)
+        input_ids, attention_mask, text_mask = self._text_to_token(text, gpt.device_gpt)
 
         emb = gpt(input_ids, text_mask)
         del text_mask
@@ -479,7 +488,7 @@ class Chat:
             input_ids,
             temperature=torch.tensor(temperature, device=device),
             eos_token=num_code,
-            attention_mask=text_token["attention_mask"],
+            attention_mask=attention_mask,
             max_new_token=params.max_new_token,
             min_new_token=params.min_new_token,
             logits_warpers=logits_warpers,
@@ -490,8 +499,7 @@ class Chat:
             context=self.context,
         )
 
-        del_all(text_token)
-        del emb, text_token, input_ids
+        del emb, input_ids
         del_all(logits_warpers)
         del_all(logits_processors)
 
@@ -505,17 +513,16 @@ class Chat:
     ):
 
         gpt = self.gpt
-        tokenizer = self.pretrain_models["tokenizer"]
 
         if not isinstance(text, list):
             text = [text]
 
         text = [f"[Sbreak]{i}[Pbreak]{params.prompt}" for i in text]
 
-        input_ids, text_token, text_mask = self._gen_gpt_inputs(text, gpt.device_gpt)
+        input_ids, attention_mask, text_mask = self._text_to_token(text, gpt.device_gpt)
 
         logits_warpers, logits_processors = gen_logits(
-            num_code=len(tokenizer),
+            num_code=self.tokenizer_len,
             top_P=params.top_P,
             top_K=params.top_K,
             repetition_penalty=params.repetition_penalty,
@@ -528,10 +535,8 @@ class Chat:
             emb,
             input_ids,
             temperature=torch.tensor([params.temperature], device=device),
-            eos_token=torch.tensor(
-                tokenizer.convert_tokens_to_ids("[Ebreak]"), device=gpt.device_gpt
-            )[None],
-            attention_mask=text_token["attention_mask"],
+            eos_token=self.tokenizer_eos_token,
+            attention_mask=attention_mask,
             max_new_token=params.max_new_token,
             min_new_token=params.min_new_token,
             logits_warpers=logits_warpers,
@@ -541,8 +546,7 @@ class Chat:
             context=self.context,
         )
 
-        del_all(text_token)
-        del emb, text_token, input_ids
+        del emb, input_ids
         del_all(logits_warpers)
         del_all(logits_processors)
 

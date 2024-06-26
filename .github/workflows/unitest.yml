@@ -21,6 +21,9 @@ jobs:
       - name: Test Install
         run: pip install .
 
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
       - name: Run Test
         run: |
           echo "TODO"

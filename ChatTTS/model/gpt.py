@@ -240,7 +240,7 @@ class GPT(nn.Module):
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            position_ids.masked_fill_(attention_mask.eq(0), 1)
             if past_key_values:
                 position_ids = position_ids.narrow(1, -input_ids.shape[1], input_ids.shape[1])
 
@@ -321,7 +321,7 @@ class GPT(nn.Module):
         inputs_ids: torch.Tensor,
         temperature: torch.Tensor,
         eos_token: Union[int, torch.Tensor],
-        attention_mask=None,
+        attention_mask: Optional[torch.Tensor]=None,
         max_new_token=2048,
         min_new_token=0,
         logits_warpers: List[LogitsWarper] = [],
@@ -469,14 +469,14 @@ class GPT(nn.Module):
                     if not infer_text:
                         # idx_next = rearrange(idx_next, "(b n) 1 -> b n", n=self.num_vq)
                         idx_next = idx_next.view(-1, self.num_vq)
-                        finish_or = (idx_next == eos_token).any(1)
+                        finish_or = idx_next.eq(eos_token).any(1)
                         finish.logical_or_(finish_or)
                         del finish_or
                         inputs_ids_tmp = torch.cat(
                             [inputs_ids, idx_next.unsqueeze_(1)], 1
                         )
                     else:
-                        finish_or = (idx_next == eos_token).any(1)
+                        finish_or = idx_next.eq(eos_token).any(1)
                         finish.logical_or_(finish_or)
                         del finish_or
                         inputs_ids_tmp = torch.cat(
@@ -497,7 +497,7 @@ class GPT(nn.Module):
                     if stream:
                         if (
                             end_idx.all()
-                            and (end_idx % 24 == 0).any()
+                            and end_idx.fmod(24).eq(0).any()
                             and minus_prev_end_index.add_(end_idx).any()
                         ):
                             self.logger.debug("yield stream result, end: %d", end_idx)
