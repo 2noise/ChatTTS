@@ -55,17 +55,31 @@ def main():
             voice_selection = gr.Dropdown(
                 label="Timbre", choices=voices.keys(), value="Default"
             )
-            audio_seed_input = gr.Number(value=2, label="Audio Seed", interactive=True)
+            audio_seed_input = gr.Number(
+                value=2, label="Audio Seed", interactive=True,
+                minimum=seed_min, maximum=seed_max,
+            )
             generate_audio_seed = gr.Button("\U0001F3B2")
-            text_seed_input = gr.Number(value=42, label="Text Seed")
+            text_seed_input = gr.Number(
+                value=42, label="Text Seed", interactive=True,
+                minimum=seed_min, maximum=seed_max,
+            )
             generate_text_seed = gr.Button("\U0001F3B2")
 
         with gr.Row():
+            spk_emb_text = gr.Textbox(
+                label="Speaker Embedding",
+                max_lines=3,
+                show_copy_button=True,
+                interactive=True,
+                scale=2,
+            )
             dvae_coef_text = gr.Textbox(
                 label="DVAE Coefficient",
                 max_lines=3,
                 show_copy_button=True,
-                scale=4,
+                interactive=True,
+                scale=2,
             )
             reload_chat_button = gr.Button("Reload", scale=1)
 
@@ -88,9 +102,11 @@ def main():
             fn=on_voice_change, inputs=voice_selection, outputs=audio_seed_input
         )
 
-        generate_audio_seed.click(generate_seed, inputs=[], outputs=audio_seed_input)
+        generate_audio_seed.click(generate_seed, outputs=audio_seed_input)
 
-        generate_text_seed.click(generate_seed, inputs=[], outputs=text_seed_input)
+        generate_text_seed.click(generate_seed, outputs=text_seed_input)
+
+        audio_seed_input.change(on_audio_seed_change, inputs=audio_seed_input, outputs=spk_emb_text)
 
         reload_chat_button.click(
             reload_chat, inputs=dvae_coef_text, outputs=dvae_coef_text
@@ -123,7 +139,7 @@ def main():
                     temperature_slider,
                     top_p_slider,
                     top_k_slider,
-                    audio_seed_input,
+                    spk_emb_text,
                     stream_mode_checkbox,
                 ],
                 outputs=audio_output,
@@ -168,6 +184,7 @@ def main():
         logger.error("Models load failed.")
         sys.exit(1)
 
+    spk_emb_text.value = on_audio_seed_change(audio_seed_input.value)
     dvae_coef_text.value = chat.coef
 
     demo.launch(
