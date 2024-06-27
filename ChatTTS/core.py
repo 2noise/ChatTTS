@@ -438,6 +438,14 @@ class Chat:
         del_all(text_token)
 
         return input_ids, attention_mask, text_mask
+    
+    @staticmethod
+    def _decode_spk_emb(spk_emb: str) -> np.ndarray:
+        return np.frombuffer(lzma.decompress(
+            b14.decode_from_string(spk_emb),
+            format=lzma.FORMAT_RAW,
+            filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+        ), dtype=np.float16).copy()
 
     def _apply_spk_emb(
         self,
@@ -448,11 +456,7 @@ class Chat:
     ):
         n = F.normalize(
             torch.from_numpy(
-                np.frombuffer(lzma.decompress(
-                    b14.decode_from_string(spk_emb),
-                    format=lzma.FORMAT_RAW,
-                    filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-                ), dtype=np.float16).copy(),
+                self._decode_spk_emb(spk_emb),
             ).unsqueeze(0).expand(text_len, -1), p=2.0, dim=1, eps=1e-12
         ).to(self.gpt.device_gpt).unsqueeze_(1).expand(emb.shape)
         cond = input_ids.narrow(-1, 0, 1).eq(self.tokenizer_spk_emb_ids).expand(emb.shape)
