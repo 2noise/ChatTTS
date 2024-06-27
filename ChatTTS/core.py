@@ -154,9 +154,12 @@ class Chat:
         self.__init__(logger)
 
     def sample_random_speaker(self) -> str:
+        return self._encode_spk_emb(self._sample_random_speaker())
+
+    @staticmethod
+    def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
         with torch.no_grad():
-            spk = self._sample_random_speaker()
-            arr: np.ndarray = spk.cpu().numpy()
+            arr: np.ndarray = spk_emb.cpu().numpy()
             s = b14.encode_to_string(
                 lzma.compress(
                     arr.tobytes(),
@@ -164,7 +167,7 @@ class Chat:
                     filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
                 ),
             )
-            del arr, spk
+            del arr
         return s
 
     def _sample_random_speaker(self) -> torch.Tensor:
