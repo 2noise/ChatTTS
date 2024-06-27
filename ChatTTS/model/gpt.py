@@ -226,7 +226,9 @@ class GPT(nn.Module):
             # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
             # input_ids based on the past_length.
             elif past_length < input_ids.shape[1]:
-                input_ids = input_ids.narrow(1, past_length, input_ids.size(1)-past_length)
+                input_ids = input_ids.narrow(
+                    1, past_length, input_ids.size(1) - past_length
+                )
             # 3 - Otherwise (past_length >= input_ids.shape[1]), let's assume input_ids only has unprocessed tokens.
 
             # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
@@ -235,14 +237,18 @@ class GPT(nn.Module):
                 and attention_mask is not None
                 and cache_length + input_ids.shape[1] > max_cache_length
             ):
-                attention_mask = attention_mask.narrow(1, -max_cache_length, max_cache_length)
+                attention_mask = attention_mask.narrow(
+                    1, -max_cache_length, max_cache_length
+                )
 
         if attention_mask is not None and position_ids is None:
             # create position_ids on the fly for batch generation
             position_ids = attention_mask.long().cumsum(-1) - 1
             position_ids.masked_fill_(attention_mask.eq(0), 1)
             if past_key_values:
-                position_ids = position_ids.narrow(1, -input_ids.shape[1], input_ids.shape[1])
+                position_ids = position_ids.narrow(
+                    1, -input_ids.shape[1], input_ids.shape[1]
+                )
 
         input_length = (
             position_ids.shape[-1] if position_ids is not None else input_ids.shape[-1]
@@ -321,7 +327,7 @@ class GPT(nn.Module):
         inputs_ids: torch.Tensor,
         temperature: torch.Tensor,
         eos_token: Union[int, torch.Tensor],
-        attention_mask: Optional[torch.Tensor]=None,
+        attention_mask: Optional[torch.Tensor] = None,
         max_new_token=2048,
         min_new_token=0,
         logits_warpers: List[LogitsWarper] = [],
@@ -360,7 +366,9 @@ class GPT(nn.Module):
                 device=inputs_ids.device,
             )
             if attention_mask is not None:
-                attention_mask_cache.narrow(1, 0, attention_mask.shape[1]).copy_(attention_mask)
+                attention_mask_cache.narrow(1, 0, attention_mask.shape[1]).copy_(
+                    attention_mask
+                )
 
             with tqdm(
                 total=max_new_token,

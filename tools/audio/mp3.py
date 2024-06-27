@@ -6,6 +6,7 @@ import numpy as np
 from .np import unsafe_float_to_int16
 from .av import wav2
 
+
 def wav_arr_to_mp3_view(wav: np.ndarray):
     buf = BytesIO()
     with wave.open(buf, "wb") as wf:
