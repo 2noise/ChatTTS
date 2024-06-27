@@ -50,7 +50,12 @@ def main():
                 interactive=True,
             )
             top_k_slider = gr.Slider(
-                minimum=1, maximum=20, step=1, value=ex[0][3], label="top_K", interactive=True
+                minimum=1,
+                maximum=20,
+                step=1,
+                value=ex[0][3],
+                label="top_K",
+                interactive=True,
             )
 
         with gr.Row():
