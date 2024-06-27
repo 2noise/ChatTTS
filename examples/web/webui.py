@@ -31,7 +31,9 @@ def main():
         )
 
         with gr.Row():
-            refine_text_checkbox = gr.Checkbox(label="Refine text", value=True, interactive=True)
+            refine_text_checkbox = gr.Checkbox(
+                label="Refine text", value=True, interactive=True
+            )
             temperature_slider = gr.Slider(
                 minimum=0.00001,
                 maximum=1.0,
@@ -54,7 +56,10 @@ def main():
 
         with gr.Row():
             voice_selection = gr.Dropdown(
-                label="Timbre", choices=voices.keys(), value="Default", interactive=True,
+                label="Timbre",
+                choices=voices.keys(),
+                value="Default",
+                interactive=True,
             )
             audio_seed_input = gr.Number(
                 value=2,
@@ -91,17 +96,30 @@ def main():
             reload_chat_button = gr.Button("Reload", scale=1, interactive=True)
 
         with gr.Row():
-            auto_play_checkbox = gr.Checkbox(label="Auto Play", value=False, scale=1, interactive=True)
-            stream_mode_checkbox = gr.Checkbox(
-                label="Stream Mode", value=False, scale=1, interactive=True,
+            auto_play_checkbox = gr.Checkbox(
+                label="Auto Play", value=False, scale=1, interactive=True
             )
-            generate_button = gr.Button("Generate", scale=2, variant="primary", interactive=True)
+            stream_mode_checkbox = gr.Checkbox(
+                label="Stream Mode",
+                value=False,
+                scale=1,
+                interactive=True,
+            )
+            generate_button = gr.Button(
+                "Generate", scale=2, variant="primary", interactive=True
+            )
             interrupt_button = gr.Button(
-                "Interrupt", scale=2, variant="stop", visible=False, interactive=False,
+                "Interrupt",
+                scale=2,
+                variant="stop",
+                visible=False,
+                interactive=False,
             )
 
         text_output = gr.Textbox(
-            label="Output Text", interactive=False, show_copy_button=True,
+            label="Output Text",
+            interactive=False,
+            show_copy_button=True,
         )
 
         # 使用Gradio的回调功能来更新数值输入框
