@@ -162,7 +162,7 @@ class Chat:
     @staticmethod
     def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
         with torch.no_grad():
-            arr: np.ndarray = spk_emb.to(dtype=torch.float16, device='cpu').numpy()
+            arr: np.ndarray = spk_emb.to(dtype=torch.float16, device="cpu").numpy()
             s = b14.encode_to_string(
                 lzma.compress(
                     arr.tobytes(),
