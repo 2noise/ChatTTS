@@ -6,9 +6,7 @@ if sys.platform == "darwin":
 now_dir = os.getcwd()
 sys.path.append(now_dir)
 
-import wave
 import argparse
-from io import BytesIO
 
 import ChatTTS
 
