@@ -49,6 +49,7 @@ def generate_seed():
 def on_voice_change(vocie_selection):
     return voices.get(vocie_selection)["seed"]
 
+
 def on_audio_seed_change(audio_seed_input):
     with TorchSeedContext(audio_seed_input):
         rand_spk = chat.sample_random_speaker()
@@ -117,12 +118,14 @@ def _set_generate_buttons(generate_button, interrupt_button, is_reset=False):
 
 
 def refine_text(
-    text, text_seed_input, refine_text_flag,
+    text,
+    text_seed_input,
+    refine_text_flag,
 ):
     global chat
 
     if not refine_text_flag:
-        sleep(1) # to skip fast answer of loading mark
+        sleep(1)  # to skip fast answer of loading mark
         return text
 
     with TorchSeedContext(text_seed_input):
@@ -133,6 +136,7 @@ def refine_text(
         )
 
     return text[0] if isinstance(text, list) else text
+
 
 def generate_audio(text, temperature, top_P, top_K, spk_emb_text: str, stream):
     global chat, has_interrupted
@@ -169,6 +173,7 @@ def interrupt_generate():
     has_interrupted = True
     chat.interrupt()
 
+
 def set_buttons_before_generate(generate_button, interrupt_button):
     global has_interrupted, is_in_generate
 
@@ -179,6 +184,7 @@ def set_buttons_before_generate(generate_button, interrupt_button):
         generate_button,
         interrupt_button,
     )
+
 
 def set_buttons_after_generate(generate_button, interrupt_button, audio_output):
     global has_interrupted, is_in_generate

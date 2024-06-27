@@ -57,13 +57,19 @@ def main():
                 label="Timbre", choices=voices.keys(), value="Default"
             )
             audio_seed_input = gr.Number(
-                value=2, label="Audio Seed", interactive=True,
-                minimum=seed_min, maximum=seed_max,
+                value=2,
+                label="Audio Seed",
+                interactive=True,
+                minimum=seed_min,
+                maximum=seed_max,
             )
             generate_audio_seed = gr.Button("\U0001F3B2")
             text_seed_input = gr.Number(
-                value=42, label="Text Seed", interactive=True,
-                minimum=seed_min, maximum=seed_max,
+                value=42,
+                label="Text Seed",
+                interactive=True,
+                minimum=seed_min,
+                maximum=seed_max,
             )
             generate_text_seed = gr.Button("\U0001F3B2")
 
@@ -107,7 +113,9 @@ def main():
 
         generate_text_seed.click(generate_seed, outputs=text_seed_input)
 
-        audio_seed_input.change(on_audio_seed_change, inputs=audio_seed_input, outputs=spk_emb_text)
+        audio_seed_input.change(
+            on_audio_seed_change, inputs=audio_seed_input, outputs=spk_emb_text
+        )
 
         reload_chat_button.click(
             reload_chat, inputs=dvae_coef_text, outputs=dvae_coef_text
@@ -125,7 +133,11 @@ def main():
                 interactive=False,
                 show_label=True,
             )
-            generate_button.click(fn=set_buttons_before_generate, inputs=[generate_button, interrupt_button], outputs=[generate_button, interrupt_button]).then(
+            generate_button.click(
+                fn=set_buttons_before_generate,
+                inputs=[generate_button, interrupt_button],
+                outputs=[generate_button, interrupt_button],
+            ).then(
                 refine_text,
                 inputs=[
                     text_input,
