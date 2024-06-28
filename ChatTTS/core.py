@@ -478,14 +478,14 @@ class Chat:
             F.normalize(
                 torch.from_numpy(
                     self._decode_spk_emb(spk_emb),
-                )
-                .unsqueeze(0)
-                .expand(text_len, -1),
+                ),
                 p=2.0,
-                dim=1,
+                dim=0,
                 eps=1e-12,
             )
             .to(self.gpt.device_gpt)
+            .unsqueeze_(0)
+            .expand(text_len, -1)
             .unsqueeze_(1)
             .expand(emb.shape)
         )
