@@ -112,8 +112,19 @@ class GPT(nn.Module):
     def _build_llama(
         self, config: omegaconf.DictConfig, device: torch.device
     ) -> LlamaModel:
+        llama_config = LlamaConfig(**config)
 
-        model = LlamaModel(LlamaConfig(**config))
+        model = None
+        if "cuda" in str(device):
+            try:
+                from .cuda import TELlamaModel
+                model = TELlamaModel(llama_config)
+                self.logger.info("use NVIDIA accelerated TELlamaModel")
+            except Exception as e:
+                model = None
+                self.logger.warn(f"use default LlamaModel for importing TELlamaModel error: {e}")
+        if model is None:
+            model = LlamaModel(llama_config)
         del model.embed_tokens
 
         return model.to(device)
