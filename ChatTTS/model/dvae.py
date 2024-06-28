@@ -163,7 +163,7 @@ class DVAEDecoder(nn.Module):
 
         x = self.conv_out(y)
         del y
-        return x.transpose_(1, 2)
+        return x
 
 
 class DVAE(nn.Module):
@@ -214,7 +214,7 @@ class DVAE(nn.Module):
             dec_out = self.out_conv(
                 self.decoder(
                     x=vq_feats,
-                ).transpose_(1, 2),
+                ),
             )
 
             return torch.mul(dec_out, self.coef, out=dec_out)
