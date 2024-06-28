@@ -307,6 +307,9 @@ class Chat:
             gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
             if compile and "cuda" in str(device):
                 try:
+                    gpt.forward = torch.compile(
+                        gpt.forward, backend="inductor", dynamic=True
+                    )
                     gpt.gpt.forward = torch.compile(
                         gpt.gpt.forward, backend="inductor", dynamic=True
                     )
@@ -436,7 +439,7 @@ class Chat:
         return wavs
 
     def _text_to_token(
-        self, text: str, device="cpu"
+        self, text: List[str], device="cpu"
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         gpt = self.gpt
@@ -448,8 +451,8 @@ class Chat:
         text_token = text_token_tmp.to(device)
         del text_token_tmp
 
-        input_ids = text_token["input_ids"].unsqueeze(-1).expand(-1, -1, gpt.num_vq)
         text_mask = torch.ones(text_token["input_ids"].shape, dtype=bool, device=device)
+        input_ids = text_token["input_ids"].unsqueeze_(-1).expand(-1, -1, gpt.num_vq)
         attention_mask = text_token["attention_mask"]
 
         del_all(text_token)
