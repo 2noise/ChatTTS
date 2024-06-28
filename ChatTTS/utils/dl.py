@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib
 import requests
 from io import BytesIO
+from typing import Dict
 from mmap import mmap, ACCESS_READ
 
 from .log import logger
@@ -42,7 +43,7 @@ def check_model(
     return True
 
 
-def check_all_assets(base_dir: Path, sha256_map: dict[str, str], update=False) -> bool:
+def check_all_assets(base_dir: Path, sha256_map: Dict[str, str], update=False) -> bool:
     logger.get_logger().info("checking assets...")
     current_dir = base_dir / "asset"
     names = [
