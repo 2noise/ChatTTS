@@ -13,3 +13,4 @@ pynini==2.1.5; sys_platform == 'linux'
 WeTextProcessing; sys_platform == 'linux'
 nemo_text_processing; sys_platform == 'linux'
 av
+pydub
