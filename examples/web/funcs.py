@@ -6,7 +6,7 @@ from time import sleep
 import gradio as gr
 import numpy as np
 
-from tools.audio import wav_arr_to_mp3_view
+from tools.audio import unsafe_float_to_int16, has_ffmpeg_installed
 from tools.logger import get_logger
 
 logger = get_logger(" WebUI ")
@@ -25,6 +25,10 @@ is_in_generate = False
 
 seed_min = 1
 seed_max = 4294967295
+
+use_mp3 = has_ffmpeg_installed()
+if not use_mp3:
+    logger.warn("no ffmpeg installed, use wav file output")
 
 # 音色选项：用于预置合适的音色
 voices = {
@@ -161,10 +165,10 @@ def generate_audio(text, temperature, top_P, top_K, spk_emb_text: str, stream):
         for gen in wav:
             audio = gen[0]
             if audio is not None and len(audio) > 0:
-                yield wav_arr_to_mp3_view(audio[0]).tobytes()
+                yield 24000, unsafe_float_to_int16(audio[0])
                 del audio
     else:
-        yield wav_arr_to_mp3_view(np.array(wav[0]).flatten()).tobytes()
+        yield 24000, unsafe_float_to_int16(np.array(wav[0]).flatten())
 
 
 def interrupt_generate():
