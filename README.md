@@ -92,6 +92,14 @@ conda activate chattts
 pip install -r requirements.txt
 ```
 
+#### Optional: Install TransformerEngine if using NVIDIA GPU
+> [!Note]
+> The installation process is very slow.
+
+```bash
+!pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
+```
+
 ### Quick Start
 > Make sure you are under the project root directory when you execute these commands below.
 
