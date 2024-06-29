@@ -407,7 +407,7 @@ class Chat:
             ):
                 wav = self._decode_to_wavs(result, length, use_decoder)
                 yield wav
-    
+
     def _vocos_decode(self, spec: torch.Tensor) -> np.ndarray:
         if "mps" in str(self.device):
             return self.vocos.decode(spec.cpu()).cpu().numpy()
@@ -460,13 +460,27 @@ class Chat:
             attn_sz = attention_mask_lst[-1].size(0)
             if attn_sz > max_attention_mask_len:
                 max_attention_mask_len = attn_sz
-        input_ids = torch.zeros(len(input_ids_lst), max_input_ids_len, device=device, dtype=input_ids_lst[0].dtype)
+        input_ids = torch.zeros(
+            len(input_ids_lst),
+            max_input_ids_len,
+            device=device,
+            dtype=input_ids_lst[0].dtype,
+        )
         for i in range(len(input_ids_lst)):
-            input_ids.narrow(0, i, 1).narrow(1, 0, input_ids_lst[i].size(0)).copy_(input_ids_lst[i])
+            input_ids.narrow(0, i, 1).narrow(1, 0, input_ids_lst[i].size(0)).copy_(
+                input_ids_lst[i]
+            )
         del_all(input_ids_lst)
-        attention_mask = torch.zeros(len(attention_mask_lst), max_attention_mask_len, device=device, dtype=attention_mask_lst[0].dtype)
+        attention_mask = torch.zeros(
+            len(attention_mask_lst),
+            max_attention_mask_len,
+            device=device,
+            dtype=attention_mask_lst[0].dtype,
+        )
         for i in range(len(attention_mask_lst)):
-            attention_mask.narrow(0, i, 1).narrow(1, 0, attention_mask_lst[i].size(0)).copy_(attention_mask_lst[i])
+            attention_mask.narrow(0, i, 1).narrow(
+                1, 0, attention_mask_lst[i].size(0)
+            ).copy_(attention_mask_lst[i])
         del_all(attention_mask_lst)
 
         text_mask = torch.ones(input_ids.shape, dtype=bool, device=device)
