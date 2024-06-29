@@ -35,16 +35,19 @@ def main(texts: List[str], spk: Optional[str] = None):
     else:
         logger.error("Models load failed.")
         sys.exit(1)
-    
+
     if spk is None:
         spk = chat.sample_random_speaker()
     logger.info("Use speaker:")
     print(spk)
 
     logger.info("Start inference.")
-    wavs = chat.infer(texts, params_infer_code=ChatTTS.Chat.InferCodeParams(
-        spk_emb=spk,
-    ))
+    wavs = chat.infer(
+        texts,
+        params_infer_code=ChatTTS.Chat.InferCodeParams(
+            spk_emb=spk,
+        ),
+    )
     logger.info("Inference completed.")
     # Save each generated wav file to a local file
     for index, wav in enumerate(wavs):
@@ -55,9 +58,15 @@ def main(texts: List[str], spk: Optional[str] = None):
 if __name__ == "__main__":
     logger.info("Starting ChatTTS commandline demo...")
     parser = argparse.ArgumentParser(
-        description="ChatTTS Command", usage='[--spk xxx] "Your text 1." " Your text 2."'
+        description="ChatTTS Command",
+        usage='[--spk xxx] "Your text 1." " Your text 2."',
     )
-    parser.add_argument("--spk", help="Speaker (empty to sample a random one)", type=Optional[str], default=None)
+    parser.add_argument(
+        "--spk",
+        help="Speaker (empty to sample a random one)",
+        type=Optional[str],
+        default=None,
+    )
     parser.add_argument(
         "texts", help="Original text", default="YOUR TEXT HERE", nargs="*"
     )
