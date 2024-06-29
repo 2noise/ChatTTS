@@ -92,7 +92,7 @@ conda activate chattts
 pip install -r requirements.txt
 ```
 
-#### Optional: Install TransformerEngine if using NVIDIA GPU
+#### Optional: Install TransformerEngine if using NVIDIA GPU (Linux only)
 > [!Note]
 > The installation process is very slow.
 
