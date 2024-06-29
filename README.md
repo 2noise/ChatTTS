@@ -97,7 +97,7 @@ pip install -r requirements.txt
 > The installation process is very slow.
 
 ```bash
-!pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
+pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 ```
 
 ### Quick Start
