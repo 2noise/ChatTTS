@@ -197,17 +197,15 @@ class Chat:
         repetition_penalty: float = 1.0
         max_new_token: int = 384
         min_new_token: int = 0
+        show_tqdm: bool = True
 
     @dataclass(repr=False, eq=False)
-    class InferCodeParams:
+    class InferCodeParams(RefineTextParams):
         prompt: str = "[speed_5]"
         spk_emb: Optional[str] = None
-        top_P: float = 0.7
-        top_K: int = 20
         temperature: float = 0.3
         repetition_penalty: float = 1.05
         max_new_token: int = 2048
-        min_new_token: int = 0
 
     def infer(
         self,
@@ -596,6 +594,7 @@ class Chat:
             infer_text=False,
             return_hidden=return_hidden,
             stream=stream,
+            show_tqdm=params.show_tqdm,
             context=self.context,
         )
 
@@ -644,6 +643,7 @@ class Chat:
                 logits_processors=logits_processors,
                 infer_text=True,
                 stream=False,
+                show_tqdm=params.show_tqdm,
                 context=self.context,
             )
         )
