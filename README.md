@@ -10,7 +10,7 @@ A generative speech model for daily dialogue.
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
-[![Discord](https://img.shields.io/badge/ChatTTS-Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Ud5Jxgx5yD)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Ud5Jxgx5yD)
 
 **English** | [**简体中文**](docs/cn/README.md) | [**日本語**](docs/jp/README.md) | [**Русский**](docs/ru/README.md) | [**Español**](docs/es/README.md)
 
@@ -72,13 +72,6 @@ For formal inquiries about the model and roadmap, please contact us at **open-so
 ##### 2. Discord Server
 Join by clicking [here](https://discord.gg/Ud5Jxgx5yD).
 
-## Installation (WIP)
-> Will be uploaded to pypi soon according to https://github.com/2noise/ChatTTS/issues/269
-
-```bash
-pip install git+https://github.com/2noise/ChatTTS
-```
-
 ## Get Started
 ### Clone Repo
 ```bash
@@ -122,7 +115,19 @@ python examples/web/webui.py
 python examples/cmd/run.py "Your text 1." "Your text 2."
 ```
 
-### Basic
+## Installation
+
+1. Install stable version from PyPI
+```bash
+pip install ChatTTS
+```
+
+2. Install latest version from GitHub
+```bash
+pip install git+https://github.com/2noise/ChatTTS
+```
+
+### Basic Usage
 
 ```python
 import ChatTTS
@@ -139,7 +144,7 @@ wavs = chat.infer(texts)
 torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
 ```
 
-### Advanced
+### Advanced Usage
 
 ```python
 ###################################
