@@ -18,7 +18,7 @@ A generative speech model for daily dialogue.
 
 ## Introduction
 > [!Note]
-> This repo contains the basic algorithm infrastructure and some simple examples.
+> This repo contains the algorithm infrastructure and some simple examples.
 
 > [!Tip]
 > For the extended end-user products, please refer to the index repo [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS) maintained by the community.
