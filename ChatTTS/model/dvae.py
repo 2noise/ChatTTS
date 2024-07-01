@@ -201,7 +201,7 @@ class DVAE(nn.Module):
             if self.vq_layer is not None:
                 vq_feats = self.vq_layer._embed(inp)
             else:
-                vq_feats = inp.detach().clone()
+                vq_feats = inp
 
             vq_feats = (
                 vq_feats.view(
