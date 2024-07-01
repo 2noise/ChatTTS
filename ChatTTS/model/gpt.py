@@ -369,7 +369,7 @@ class GPT(nn.Module):
                 attention_mask_cache.narrow(1, 0, attention_mask.shape[1]).copy_(
                     attention_mask
                 )
-            
+
             pbar: Optional[tqdm] = None
 
             if show_tqdm:
@@ -473,9 +473,7 @@ class GPT(nn.Module):
 
                 del logits
 
-                idx_next = torch.multinomial(scores, num_samples=1).to(
-                    finish.device
-                )
+                idx_next = torch.multinomial(scores, num_samples=1).to(finish.device)
 
                 if not infer_text:
                     # idx_next = rearrange(idx_next, "(b n) 1 -> b n", n=self.num_vq)
@@ -483,9 +481,7 @@ class GPT(nn.Module):
                     finish_or = idx_next.eq(eos_token).any(1)
                     finish.logical_or_(finish_or)
                     del finish_or
-                    inputs_ids_tmp = torch.cat(
-                        [inputs_ids, idx_next.unsqueeze_(1)], 1
-                    )
+                    inputs_ids_tmp = torch.cat([inputs_ids, idx_next.unsqueeze_(1)], 1)
                 else:
                     finish_or = idx_next.eq(eos_token).any(1)
                     finish.logical_or_(finish_or)
@@ -525,9 +521,11 @@ class GPT(nn.Module):
                 if finish.all() or context.get():
                     break
 
-                if pbar is not None: pbar.update(1)
-            
-            if pbar is not None: pbar.close()
+                if pbar is not None:
+                    pbar.update(1)
+
+            if pbar is not None:
+                pbar.close()
 
             if not finish.all():
                 if context.get():
