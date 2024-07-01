@@ -16,6 +16,12 @@ A generative speech model for daily dialogue.
 </div>
 
 ## Introduction
+> [!Note]
+> This repo contains the basic algorithm infrastructure and some simple examples.
+
+> [!Tip]
+> For the extended end-user product, please refer to the index repo [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS) maintained by the community.
+
 ChatTTS is a text-to-speech model designed specifically for dialogue scenarios such as LLM assistant.
 
 ### Supported Languages
@@ -242,9 +248,6 @@ In the current released model, the only token-level control units are `[laugh]`,
 
 ## Special Appreciation
 - [wlu-audio lab](https://audio.westlake.edu.cn/) for early algorithm experiments.
-
-## Related Resources
-- [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS)
 
 ## Thanks to all contributors for their efforts
 [![contributors](https://contrib.rocks/image?repo=2noise/ChatTTS)](https://github.com/2noise/ChatTTS/graphs/contributors)
