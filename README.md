@@ -117,14 +117,19 @@ python examples/cmd/run.py "Your text 1." "Your text 2."
 
 ## Installation
 
-1. Install stable version from PyPI
+1. Install the stable version from PyPI
 ```bash
 pip install ChatTTS
 ```
 
-2. Install latest version from GitHub
+2. Install the latest version from GitHub
 ```bash
 pip install git+https://github.com/2noise/ChatTTS
+```
+
+3. Install from local directory in dev mode
+```bash
+pip install -e .
 ```
 
 ### Basic Usage
@@ -190,8 +195,8 @@ torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)
 inputs_en = """
 chat T T S is a text to speech model designed for dialogue applications. 
 [uv_break]it supports mixed language input [uv_break]and offers multi speaker 
-capabilities with precise control over prosodic elements [laugh]like like 
-[uv_break]laughter[laugh], [uv_break]pauses, [uv_break]and intonation. 
+capabilities with precise control over prosodic elements like 
+[uv_break]laughter[uv_break][laugh], [uv_break]pauses, [uv_break]and intonation. 
 [uv_break]it delivers natural and expressive speech,[uv_break]so please
 [uv_break] use the project responsibly at your own risk.[uv_break]
 """.replace('\n', '') # English is still experimental.
