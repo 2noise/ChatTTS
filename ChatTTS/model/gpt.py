@@ -98,7 +98,9 @@ class GPT(nn.Module):
     def _build_llama(
         self, config: omegaconf.DictConfig, device: torch.device
     ) -> LlamaModel:
+
         model = None
+
         if "cuda" in str(device) and platform.system().lower() == "linux":
             try:
                 from .cuda import TELlamaModel
@@ -109,15 +111,31 @@ class GPT(nn.Module):
                 self.logger.warn(
                     f"use default LlamaModel for importing TELlamaModel error: {e}"
                 )
-        if is_flash_attn_2_available():
-            llama_config = LlamaConfig(**config, attn_implementation="flash_attention_2")
-        else:
-            llama_config = LlamaConfig(**config)
+
         if model is None:
+            if is_flash_attn_2_available():
+                llama_config = LlamaConfig(
+                    **config,
+                    attn_implementation="flash_attention_2",
+                )
+            else:
+                llama_config = LlamaConfig(**config)
             model = LlamaModel(llama_config)
         del model.embed_tokens
 
         return model.to(device)
+
+    def prepare(self, compile=False):
+        if is_flash_attn_2_available():
+            self.gpt = self.gpt.to(dtype=torch.float16)
+        if compile:
+            try:
+                self.compile(backend="inductor", dynamic=True)
+                self.gpt.compile(backend="inductor", dynamic=True)
+            except RuntimeError as e:
+                self.logger.warning(
+                    f"compile failed: {e}. fallback to normal mode."
+                )
 
     def __call__(
         self, input_ids: torch.Tensor, text_mask: torch.Tensor

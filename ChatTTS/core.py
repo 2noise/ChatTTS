@@ -295,18 +295,7 @@ class Chat:
             gpt = GPT(**cfg, device=device, logger=self.logger).eval()
             assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
             gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
-            if compile and "cuda" in str(device):
-                try:
-                    gpt.forward = torch.compile(
-                        gpt.forward, backend="inductor", dynamic=True
-                    )
-                    gpt.gpt.forward = torch.compile(
-                        gpt.gpt.forward, backend="inductor", dynamic=True
-                    )
-                except RuntimeError as e:
-                    self.logger.warning(
-                        f"compile failed: {e}. fallback to normal mode."
-                    )
+            gpt.prepare(compile=compile and "cuda" in str(device))
             self.gpt = gpt
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
             assert os.path.exists(

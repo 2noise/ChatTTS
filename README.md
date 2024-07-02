@@ -96,8 +96,8 @@ pip install -r requirements.txt
 > The installation process is very slow.
 
 > [!Warning]
-> The TransformerEngine adaption is currently developing and CANNOT run properly now. 
-> Only install it in developing purpose.
+> The adaptation of TransformerEngine is currently under development and CANNOT run properly now. 
+> Only install it on developing purpose.
 
 ```bash
 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
