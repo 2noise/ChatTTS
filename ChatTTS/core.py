@@ -128,6 +128,7 @@ class Chat:
         custom_path: Optional[torch.serialization.FILE_LIKE] = None,
         device: Optional[torch.device] = None,
         coef: Optional[torch.Tensor] = None,
+        use_flash_attn=False,
     ) -> bool:
         download_path = self.download_models(source, force_redownload, custom_path)
         if download_path is None:
@@ -136,6 +137,7 @@ class Chat:
             device=device,
             compile=compile,
             coef=coef,
+            use_flash_attn=use_flash_attn,
             **{
                 k: os.path.join(download_path, v)
                 for k, v in OmegaConf.load(
@@ -255,6 +257,7 @@ class Chat:
         device: Optional[torch.device] = None,
         compile: bool = True,
         coef: Optional[str] = None,
+        use_flash_attn=False,
     ):
         if device is None:
             device = select_device()
@@ -292,7 +295,7 @@ class Chat:
 
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
-            gpt = GPT(**cfg, device=device, logger=self.logger).eval()
+            gpt = GPT(**cfg, use_flash_attn=use_flash_attn, device=device, logger=self.logger).eval()
             assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
             gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
             gpt.prepare(compile=compile and "cuda" in str(device))

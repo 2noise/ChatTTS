@@ -107,6 +107,10 @@ pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 > [!Note]
 > See supported devices at the [Hugging Face Doc](https://huggingface.co/docs/transformers/perf_infer_gpu_one#flashattention-2).
 
+> [!Warning]
+> Currently the FlashAttention-2 will slow down the generating speed according to [this issue](https://github.com/huggingface/transformers/issues/26990). 
+> Only install it on developing purpose.
+
 ```bash
 pip install flash-attn --no-build-isolation
 ```

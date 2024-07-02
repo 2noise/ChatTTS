@@ -32,6 +32,7 @@ class GPT(nn.Module):
         num_audio_tokens: int,
         num_text_tokens: int,
         num_vq=4,
+        use_flash_attn=False,
         device=torch.device("cpu"),
         logger=logging.getLogger(__name__),
     ):
@@ -44,6 +45,8 @@ class GPT(nn.Module):
 
         self.num_vq = num_vq
         self.num_audio_tokens = num_audio_tokens
+
+        self.use_flash_attn = use_flash_attn
 
         self.gpt = self._build_llama(gpt_config, self.device_gpt)
         self.model_dim = int(self.gpt.config.hidden_size)
@@ -96,7 +99,7 @@ class GPT(nn.Module):
             return self._interrupt
 
     def _build_llama(
-        self, config: omegaconf.DictConfig, device: torch.device
+        self, config: omegaconf.DictConfig, device: torch.device,
     ) -> LlamaModel:
 
         model = None
@@ -114,11 +117,12 @@ class GPT(nn.Module):
                 )
 
         if model is None:
-            if is_flash_attn_2_available():
+            if self.use_flash_attn and is_flash_attn_2_available():
                 llama_config = LlamaConfig(
                     **config,
                     attn_implementation="flash_attention_2",
                 )
+                self.logger.warn("enabling flash_attention_2 may make gpt be even slower")
             else:
                 llama_config = LlamaConfig(**config)
             model = LlamaModel(llama_config)
@@ -127,7 +131,7 @@ class GPT(nn.Module):
         return model.to(device)
 
     def prepare(self, compile=False):
-        if is_flash_attn_2_available():
+        if self.use_flash_attn and is_flash_attn_2_available():
             self.gpt = self.gpt.to(dtype=torch.float16)
         if compile:
             try:
@@ -435,7 +439,7 @@ class GPT(nn.Module):
                 )
                 del_all(model_input)
                 attentions.append(outputs.attentions)
-                hidden_states = outputs.last_hidden_state.to(self.device)  # 🐻
+                hidden_states = outputs.last_hidden_state.to(self.device, dtype=torch.float)  # 🐻
                 past_key_values = outputs.past_key_values
                 del_all(outputs)
                 if return_hidden:
