@@ -99,7 +99,9 @@ class GPT(nn.Module):
             return self._interrupt
 
     def _build_llama(
-        self, config: omegaconf.DictConfig, device: torch.device,
+        self,
+        config: omegaconf.DictConfig,
+        device: torch.device,
     ) -> LlamaModel:
 
         model = None
@@ -122,7 +124,9 @@ class GPT(nn.Module):
                     **config,
                     attn_implementation="flash_attention_2",
                 )
-                self.logger.warn("enabling flash_attention_2 may make gpt be even slower")
+                self.logger.warn(
+                    "enabling flash_attention_2 may make gpt be even slower"
+                )
             else:
                 llama_config = LlamaConfig(**config)
             model = LlamaModel(llama_config)
@@ -439,7 +443,9 @@ class GPT(nn.Module):
                 )
                 del_all(model_input)
                 attentions.append(outputs.attentions)
-                hidden_states = outputs.last_hidden_state.to(self.device, dtype=torch.float)  # 🐻
+                hidden_states = outputs.last_hidden_state.to(
+                    self.device, dtype=torch.float
+                )  # 🐻
                 past_key_values = outputs.past_key_values
                 del_all(outputs)
                 if return_hidden:

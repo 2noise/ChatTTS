@@ -295,7 +295,9 @@ class Chat:
 
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
-            gpt = GPT(**cfg, use_flash_attn=use_flash_attn, device=device, logger=self.logger).eval()
+            gpt = GPT(
+                **cfg, use_flash_attn=use_flash_attn, device=device, logger=self.logger
+            ).eval()
             assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
             gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
             gpt.prepare(compile=compile and "cuda" in str(device))
