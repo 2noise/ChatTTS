@@ -43,8 +43,7 @@ ChatTTS is a text-to-speech model designed specifically for dialogue scenarios s
 
 ### Roadmap
 - [x] Open-source the 40k hour base model and spk_stats file
-- [ ] Open-source VQ encoder and Lora training code
-- [ ] Streaming audio generation without refining the text*
+- [x] Streaming audio generation without refining the text*
 - [ ] Open-source the 40k hour version with multi-emotion control
 - [ ] ChatTTS.cpp maybe? (PR or new repo are welcomed.)
 
