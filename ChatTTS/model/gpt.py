@@ -19,6 +19,7 @@ from tqdm import tqdm
 from transformers import LlamaModel, LlamaConfig, LogitsWarper
 from transformers.cache_utils import Cache
 from transformers.modeling_outputs import BaseModelOutputWithPast
+from transformers.utils import is_flash_attn_2_available
 
 from .processors import CustomRepetitionPenaltyLogitsProcessorRepeat
 from ..utils import del_all
@@ -97,20 +98,21 @@ class GPT(nn.Module):
     def _build_llama(
         self, config: omegaconf.DictConfig, device: torch.device
     ) -> LlamaModel:
-        llama_config = LlamaConfig(**config)
-
         model = None
         if "cuda" in str(device) and platform.system().lower() == "linux":
             try:
                 from .cuda import TELlamaModel
-
-                model = TELlamaModel(llama_config)
+                model = TELlamaModel(LlamaConfig(**config))
                 self.logger.info("Linux with CUDA, try NVIDIA accelerated TELlamaModel")
             except Exception as e:
                 model = None
                 self.logger.warn(
                     f"use default LlamaModel for importing TELlamaModel error: {e}"
                 )
+        if is_flash_attn_2_available():
+            llama_config = LlamaConfig(**config, attn_implementation="flash_attention_2")
+        else:
+            llama_config = LlamaConfig(**config)
         if model is None:
             model = LlamaModel(llama_config)
         del model.embed_tokens

@@ -42,10 +42,10 @@ ChatTTS is a text-to-speech model designed specifically for dialogue scenarios s
 - The open-source version on **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** is a 40,000 hours pre-trained model without SFT.
 
 ### Roadmap
-- [x] Open-source the 40k hour base model and spk_stats file
-- [x] Streaming audio generation without refining the text*
-- [ ] Open-source the 40k hour version with multi-emotion control
-- [ ] ChatTTS.cpp maybe? (PR or new repo are welcomed.)
+- [x] Open-source the 40k hour base model and spk_stats file.
+- [x] Streaming audio generation.
+- [ ] Open-source the 40k hour version with multi-emotion control.
+- [ ] ChatTTS.cpp (new repo in `2noise` org is welcomed)
 
 ### Disclaimer
 > [!Important]
@@ -95,8 +95,20 @@ pip install -r requirements.txt
 > [!Note]
 > The installation process is very slow.
 
+> [!Warning]
+> The TransformerEngine adaption is currently developing and CANNOT run properly now. 
+> Only install it in developing purpose.
+
 ```bash
 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
+```
+
+#### Optional: Install FlashAttention-2 (mainly NVIDIA GPU)
+> [!Note]
+> See supported devices at the [Hugging Face Doc](https://huggingface.co/docs/transformers/perf_infer_gpu_one#flashattention-2).
+
+```bash
+pip install flash-attn --no-build-isolation
 ```
 
 ### Quick Start
