@@ -104,6 +104,7 @@ class GPT(nn.Module):
         if "cuda" in str(device) and platform.system().lower() == "linux":
             try:
                 from .cuda import TELlamaModel
+
                 model = TELlamaModel(LlamaConfig(**config))
                 self.logger.info("Linux with CUDA, try NVIDIA accelerated TELlamaModel")
             except Exception as e:
@@ -133,9 +134,7 @@ class GPT(nn.Module):
                 self.compile(backend="inductor", dynamic=True)
                 self.gpt.compile(backend="inductor", dynamic=True)
             except RuntimeError as e:
-                self.logger.warning(
-                    f"compile failed: {e}. fallback to normal mode."
-                )
+                self.logger.warning(f"compile failed: {e}. fallback to normal mode.")
 
     def __call__(
         self, input_ids: torch.Tensor, text_mask: torch.Tensor
