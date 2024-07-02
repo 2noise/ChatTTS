@@ -6,9 +6,11 @@
 一款适用于日常对话的生成式语音模型。
 
 [![Licence](https://img.shields.io/badge/LICENSE-CC%20BY--NC%204.0-green.svg?style=for-the-badge)](https://github.com/2noise/ChatTTS/blob/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/ChatTTS.svg?style=for-the-badge)](https://pypi.org/project/ChatTTS)
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Ud5Jxgx5yD)
 
 [**English**](../../README.md) | **简体中文** | [**日本語**](../jp/README.md) | [**Русский**](../ru/README.md) | [**Español**](../es/README.md)
 
@@ -18,6 +20,12 @@
 > 注意此版本可能不是最新版，所有内容请以英文版为准。
 
 ## 简介
+
+> [!Note]
+> 这个仓库包含算法架构和一些简单的示例。
+
+> [!Tip]
+> 由本仓库衍生出的用户端产品，请参见由社区维护的索引仓库  [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS)。
 
 ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转语音模型。
 
@@ -42,11 +50,10 @@ ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转�
 
 ### 路线图
 
-- [x] 开源 4 万小时基础模型和 spk_stats 文件
-- [ ] 开源 VQ 编码器和 Lora 训练代码
-- [ ] 无需细化文本即可进行流式音频生成
-- [ ] 开源具有多情感控制功能的 4 万小时版本
-- [ ] 也许会有 ChatTTS.cpp ？(欢迎 PR 或新建仓库)
+- [x] 开源 4 万小时基础模型和 spk_stats 文件。
+- [x] 支持流式语音输出。
+- [ ] 开源具有多情感控制功能的 4 万小时版本。
+- [ ] ChatTTS.cpp (欢迎在 2noise 组织中新建仓库)。
 
 ### 免责声明
 
@@ -71,66 +78,112 @@ ChatTTS 是一款强大的文本转语音系统。但是，负责任和道德地
 
 - **群 1**, 808364215 (已满)
 - **群 2**, 230696694 (已满)
-- **群 3**, 933639842
+- **群 3**, 933639842 (已满)
+- **群 4**, 608667975
 
-## 安装教程 (丰富中)
+##### 2. Discord
 
-> 将在近期上传至 pypi，详情请查看 https://github.com/2noise/ChatTTS/issues/269 上的讨论。
+点击加入 [Discord](https://discord.gg/Ud5Jxgx5yD)。
 
-#### 1. 使用源代码安装
+## 体验教程
 
-```bash
-pip install git+https://github.com/2noise/ChatTTS
-```
-
-#### 2. 使用 conda 安装
+### 克隆仓库
 
 ```bash
 git clone https://github.com/2noise/ChatTTS
 cd ChatTTS
-conda create -n chattts
-conda activate chattts
-pip install -r requirements.txt
 ```
 
-## 使用教程
-
 ### 安装依赖
+
+#### 1. 直接安装
 
 ```bash
 pip install --upgrade -r requirements.txt
 ```
 
-### 快速开始
+#### 2. 使用 conda 安装
 
-#### 1. 启动 WebUI
+```bash
+conda create -n chattts
+conda activate chattts
+pip install -r requirements.txt
+```
+
+#### 可选 : 如果使用 NVIDIA GPU（仅限 Linux），可安装 TransformerEngine。
+
+> [!Note]
+> 安装过程可能耗时很长。
+
+> [!Warning]
+> TransformerEngine 的适配目前正在开发中，运行时可能会遇到较多问题。仅推荐出于开发目的安装。
+
+```bash
+pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
+```
+
+#### 可选 : 安装 FlashAttention-2 (主要适用于 NVIDIA GPU)
+
+> [!Note]
+> 支持设备列表详见 [Hugging Face Doc](https://huggingface.co/docs/transformers/perf_infer_gpu_one#flashattention-2).
+
+```bash
+pip install flash-attn --no-build-isolation
+```
+
+### 快速启动
+
+> 确保在执行以下命令时，处于项目根目录下。
+
+#### 1. WebUI 可视化界面
 
 ```bash
 python examples/web/webui.py
 ```
 
-#### 2. 使用命令行
+#### 2. 命令行交互
 
-> 生成的音频将保存至 `./output_audio_xxx.wav`
+> 生成的音频将保存至 `./output_audio_n.mp3`
 
 ```bash
-python examples/cmd/run.py "Please input your text."
+python examples/cmd/run.py "Your text 1." "Your text 2."
+```
+
+## 开发教程
+
+### 安装 Python 包
+
+1. 从 PyPI 安装稳定版
+
+```bash
+pip install ChatTTS
+```
+
+2. 从 GitHub 安装最新版
+
+```bash
+pip install git+https://github.com/2noise/ChatTTS
+```
+
+3. 从本地文件夹安装开发版
+
+```bash
+pip install -e .
 ```
 
 ### 基础用法
 
 ```python
 import ChatTTS
-from IPython.display import Audio
-import torchaudio
 import torch
+import torchaudio
 
 chat = ChatTTS.Chat()
 chat.load(compile=False) # Set to True for better performance
 
-texts = ["PUT YOUR TEXT HERE",]
+texts = ["PUT YOUR 1st TEXT HERE", "PUT YOUR 2nd TEXT HERE"]
 
-wavs = chat.infer(texts, )
+wavs = chat.infer(texts)
 
 torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
 ```
@@ -144,26 +197,31 @@ torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
 rand_spk = chat.sample_random_speaker()
 print(rand_spk) # save it for later timbre recovery
 
-params_infer_code = {
-  'spk_emb': rand_spk, # add sampled speaker 
-  'temperature': .3, # using custom temperature
-  'top_P': 0.7, # top P decode
-  'top_K': 20, # top K decode
-}
+params_infer_code = ChatTTS.Chat.InferCodeParams(
+    spk_emb = rand_spk, # add sampled speaker 
+    temperature = .3,   # using custom temperature
+    top_P = 0.7,        # top P decode
+    top_K = 20,         # top K decode
+)
 
 ###################################
 # For sentence level manual control.
 
 # use oral_(0-9), laugh_(0-2), break_(0-7) 
 # to generate special token in text to synthesize.
-params_refine_text = {
-  'prompt': '[oral_2][laugh_0][break_6]'
-} 
+params_refine_text = ChatTTS.Chat.RefineTextParams(
+    prompt='[oral_2][laugh_0][break_6]',
+)
 
-wavs = chat.infer(texts, params_refine_text=params_refine_text, params_infer_code=params_infer_code)
+wavs = chat.infer(
+    texts,
+    params_refine_text=params_refine_text,
+    params_infer_code=params_infer_code,
+)
 
 ###################################
 # For word level manual control.
+
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
 wavs = chat.infer(text, skip_refine_text=True, params_refine_text=params_refine_text,  params_infer_code=params_infer_code)
 torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)
@@ -174,25 +232,48 @@ torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)
 
 ```python
 inputs_en = """
-chat T T S is a text to speech model designed for dialogue applications. 
-[uv_break]it supports mixed language input [uv_break]and offers multi speaker 
-capabilities with precise control over prosodic elements [laugh]like like 
-[uv_break]laughter[laugh], [uv_break]pauses, [uv_break]and intonation. 
+chatTTS is a text to speech model designed for dialogue applications.
+[uv_break]it supports mixed language input [uv_break]and offers multi speaker
+capabilities with precise control over prosodic elements like
+[uv_break]laughter[uv_break][laugh], [uv_break]pauses, [uv_break]and intonation.
 [uv_break]it delivers natural and expressive speech,[uv_break]so please
 [uv_break] use the project responsibly at your own risk.[uv_break]
 """.replace('\n', '') # English is still experimental.
 
-params_refine_text = {
-  'prompt': '[oral_2][laugh_0][break_4]'
-} 
-# audio_array_cn = chat.infer(inputs_cn, params_refine_text=params_refine_text)
+params_refine_text = ChatTTS.Chat.RefineTextParams(
+    prompt='[oral_2][laugh_0][break_4]',
+)
+
 audio_array_en = chat.infer(inputs_en, params_refine_text=params_refine_text)
 torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 ```
 
+<table>
+<tr>
+<td align="center">
+
+**男性音色**
+
+</td>
+<td align="center">
+
+**女性音色**
+
+</td>
+</tr>
+<tr>
+<td align="center">
+
 [男性音色](https://github.com/2noise/ChatTTS/assets/130631963/e0f51251-db7f-4d39-a0e9-3e095bb65de1)
 
+</td>
+<td align="center">
+
 [女性音色](https://github.com/2noise/ChatTTS/assets/130631963/f5dcdd01-1091-47c5-8241-c4f6aaaa8bbd)
+
+</td>
+</tr>
+</table>
 
 </details>
 
@@ -219,10 +300,6 @@ torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
 ## 特别鸣谢
 
 - [wlu-audio lab](https://audio.westlake.edu.cn/) 对于早期算法实验的支持。
-
-## 相关资源
-
-- [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS) 一个 ChatTTS 的资源汇总列表。
 
 ## 贡献者列表
 
