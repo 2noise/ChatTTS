@@ -468,7 +468,7 @@ class GPT(nn.Module):
                         )
                         for num_vq_iter in range(self.num_vq):
                             x: torch.Tensor = self.head_code[num_vq_iter](hidden_states)
-                            logits[..., num_vq_iter ] = x
+                            logits[..., num_vq_iter] = x
                             del x
 
                 # logits = logits[:, -1].float()
@@ -524,11 +524,16 @@ class GPT(nn.Module):
                         ],
                         1,
                     )
-                
+
                 if i == 0 and finish.any():
                     self.logger.warn(
                         "unexpected end at index %s",
-                        str([unexpected_idx.item() for unexpected_idx in finish.nonzero()]),
+                        str(
+                            [
+                                unexpected_idx.item()
+                                for unexpected_idx in finish.nonzero()
+                            ]
+                        ),
                     )
                     if ensure_non_empty:
                         if show_tqdm:
