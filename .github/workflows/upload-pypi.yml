@@ -26,9 +26,11 @@ jobs:
           pip install twine
 
       - name: Build Package
+        env:
+          CHTTS_VER: $GITHUB_REF_NAME
         run: |
           echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
-          echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+          echo "Tag name from github.ref_name: ${{ github.ref_name }}"
           python setup.py build_py
 
       - name: Upload Package
