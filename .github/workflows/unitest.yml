@@ -3,6 +3,9 @@ on: [ push, pull_request ]
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+
+    if: github.actor != 'github-actions[bot]'
+
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
