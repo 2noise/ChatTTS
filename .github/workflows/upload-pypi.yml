@@ -30,7 +30,7 @@ jobs:
           CHTTS_VER: ${{ github.ref_name }}
         run: |
           echo "Release Tag: ${{ github.ref_name }}"
-          python setup.py build_py
+          python setup.py sdist
 
       - name: Upload Package
         run: |
