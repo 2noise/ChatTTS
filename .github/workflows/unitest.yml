@@ -25,5 +25,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run Test
-        run: |
-          echo "TODO"
+        run: tests/testall.sh

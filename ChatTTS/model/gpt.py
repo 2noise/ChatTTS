@@ -363,6 +363,7 @@ class GPT(nn.Module):
         return_hidden=False,
         stream=False,
         show_tqdm=True,
+        ensure_non_empty=True,
         context=Context(),
     ):
 
@@ -376,13 +377,14 @@ class GPT(nn.Module):
             )
             finish = torch.zeros(inputs_ids.shape[0], device=inputs_ids.device).bool()
 
+            old_temperature = temperature
+
             temperature = (
-                temperature.unsqueeze_(0)
+                temperature.unsqueeze(0)
                 .expand(inputs_ids.shape[0], -1)
                 .contiguous()
                 .view(-1, 1)
             )
-            # temperature = rearrange(temperature, "b n -> (b n) 1")
 
             attention_mask_cache = torch.ones(
                 (
@@ -464,9 +466,9 @@ class GPT(nn.Module):
                             dtype=torch.float,
                             device=self.device,
                         )
-                        for i in range(self.num_vq):
-                            x: torch.Tensor = self.head_code[i](hidden_states)
-                            logits[..., i] = x
+                        for num_vq_iter in range(self.num_vq):
+                            x: torch.Tensor = self.head_code[num_vq_iter](hidden_states)
+                            logits[..., num_vq_iter ] = x
                             del x
 
                 # logits = logits[:, -1].float()
@@ -522,6 +524,37 @@ class GPT(nn.Module):
                         ],
                         1,
                     )
+                
+                if i == 0 and finish.any():
+                    self.logger.warn(
+                        "unexpected end at index %s",
+                        str([unexpected_idx.item() for unexpected_idx in finish.nonzero()]),
+                    )
+                    if ensure_non_empty:
+                        if show_tqdm:
+                            pbar.close()
+                        self.logger.warn("regenerate in order to ensure non-empty")
+                        new_gen = self.generate(
+                            emb,
+                            inputs_ids,
+                            old_temperature,
+                            eos_token,
+                            attention_mask,
+                            max_new_token,
+                            min_new_token,
+                            logits_warpers,
+                            logits_processors,
+                            infer_text,
+                            return_attn,
+                            return_hidden,
+                            stream,
+                            show_tqdm,
+                            ensure_non_empty,
+                            context,
+                        )
+                        for result in new_gen:
+                            yield result
+                    return
 
                 del inputs_ids
                 inputs_ids = inputs_ids_tmp
@@ -529,6 +562,7 @@ class GPT(nn.Module):
 
                 if stream:
                     minus_prev_end_index = end_idx.neg()
+
                 end_idx.add_((finish.logical_not().to(end_idx.device)).int())
                 if stream:
                     if (
