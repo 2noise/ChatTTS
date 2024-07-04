@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = "v0.0.0"
+version = "test"
 
 setup(
     name="chattts",
