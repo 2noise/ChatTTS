@@ -46,7 +46,7 @@ for i, result in enumerate(gen_result):
             continue
         if not has_finished[j]:
             has_finished[j] = True
-            logger.warning("iter %d index %d len finished unfully", i, j)
+            logger.warning("iter %d index %d finished with non-12032 len %d", i, j, len(wav))
         else:
             logger.warning(
                 "stream iter %d index %d returned non-zero wav after finished", i, j
