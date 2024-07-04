@@ -15,7 +15,7 @@ from tools.logger import get_logger
 logger = get_logger("Test #511", lv=logging.WARN)
 
 chat = ChatTTS.Chat(logger)
-chat.load(compile=False)  # Set to True for better performance
+chat.load(compile=False, source="huggingface")  # Set to True for better performance
 
 texts = [
     "的 话 语 音 太 短 了 会 造 成 生 成 音 频 错 误 ， 这 是 占 位 占 位 ， 老 大 爷 觉 得 车 夫 的 想 法 很 有 道 理 [uv_break]",

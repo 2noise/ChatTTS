@@ -14,7 +14,7 @@ from tools.logger import get_logger
 
 logger = get_logger("Test #521", lv=logging.WARN)
 
-chat = ChatTTS.Chat(logger)
+chat = ChatTTS.Chat(logger, source="huggingface")
 chat.load(compile=False)  # Set to True for better performance
 
 texts = [
@@ -25,6 +25,12 @@ texts = [
 gen_result = chat.infer(
     texts,
     stream=True,
+    params_refine_text=ChatTTS.Chat.RefineTextParams(
+        show_tqdm=False,
+    ),
+    params_infer_code=ChatTTS.Chat.InferCodeParams(
+        show_tqdm=False,
+    )
 )
 
 has_finished = [False for _ in range(len(texts))]
@@ -40,6 +46,7 @@ for i, result in enumerate(gen_result):
             continue
         if not has_finished[j]:
             has_finished[j] = True
+            logger.warning("iter %d index %d len finished unfully", i, j)
         else:
             logger.warning(
                 "stream iter %d index %d returned non-zero wav after finished", i, j
