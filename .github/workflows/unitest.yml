@@ -4,7 +4,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
 
-    if: github.actor != 'github-actions[bot]'
+    if: "!contains(github.event.head_commit.message, 'chore(format): ')"
 
     strategy:
       matrix:

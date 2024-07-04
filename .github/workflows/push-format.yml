@@ -10,7 +10,7 @@ jobs:
   push-format:
     runs-on: ubuntu-latest
 
-    if: github.actor != 'github-actions[bot]'
+    if: "!contains(github.event.head_commit.message, 'chore(format): ')"
   
     permissions:
       contents: write
