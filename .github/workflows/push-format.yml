@@ -7,9 +7,11 @@ on:
       - dev
 
 jobs:
-  push_format:
+  push-format:
     runs-on: ubuntu-latest
 
+    if: github.actor != 'github-actions[bot]'
+  
     permissions:
       contents: write
       pull-requests: write

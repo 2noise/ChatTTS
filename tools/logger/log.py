@@ -1,4 +1,4 @@
-import platform
+import platform, sys
 import logging
 from datetime import datetime, timezone
 
@@ -47,7 +47,10 @@ class Formatter(logging.Formatter):
         logstr += log_level_msg_str.get(record.levelno, record.levelname)
         if self.color:
             logstr += colorReset
-        fn = record.filename.removesuffix(".py")
+        if sys.version_info >= (3, 9):
+            fn = record.filename.removesuffix(".py")
+        elif record.filename.endswith(".py"):
+            fn = record.filename[:-3]
         logstr += f"] {str(record.name)} | {fn} | {str(record.msg)%record.args}"
         return logstr
 

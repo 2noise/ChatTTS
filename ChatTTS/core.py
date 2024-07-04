@@ -200,6 +200,7 @@ class Chat:
         max_new_token: int = 384
         min_new_token: int = 0
         show_tqdm: bool = True
+        ensure_non_empty: bool = True
 
     @dataclass(repr=False, eq=False)
     class InferCodeParams(RefineTextParams):

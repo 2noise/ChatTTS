@@ -1,9 +1,7 @@
 name: Calculate and Sync SHA256
 on:
-  push:
-    branches:
-      - main
-      - dev
+  workflow_dispatch:
+
 jobs:
   checksum:
     runs-on: ubuntu-latest
