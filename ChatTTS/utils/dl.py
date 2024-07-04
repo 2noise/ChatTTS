@@ -29,7 +29,7 @@ def check_model(
         digest = sha256(f.fileno())
         bakfile = f"{target}.bak"
         if digest != hash:
-            logger.get_logger().warn(f"{target} sha256 hash mismatch.")
+            logger.get_logger().warning(f"{target} sha256 hash mismatch.")
             logger.get_logger().info(f"expected: {hash}")
             logger.get_logger().info(f"real val: {digest}")
             if remove_incorrect:

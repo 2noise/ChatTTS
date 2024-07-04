@@ -28,7 +28,7 @@ seed_max = 4294967295
 
 use_mp3 = has_ffmpeg_installed()
 if not use_mp3:
-    logger.warn("no ffmpeg installed, use wav file output")
+    logger.warning("no ffmpeg installed, use wav file output")
 
 # 音色选项：用于预置合适的音色
 voices = {
@@ -165,10 +165,10 @@ def generate_audio(text, temperature, top_P, top_K, spk_emb_text: str, stream):
         for gen in wav:
             audio = gen[0]
             if audio is not None and len(audio) > 0:
-                yield 24000, unsafe_float_to_int16(audio[0])
-                del audio
+                yield 24000, unsafe_float_to_int16(audio)
+            del audio
     else:
-        yield 24000, unsafe_float_to_int16(np.array(wav[0]).flatten())
+        yield 24000, unsafe_float_to_int16(wav[0])
 
 
 def interrupt_generate():

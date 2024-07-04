@@ -162,33 +162,33 @@ class Chat:
         return self._encode_spk_emb(self._sample_random_speaker())
 
     @staticmethod
+    @torch.inference_mode()
     def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
-        with torch.no_grad():
-            arr: np.ndarray = spk_emb.to(dtype=torch.float16, device="cpu").numpy()
-            s = b14.encode_to_string(
-                lzma.compress(
-                    arr.tobytes(),
-                    format=lzma.FORMAT_RAW,
-                    filters=[
-                        {"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}
-                    ],
-                ),
-            )
-            del arr
+        arr: np.ndarray = spk_emb.to(dtype=torch.float16, device="cpu").numpy()
+        s = b14.encode_to_string(
+            lzma.compress(
+                arr.tobytes(),
+                format=lzma.FORMAT_RAW,
+                filters=[
+                    {"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}
+                ],
+            ),
+        )
+        del arr
         return s
 
+    @torch.inference_mode()
     def _sample_random_speaker(self) -> torch.Tensor:
-        with torch.no_grad():
-            dim: int = self.gpt.gpt.layers[0].mlp.gate_proj.in_features
-            out: torch.Tensor = self.pretrain_models["spk_stat"]
-            std, mean = out.chunk(2)
-            spk = (
-                torch.randn(dim, device=std.device, dtype=torch.float16)
-                .mul_(std)
-                .add_(mean)
-            )
-            del out, std, mean
-            return spk
+        dim: int = self.gpt.gpt.layers[0].mlp.gate_proj.in_features
+        out: torch.Tensor = self.pretrain_models["spk_stat"]
+        std, mean = out.chunk(2)
+        spk = (
+            torch.randn(dim, device=std.device, dtype=torch.float16)
+            .mul_(std)
+            .add_(mean)
+        )
+        del out, std, mean
+        return spk
 
     @dataclass(repr=False, eq=False)
     class RefineTextParams:
@@ -201,6 +201,7 @@ class Chat:
         min_new_token: int = 0
         show_tqdm: bool = True
         ensure_non_empty: bool = True
+        stream_batch: int = 24
 
     @dataclass(repr=False, eq=False)
     class InferCodeParams(RefineTextParams):
@@ -343,6 +344,7 @@ class Chat:
 
         return self.has_loaded()
 
+    @torch.inference_mode()
     def _infer(
         self,
         text,
@@ -372,46 +374,46 @@ class Chat:
             for t in text
         ]
 
-        with torch.no_grad():
-
-            if not skip_refine_text:
-                refined = self._refine_text(
-                    text,
-                    self.device,
-                    params_refine_text,
-                )
-                text_tokens = refined.ids
-                text_tokens = [
-                    i[i.less(self.tokenizer_break_0_ids)] for i in text_tokens
-                ]
-                text = self.pretrain_models["tokenizer"].batch_decode(text_tokens)
-                refined.destroy()
-                if refine_text_only:
-                    yield text
-                    return
-
-            length = [0 for _ in range(len(text))]
-            for result in self._infer_code(
+        if not skip_refine_text:
+            refined = self._refine_text(
                 text,
-                stream,
                 self.device,
-                use_decoder,
-                params_infer_code,
-            ):
-                wav = self._decode_to_wavs(result, length, use_decoder)
-                yield wav
+                params_refine_text,
+            )
+            text_tokens = refined.ids
+            text_tokens = [
+                i[i.less(self.tokenizer_break_0_ids)] for i in text_tokens
+            ]
+            text = self.pretrain_models["tokenizer"].batch_decode(text_tokens)
+            refined.destroy()
+            if refine_text_only:
+                yield text
+                return
 
+        length = [0 for _ in range(len(text))]
+        for result in self._infer_code(
+            text,
+            stream,
+            self.device,
+            use_decoder,
+            params_infer_code,
+        ):
+            wav = self._decode_to_wavs(result, length, use_decoder)
+            result.destroy()
+            yield wav
+
+    @torch.inference_mode()
     def _vocos_decode(self, spec: torch.Tensor) -> np.ndarray:
         if "mps" in str(self.device):
-            return self.vocos.decode(spec.cpu()).cpu().numpy()
+            return self.vocos.decode(spec.cpu()).squeeze_(0).cpu().numpy()
         else:
-            return self.vocos.decode(spec).cpu().numpy()
+            return self.vocos.decode(spec).squeeze_(0).cpu().numpy()
 
     def _decode_to_wavs(
         self, result: GPT.GenerationOutputs, start_seeks: List[int], use_decoder: bool
     ):
         x = result.hiddens if use_decoder else result.ids
-        wavs: List[np.ndarray] = []
+        wavs: List[Optional[np.ndarray]] = []
         for i, chunk_data in enumerate(x):
             start_seek = start_seeks[i]
             length = len(chunk_data)
@@ -419,13 +421,12 @@ class Chat:
                 wavs.append(None)
                 continue
             start_seeks[i] = length
-            chunk_data = chunk_data[start_seek:]
+            chunk_data = chunk_data[start_seek:].to(self.device)
             decoder = self.decoder if use_decoder else self.dvae
-            mel_spec = decoder(chunk_data[None].permute(0, 2, 1).to(self.device))
+            mel_spec = decoder(chunk_data.unsqueeze_(0).permute(0, 2, 1))
             del chunk_data
             wavs.append(self._vocos_decode(mel_spec))
             del_all(mel_spec)
-        result.destroy()
         del_all(x)
         return wavs
 
@@ -590,6 +591,8 @@ class Chat:
             return_hidden=return_hidden,
             stream=stream,
             show_tqdm=params.show_tqdm,
+            ensure_non_empty=params.ensure_non_empty,
+            stream_batch=params.stream_batch,
             context=self.context,
         )
 
@@ -639,6 +642,8 @@ class Chat:
                 infer_text=True,
                 stream=False,
                 show_tqdm=params.show_tqdm,
+                ensure_non_empty=params.ensure_non_empty,
+                stream_batch=params.stream_batch,
                 context=self.context,
             )
         )

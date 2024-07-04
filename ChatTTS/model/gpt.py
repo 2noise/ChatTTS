@@ -114,7 +114,7 @@ class GPT(nn.Module):
                 self.logger.info("Linux with CUDA, try NVIDIA accelerated TELlamaModel")
             except Exception as e:
                 model = None
-                self.logger.warn(
+                self.logger.warning(
                     f"use default LlamaModel for importing TELlamaModel error: {e}"
                 )
 
@@ -124,7 +124,7 @@ class GPT(nn.Module):
                     **config,
                     attn_implementation="flash_attention_2",
                 )
-                self.logger.warn(
+                self.logger.warning(
                     "enabling flash_attention_2 may make gpt be even slower"
                 )
             else:
@@ -347,6 +347,7 @@ class GPT(nn.Module):
             hiddens=hiddens,
         )
 
+    @torch.inference_mode()
     def generate(
         self,
         emb: torch.Tensor,
@@ -364,252 +365,252 @@ class GPT(nn.Module):
         stream=False,
         show_tqdm=True,
         ensure_non_empty=True,
+        stream_batch=24,
         context=Context(),
     ):
 
-        with torch.no_grad():
+        attentions: List[Optional[Tuple[torch.FloatTensor, ...]]] = []
+        hiddens = []
+        stream_iter = 0
 
-            attentions: List[Optional[Tuple[torch.FloatTensor, ...]]] = []
-            hiddens = []
+        start_idx, end_idx = inputs_ids.shape[1], torch.zeros(
+            inputs_ids.shape[0], device=inputs_ids.device, dtype=torch.long
+        )
+        finish = torch.zeros(inputs_ids.shape[0], device=inputs_ids.device).bool()
 
-            start_idx, end_idx = inputs_ids.shape[1], torch.zeros(
-                inputs_ids.shape[0], device=inputs_ids.device, dtype=torch.long
+        old_temperature = temperature
+
+        temperature = (
+            temperature.unsqueeze(0)
+            .expand(inputs_ids.shape[0], -1)
+            .contiguous()
+            .view(-1, 1)
+        )
+
+        attention_mask_cache = torch.ones(
+            (
+                inputs_ids.shape[0],
+                inputs_ids.shape[1] + max_new_token,
+            ),
+            dtype=torch.bool,
+            device=inputs_ids.device,
+        )
+        if attention_mask is not None:
+            attention_mask_cache.narrow(1, 0, attention_mask.shape[1]).copy_(
+                attention_mask
             )
-            finish = torch.zeros(inputs_ids.shape[0], device=inputs_ids.device).bool()
 
-            old_temperature = temperature
+        pbar: Optional[tqdm] = None
 
-            temperature = (
-                temperature.unsqueeze(0)
-                .expand(inputs_ids.shape[0], -1)
-                .contiguous()
-                .view(-1, 1)
+        if show_tqdm:
+            pbar = tqdm(
+                total=max_new_token,
+                desc="text" if infer_text else "code",
+                bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}(max) [{elapsed}, {rate_fmt}{postfix}]",
             )
 
-            attention_mask_cache = torch.ones(
-                (
-                    inputs_ids.shape[0],
-                    inputs_ids.shape[1] + max_new_token,
-                ),
-                dtype=torch.bool,
-                device=inputs_ids.device,
+        past_key_values = None
+
+        for i in range(max_new_token):
+            model_input = self._prepare_generation_inputs(
+                inputs_ids,
+                past_key_values,
+                attention_mask_cache.narrow(1, 0, inputs_ids.shape[1]),
+                use_cache=True,
             )
-            if attention_mask is not None:
-                attention_mask_cache.narrow(1, 0, attention_mask.shape[1]).copy_(
-                    attention_mask
-                )
 
-            pbar: Optional[tqdm] = None
-
-            if show_tqdm:
-                pbar = tqdm(
-                    total=max_new_token,
-                    desc="text" if infer_text else "code",
-                    bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}(max) [{elapsed}, {rate_fmt}{postfix}]",
-                )
-
-            past_key_values = None
-
-            for i in range(max_new_token):
-                model_input = self._prepare_generation_inputs(
-                    inputs_ids,
-                    past_key_values,
-                    attention_mask_cache.narrow(1, 0, inputs_ids.shape[1]),
-                    use_cache=True,
-                )
-
-                if i > 0:
-                    del emb
-                    inputs_ids_emb = model_input.input_ids.to(self.device_gpt)
-                    if infer_text:
-                        emb: torch.Tensor = self.emb_text(inputs_ids_emb[:, :, 0])
-                    else:
-                        code_emb = [
-                            self.emb_code[i](inputs_ids_emb[:, :, i])
-                            for i in range(self.num_vq)
-                        ]
-                        emb = torch.stack(code_emb, 3).sum(3)
-                    del inputs_ids_emb, model_input.input_ids
-                model_input.inputs_embeds = emb
-
-                model_input.to(self.device_gpt, self.gpt.dtype)
-
-                outputs: BaseModelOutputWithPast = self.gpt(
-                    attention_mask=model_input.attention_mask,
-                    position_ids=model_input.position_ids,
-                    past_key_values=model_input.past_key_values,
-                    inputs_embeds=model_input.inputs_embeds,
-                    use_cache=model_input.use_cache,
-                    output_attentions=return_attn,
-                    cache_position=model_input.cache_position,
-                )
-                del_all(model_input)
-                attentions.append(outputs.attentions)
-                hidden_states = outputs.last_hidden_state.to(
-                    self.device, dtype=torch.float
-                )  # 🐻
-                past_key_values = outputs.past_key_values
-                del_all(outputs)
-                if return_hidden:
-                    hiddens.append(hidden_states.narrow(1, -1, 1).squeeze_(1))
-
-                with P.cached():
-                    if infer_text:
-                        logits: torch.Tensor = self.head_text(hidden_states)
-                    else:
-                        # logits = torch.stack([self.head_code[i](hidden_states) for i in range(self.num_vq)], 3)
-                        logits = torch.empty(
-                            hidden_states.size(0),
-                            hidden_states.size(1),
-                            self.num_audio_tokens,
-                            self.num_vq,
-                            dtype=torch.float,
-                            device=self.device,
-                        )
-                        for num_vq_iter in range(self.num_vq):
-                            x: torch.Tensor = self.head_code[num_vq_iter](hidden_states)
-                            logits[..., num_vq_iter] = x
-                            del x
-
-                # logits = logits[:, -1].float()
-                logits = logits.narrow(1, -1, 1).squeeze_(1).float()
-
-                if not infer_text:
-                    # logits = rearrange(logits, "b c n -> (b n) c")
-                    logits = logits.permute(0, 2, 1)
-                    logits = logits.reshape(-1, logits.size(2))
-                    # logits_token = rearrange(inputs_ids[:, start_idx:], "b c n -> (b n) c")
-                    inputs_ids_sliced = inputs_ids[:, start_idx:].permute(0, 2, 1)
-                    logits_token = inputs_ids_sliced.reshape(
-                        inputs_ids_sliced.size(0) * inputs_ids_sliced.size(1),
-                        -1,
-                    ).to(self.device)
+            if i > 0:
+                del emb
+                inputs_ids_emb = model_input.input_ids.to(self.device_gpt)
+                if infer_text:
+                    emb: torch.Tensor = self.emb_text(inputs_ids_emb[:, :, 0])
                 else:
-                    logits_token = inputs_ids[:, start_idx:, 0].to(self.device)
+                    code_emb = [
+                        self.emb_code[i](inputs_ids_emb[:, :, i])
+                        for i in range(self.num_vq)
+                    ]
+                    emb = torch.stack(code_emb, 3).sum(3)
+                del inputs_ids_emb, model_input.input_ids
+            model_input.inputs_embeds = emb
 
-                logits /= temperature
+            model_input.to(self.device_gpt, self.gpt.dtype)
 
-                for logitsProcessors in logits_processors:
-                    logits = logitsProcessors(logits_token, logits)
+            outputs: BaseModelOutputWithPast = self.gpt(
+                attention_mask=model_input.attention_mask,
+                position_ids=model_input.position_ids,
+                past_key_values=model_input.past_key_values,
+                inputs_embeds=model_input.inputs_embeds,
+                use_cache=model_input.use_cache,
+                output_attentions=return_attn,
+                cache_position=model_input.cache_position,
+            )
+            del_all(model_input)
+            attentions.append(outputs.attentions)
+            hidden_states = outputs.last_hidden_state.to(
+                self.device, dtype=torch.float
+            )  # 🐻
+            past_key_values = outputs.past_key_values
+            del_all(outputs)
+            if return_hidden:
+                hiddens.append(hidden_states.narrow(1, -1, 1).squeeze_(1))
 
-                for logitsWarpers in logits_warpers:
-                    logits = logitsWarpers(logits_token, logits)
-
-                del logits_token
-
-                if i < min_new_token:
-                    logits[:, eos_token] = -torch.inf
-
-                scores = F.softmax(logits, dim=-1)
-
-                del logits
-
-                idx_next = torch.multinomial(scores, num_samples=1).to(finish.device)
-
-                if not infer_text:
-                    # idx_next = rearrange(idx_next, "(b n) 1 -> b n", n=self.num_vq)
-                    idx_next = idx_next.view(-1, self.num_vq)
-                    finish_or = idx_next.eq(eos_token).any(1)
-                    finish.logical_or_(finish_or)
-                    del finish_or
-                    inputs_ids_tmp = torch.cat([inputs_ids, idx_next.unsqueeze_(1)], 1)
+            with P.cached():
+                if infer_text:
+                    logits: torch.Tensor = self.head_text(hidden_states)
                 else:
-                    finish_or = idx_next.eq(eos_token).any(1)
-                    finish.logical_or_(finish_or)
-                    del finish_or
-                    inputs_ids_tmp = torch.cat(
+                    # logits = torch.stack([self.head_code[i](hidden_states) for i in range(self.num_vq)], 3)
+                    logits = torch.empty(
+                        hidden_states.size(0),
+                        hidden_states.size(1),
+                        self.num_audio_tokens,
+                        self.num_vq,
+                        dtype=torch.float,
+                        device=self.device,
+                    )
+                    for num_vq_iter in range(self.num_vq):
+                        x: torch.Tensor = self.head_code[num_vq_iter](hidden_states)
+                        logits[..., num_vq_iter] = x
+                        del x
+            
+            del hidden_states
+
+            # logits = logits[:, -1].float()
+            logits = logits.narrow(1, -1, 1).squeeze_(1).float()
+
+            if not infer_text:
+                # logits = rearrange(logits, "b c n -> (b n) c")
+                logits = logits.permute(0, 2, 1)
+                logits = logits.reshape(-1, logits.size(2))
+                # logits_token = rearrange(inputs_ids[:, start_idx:], "b c n -> (b n) c")
+                inputs_ids_sliced = inputs_ids[:, start_idx:].permute(0, 2, 1)
+                logits_token = inputs_ids_sliced.reshape(
+                    inputs_ids_sliced.size(0) * inputs_ids_sliced.size(1),
+                    -1,
+                ).to(self.device)
+            else:
+                logits_token = inputs_ids[:, start_idx:, 0].to(self.device)
+
+            logits /= temperature
+
+            for logitsProcessors in logits_processors:
+                logits = logitsProcessors(logits_token, logits)
+
+            for logitsWarpers in logits_warpers:
+                logits = logitsWarpers(logits_token, logits)
+
+            del logits_token
+
+            if i < min_new_token:
+                logits[:, eos_token] = -torch.inf
+
+            scores = F.softmax(logits, dim=-1)
+
+            del logits
+
+            idx_next = torch.multinomial(scores, num_samples=1).to(finish.device)
+
+            if not infer_text:
+                # idx_next = rearrange(idx_next, "(b n) 1 -> b n", n=self.num_vq)
+                idx_next = idx_next.view(-1, self.num_vq)
+                finish_or = idx_next.eq(eos_token).any(1)
+                finish.logical_or_(finish_or)
+                del finish_or
+                inputs_ids_tmp = torch.cat([inputs_ids, idx_next.unsqueeze_(1)], 1)
+            else:
+                finish_or = idx_next.eq(eos_token).any(1)
+                finish.logical_or_(finish_or)
+                del finish_or
+                inputs_ids_tmp = torch.cat(
+                    [
+                        inputs_ids,
+                        idx_next.unsqueeze_(-1).expand(-1, -1, self.num_vq),
+                    ],
+                    1,
+                )
+
+            if i == 0 and finish.any():
+                self.logger.warning(
+                    "unexpected end at index %s",
+                    str(
                         [
-                            inputs_ids,
-                            idx_next.unsqueeze_(-1).expand(-1, -1, self.num_vq),
-                        ],
-                        1,
+                            unexpected_idx.item()
+                            for unexpected_idx in finish.nonzero()
+                        ]
+                    ),
+                )
+                if ensure_non_empty:
+                    if show_tqdm:
+                        pbar.close()
+                    self.logger.warning("regenerate in order to ensure non-empty")
+                    del_all(attentions)
+                    del_all(hiddens)
+                    del start_idx, end_idx, finish, temperature, attention_mask_cache, past_key_values, idx_next, inputs_ids_tmp
+                    new_gen = self.generate(
+                        emb,
+                        inputs_ids,
+                        old_temperature,
+                        eos_token,
+                        attention_mask,
+                        max_new_token,
+                        min_new_token,
+                        logits_warpers,
+                        logits_processors,
+                        infer_text,
+                        return_attn,
+                        return_hidden,
+                        stream,
+                        show_tqdm,
+                        ensure_non_empty,
+                        context,
                     )
+                    for result in new_gen:
+                        yield result
+                return
 
-                if i == 0 and finish.any():
-                    self.logger.warn(
-                        "unexpected end at index %s",
-                        str(
-                            [
-                                unexpected_idx.item()
-                                for unexpected_idx in finish.nonzero()
-                            ]
-                        ),
+            del inputs_ids
+            inputs_ids = inputs_ids_tmp
+            del inputs_ids_tmp, idx_next
+
+            not_finished = finish.logical_not().to(end_idx.device)
+            end_idx.add_(not_finished.int())
+            stream_iter += not_finished.any().int()
+            if stream:
+                if stream_iter > 0 and stream_iter % stream_batch == 0:
+                    self.logger.debug("yield stream result, end: %d", end_idx)
+                    yield self._prepare_generation_outputs(
+                        inputs_ids,
+                        start_idx,
+                        end_idx,
+                        attentions,
+                        hiddens,
+                        infer_text,
                     )
-                    if ensure_non_empty:
-                        if show_tqdm:
-                            pbar.close()
-                        self.logger.warn("regenerate in order to ensure non-empty")
-                        new_gen = self.generate(
-                            emb,
-                            inputs_ids,
-                            old_temperature,
-                            eos_token,
-                            attention_mask,
-                            max_new_token,
-                            min_new_token,
-                            logits_warpers,
-                            logits_processors,
-                            infer_text,
-                            return_attn,
-                            return_hidden,
-                            stream,
-                            show_tqdm,
-                            ensure_non_empty,
-                            context,
-                        )
-                        for result in new_gen:
-                            yield result
-                    return
+            del not_finished
 
-                del inputs_ids
-                inputs_ids = inputs_ids_tmp
-                del inputs_ids_tmp, idx_next
-
-                if stream:
-                    minus_prev_end_index = end_idx.neg()
-
-                end_idx.add_((finish.logical_not().to(end_idx.device)).int())
-                if stream:
-                    if (
-                        end_idx.all()
-                        and end_idx.fmod(24).eq(0).any()
-                        and minus_prev_end_index.add_(end_idx).any()
-                    ):
-                        self.logger.debug("yield stream result, end: %d", end_idx)
-                        yield self._prepare_generation_outputs(
-                            inputs_ids,
-                            start_idx,
-                            end_idx,
-                            attentions,
-                            hiddens,
-                            infer_text,
-                        )
-                    del minus_prev_end_index
-
-                if finish.all() or context.get():
-                    break
-
-                if pbar is not None:
-                    pbar.update(1)
+            if finish.all() or context.get():
+                break
 
             if pbar is not None:
-                pbar.close()
+                pbar.update(1)
 
-            if not finish.all():
-                if context.get():
-                    self.logger.warning("generation is interrupted")
-                else:
-                    self.logger.warning(
-                        f"incomplete result. hit max_new_token: {max_new_token}"
-                    )
+        if pbar is not None:
+            pbar.close()
 
-            del finish
+        if not finish.all():
+            if context.get():
+                self.logger.warning("generation is interrupted")
+            else:
+                self.logger.warning(
+                    f"incomplete result. hit max_new_token: {max_new_token}"
+                )
 
-            yield self._prepare_generation_outputs(
-                inputs_ids,
-                start_idx,
-                end_idx,
-                attentions,
-                hiddens,
-                infer_text,
-            )
+        del finish
+
+        yield self._prepare_generation_outputs(
+            inputs_ids,
+            start_idx,
+            end_idx,
+            attentions,
+            hiddens,
+            infer_text,
+        )
