@@ -14,8 +14,8 @@ from tools.logger import get_logger
 
 logger = get_logger("Test #521", lv=logging.WARN)
 
-chat = ChatTTS.Chat(logger, source="huggingface")
-chat.load(compile=False)  # Set to True for better performance
+chat = ChatTTS.Chat(logger)
+chat.load(compile=False, source="huggingface")  # Set to True for better performance
 
 texts = [
     "这段代码在流式输出的情况下，和非流式情况下，计算是否一致？我在流式输出的情况下，会产生噪音，怀疑这部分有问题，哪位大佬可以指教一下？",
