@@ -6,7 +6,7 @@ on:
 
 jobs:
   # This workflow closes invalid PR
-  close_pr:
+  change-or-close-pr:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     permissions: write-all
@@ -22,13 +22,19 @@ jobs:
           script: |
             const { owner, repo, number } = context.issue;
             const newBase = 'dev';
-            const result = await github.pulls.update({
-              owner,
-              repo,
-              pull_number: number,
-              base: newBase
-            });
-            console.log(result);
+            try {
+              const result = await github.pulls.update({
+                owner,
+                repo,
+                pull_number: number,
+                base: newBase
+              });
+              console.log(result);
+              return 'success';
+            } catch (error) {
+              console.log(error);
+              return 'failed';
+            }
 
       - name: Close PR if it is not pointed to dev Branch
         if: "github.event.pull_request.base.ref != 'dev' && steps.change-base.outputs.result == 'failed'"
