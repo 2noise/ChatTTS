@@ -23,7 +23,7 @@ jobs:
       
       - name: Install Dependents
         run: |
-          sudo apt-get install -y python3-pyaudio
+          sudo apt-get install -y portaudio19-dev python3-pyaudio
 
       - name: Test Install
         run: pip install .
