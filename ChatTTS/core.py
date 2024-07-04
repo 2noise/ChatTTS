@@ -169,9 +169,7 @@ class Chat:
             lzma.compress(
                 arr.tobytes(),
                 format=lzma.FORMAT_RAW,
-                filters=[
-                    {"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}
-                ],
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
             ),
         )
         del arr
@@ -381,9 +379,7 @@ class Chat:
                 params_refine_text,
             )
             text_tokens = refined.ids
-            text_tokens = [
-                i[i.less(self.tokenizer_break_0_ids)] for i in text_tokens
-            ]
+            text_tokens = [i[i.less(self.tokenizer_break_0_ids)] for i in text_tokens]
             text = self.pretrain_models["tokenizer"].batch_decode(text_tokens)
             refined.destroy()
             if refine_text_only:

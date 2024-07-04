@@ -471,7 +471,7 @@ class GPT(nn.Module):
                         x: torch.Tensor = self.head_code[num_vq_iter](hidden_states)
                         logits[..., num_vq_iter] = x
                         del x
-            
+
             del hidden_states
 
             # logits = logits[:, -1].float()
@@ -531,12 +531,7 @@ class GPT(nn.Module):
             if i == 0 and finish.any():
                 self.logger.warning(
                     "unexpected end at index %s",
-                    str(
-                        [
-                            unexpected_idx.item()
-                            for unexpected_idx in finish.nonzero()
-                        ]
-                    ),
+                    str([unexpected_idx.item() for unexpected_idx in finish.nonzero()]),
                 )
                 if ensure_non_empty:
                     if show_tqdm:
@@ -544,7 +539,16 @@ class GPT(nn.Module):
                     self.logger.warning("regenerate in order to ensure non-empty")
                     del_all(attentions)
                     del_all(hiddens)
-                    del start_idx, end_idx, finish, temperature, attention_mask_cache, past_key_values, idx_next, inputs_ids_tmp
+                    del (
+                        start_idx,
+                        end_idx,
+                        finish,
+                        temperature,
+                        attention_mask_cache,
+                        past_key_values,
+                        idx_next,
+                        inputs_ids_tmp,
+                    )
                     new_gen = self.generate(
                         emb,
                         inputs_ids,
