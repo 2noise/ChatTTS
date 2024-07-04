@@ -14,3 +14,4 @@ WeTextProcessing; sys_platform == 'linux'
 nemo_text_processing; sys_platform == 'linux'
 av
 pydub
+pyaudio
