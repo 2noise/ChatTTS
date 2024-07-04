@@ -13,8 +13,25 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: Close PR if it is not pointed to dev Branch
+      - name: Change Base Branch
         if: github.event.pull_request.base.ref != 'dev'
+        uses: actions/github-script@v4
+        id: change-base
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo, number } = context.issue;
+            const newBase = 'dev';
+            const result = await github.pulls.update({
+              owner,
+              repo,
+              pull_number: number,
+              base: newBase
+            });
+            console.log(result);
+
+      - name: Close PR if it is not pointed to dev Branch
+        if: "github.event.pull_request.base.ref != 'dev' && steps.change-base.outputs.result == 'failed'"
         uses: superbrothers/close-pull-request@v3
         with:
           # Optional. Post a issue comment just before closing a pull request.
