@@ -30,7 +30,7 @@ gen_result = chat.infer(
     ),
     params_infer_code=ChatTTS.Chat.InferCodeParams(
         show_tqdm=False,
-    )
+    ),
 )
 
 has_finished = [False for _ in range(len(texts))]
