@@ -1,37 +1,13 @@
-import sys
-import torch
-import numpy as np
-import ChatTTS
-from IPython.display import Audio
-
-
 import io
 import threading
 import time
-import pyaudio
-
 import random
 
+import pyaudio
+import numpy as np
+import ChatTTS
 
-# 如果不对batch进行统一量纲，同batch的多段话之间量纲会有较大差异，以致于无法在后处理中获取正常的历史语音结果？
-def batch_unsafe_float_to_int16(audios: list[np.ndarray], am=None) -> list[np.ndarray]:
-    """
-    This function will destroy audio, use only once.
-    """
-
-    valid_audios = [i for i in audios if i is not None]
-    if len(valid_audios) > 1:
-        am = np.abs(np.concatenate(valid_audios, axis=1)).max() * 32768
-    else:
-        am = np.abs(valid_audios[0]).max() * 32768
-    am = 32767 * 32768 / am
-
-    for i in range(len(audios)):
-        if audios[i] is not None:
-            np.multiply(audios[i], am, audios[i])
-            audios[i] = audios[i].astype(np.int16)
-    return audios
-
+from tools.audio import batch_unsafe_float_to_int16
 
 # 流式声音处理器
 class AudioStreamer:

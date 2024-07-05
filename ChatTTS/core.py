@@ -331,7 +331,6 @@ class Chat:
 
         return self.has_loaded()
 
-    @torch.inference_mode()
     def _infer(
         self,
         text,
@@ -506,7 +505,7 @@ class Chat:
         torch.where(cond, n, emb, out=emb)
         del cond, n
 
-    @torch.inference_mode()
+    @torch.no_grad()
     def _infer_code(
         self,
         text: Tuple[List[str], str],
@@ -549,9 +548,7 @@ class Chat:
 
         input_ids, attention_mask, text_mask = self._text_to_token(text, gpt.device_gpt)
 
-        with torch.inference_mode(not self.compile):
-            with torch.no_grad():
-                emb = gpt(input_ids, text_mask)
+        emb = gpt(input_ids, text_mask)
 
         del text_mask
 
@@ -592,7 +589,7 @@ class Chat:
 
         return result
 
-    @torch.inference_mode()
+    @torch.no_grad()
     def _refine_text(
         self,
         text: str,
@@ -616,9 +613,7 @@ class Chat:
             repetition_penalty=params.repetition_penalty,
         )
 
-        with torch.inference_mode(not self.compile):
-            with torch.no_grad():
-                emb = gpt(input_ids, text_mask)
+        emb = gpt(input_ids, text_mask)
 
         del text_mask
 
