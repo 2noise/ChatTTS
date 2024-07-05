@@ -142,7 +142,7 @@ def refine_text(
     return text[0] if isinstance(text, list) else text
 
 
-def generate_audio(text, temperature, top_P, top_K, spk_emb_text: str, stream):
+def generate_audio(text, temperature, top_P, top_K, spk_emb_text: str, stream, audio_seed_input):
     global chat, has_interrupted
 
     if not text or has_interrupted or not spk_emb_text.startswith("蘁淰"):
@@ -155,20 +155,21 @@ def generate_audio(text, temperature, top_P, top_K, spk_emb_text: str, stream):
         top_K=top_K,
     )
 
-    wav = chat.infer(
-        text,
-        skip_refine_text=True,
-        params_infer_code=params_infer_code,
-        stream=stream,
-    )
-    if stream:
-        for gen in wav:
-            audio = gen[0]
-            if audio is not None and len(audio) > 0:
-                yield 24000, unsafe_float_to_int16(audio)
-            del audio
-    else:
-        yield 24000, unsafe_float_to_int16(wav[0])
+    with TorchSeedContext(audio_seed_input):
+        wav = chat.infer(
+            text,
+            skip_refine_text=True,
+            params_infer_code=params_infer_code,
+            stream=stream,
+        )
+        if stream:
+            for gen in wav:
+                audio = gen[0]
+                if audio is not None and len(audio) > 0:
+                    yield 24000, unsafe_float_to_int16(audio)
+                del audio
+        else:
+            yield 24000, unsafe_float_to_int16(wav[0])
 
 
 def interrupt_generate():

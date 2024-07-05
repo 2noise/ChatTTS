@@ -177,6 +177,7 @@ def main():
                     top_k_slider,
                     spk_emb_text,
                     stream_mode_checkbox,
+                    audio_seed_input,
                 ],
                 outputs=audio_output,
             ).then(
