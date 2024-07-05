@@ -1,9 +1,14 @@
 import torch
 from transformers import BertTokenizerFast
 
-class Tokenizer():
-    def __init__(self, tokenizer_path: torch.serialization.FILE_LIKE, device: torch.device):
-        tokenizer: BertTokenizerFast = torch.load(tokenizer_path, map_location=device, mmap=True)
+
+class Tokenizer:
+    def __init__(
+        self, tokenizer_path: torch.serialization.FILE_LIKE, device: torch.device
+    ):
+        tokenizer: BertTokenizerFast = torch.load(
+            tokenizer_path, map_location=device, mmap=True
+        )
         tokenizer.padding_side = "left"
         self._tokenizer = tokenizer
 

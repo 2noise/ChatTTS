@@ -302,9 +302,7 @@ class Chat:
                 spk_stat_path
             ), f"Missing spk_stat.pt: {spk_stat_path}"
             self.std, self.mean = torch.tensor(
-                    torch.load(
-                    spk_stat_path, weights_only=True, mmap=True
-                ),
+                torch.load(spk_stat_path, weights_only=True, mmap=True),
                 device=device,
                 requires_grad=False,
             ).chunk(2)
