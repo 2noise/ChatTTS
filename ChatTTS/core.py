@@ -8,6 +8,7 @@ from pathlib import Path
 import lzma
 
 import numpy as np
+from numba import jit
 import torch
 import torch.nn.functional as F
 from omegaconf import OmegaConf
@@ -238,6 +239,7 @@ class Chat:
     def interrupt(self):
         self.context.set(True)
 
+    @torch.inference_mode()
     def _load(
         self,
         vocos_config_path: str = None,
@@ -392,6 +394,7 @@ class Chat:
         else:
             return self.vocos.decode(spec).squeeze_(0).cpu().numpy()
 
+    @torch.inference_mode()
     def _decode_to_wavs(
         self, result: GPT.GenerationOutputs, start_seeks: List[int], use_decoder: bool
     ):
@@ -413,6 +416,7 @@ class Chat:
         del_all(x)
         return wavs
 
+    @torch.inference_mode()
     def _text_to_token(
         self, text: List[str], device="cpu"
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -474,6 +478,7 @@ class Chat:
             dtype=np.float16,
         ).copy()
 
+    @torch.inference_mode()
     def _apply_spk_emb(
         self,
         emb: torch.Tensor,
@@ -501,6 +506,7 @@ class Chat:
         torch.where(cond, n, emb, out=emb)
         del cond, n
 
+    @torch.inference_mode()
     def _infer_code(
         self,
         text: Tuple[List[str], str],
@@ -583,6 +589,7 @@ class Chat:
 
         return result
 
+    @torch.inference_mode()
     def _refine_text(
         self,
         text: str,
