@@ -495,7 +495,9 @@ class Chat:
         else:
             text = [f"[Stts][empty_spk]{i}[Ptts]" for i in text]
 
-        input_ids, attention_mask, text_mask = self.tokenizer.encode(text, self.gpt.num_vq, gpt.device_gpt)
+        input_ids, attention_mask, text_mask = self.tokenizer.encode(
+            text, self.gpt.num_vq, gpt.device_gpt
+        )
 
         emb = gpt(input_ids, text_mask)
 
@@ -553,7 +555,9 @@ class Chat:
 
         text = [f"[Sbreak]{i}[Pbreak]{params.prompt}" for i in text]
 
-        input_ids, attention_mask, text_mask = self.tokenizer.encode(text, self.gpt.num_vq, gpt.device_gpt)
+        input_ids, attention_mask, text_mask = self.tokenizer.encode(
+            text, self.gpt.num_vq, gpt.device_gpt
+        )
 
         logits_warpers, logits_processors = gen_logits(
             num_code=self.tokenizer.len,

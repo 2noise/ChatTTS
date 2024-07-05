@@ -25,7 +25,7 @@ class Tokenizer:
 
     @torch.inference_mode()
     def encode(
-        self, text: List[str], num_vq:int, device="cpu"
+        self, text: List[str], num_vq: int, device="cpu"
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         input_ids_lst = []
