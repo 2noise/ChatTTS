@@ -368,7 +368,7 @@ class Chat:
             )
             text_tokens = refined.ids
             text_tokens = [i[i.less(self.tokenizer.break_0_ids)] for i in text_tokens]
-            text = self.tokenizer.batch_decode(text_tokens)
+            text = self.tokenizer.decode(text_tokens)
             refined.destroy()
             if refine_text_only:
                 yield text
@@ -414,57 +414,6 @@ class Chat:
             del_all(mel_spec)
         del_all(x)
         return wavs
-
-    @torch.inference_mode()
-    def _text_to_token(
-        self, text: List[str], device="cpu"
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-
-        input_ids_lst = []
-        attention_mask_lst = []
-        max_input_ids_len = -1
-        max_attention_mask_len = -1
-        # avoid random speaker embedding of tokenizer in the other dims
-        for t in text:
-            x = self.tokenizer.batch_encode(
-                t, return_tensors="pt", add_special_tokens=False, padding=True
-            )
-            input_ids_lst.append(x["input_ids"].squeeze_(0))
-            attention_mask_lst.append(x["attention_mask"].squeeze_(0))
-            del_all(x)
-            ids_sz = input_ids_lst[-1].size(0)
-            if ids_sz > max_input_ids_len:
-                max_input_ids_len = ids_sz
-            attn_sz = attention_mask_lst[-1].size(0)
-            if attn_sz > max_attention_mask_len:
-                max_attention_mask_len = attn_sz
-        input_ids = torch.zeros(
-            len(input_ids_lst),
-            max_input_ids_len,
-            device=device,
-            dtype=input_ids_lst[0].dtype,
-        )
-        for i in range(len(input_ids_lst)):
-            input_ids.narrow(0, i, 1).narrow(1, 0, input_ids_lst[i].size(0)).copy_(
-                input_ids_lst[i]
-            )
-        del_all(input_ids_lst)
-        attention_mask = torch.zeros(
-            len(attention_mask_lst),
-            max_attention_mask_len,
-            device=device,
-            dtype=attention_mask_lst[0].dtype,
-        )
-        for i in range(len(attention_mask_lst)):
-            attention_mask.narrow(0, i, 1).narrow(
-                1, 0, attention_mask_lst[i].size(0)
-            ).copy_(attention_mask_lst[i])
-        del_all(attention_mask_lst)
-
-        text_mask = torch.ones(input_ids.shape, dtype=bool, device=device)
-        input_ids = input_ids.unsqueeze_(-1).expand(-1, -1, self.gpt.num_vq)
-
-        return input_ids, attention_mask, text_mask
 
     @staticmethod
     def _decode_spk_emb(spk_emb: str) -> np.ndarray:
@@ -546,7 +495,7 @@ class Chat:
         else:
             text = [f"[Stts][empty_spk]{i}[Ptts]" for i in text]
 
-        input_ids, attention_mask, text_mask = self._text_to_token(text, gpt.device_gpt)
+        input_ids, attention_mask, text_mask = self.tokenizer.encode(text, self.gpt.num_vq, gpt.device_gpt)
 
         emb = gpt(input_ids, text_mask)
 
@@ -604,7 +553,7 @@ class Chat:
 
         text = [f"[Sbreak]{i}[Pbreak]{params.prompt}" for i in text]
 
-        input_ids, attention_mask, text_mask = self._text_to_token(text, gpt.device_gpt)
+        input_ids, attention_mask, text_mask = self.tokenizer.encode(text, self.gpt.num_vq, gpt.device_gpt)
 
         logits_warpers, logits_processors = gen_logits(
             num_code=self.tokenizer.len,
