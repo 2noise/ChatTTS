@@ -366,6 +366,7 @@ class GPT(nn.Module):
         show_tqdm=True,
         ensure_non_empty=True,
         stream_batch=24,
+        compile=False,
         context=Context(),
     ):
 
@@ -435,15 +436,17 @@ class GPT(nn.Module):
 
             model_input.to(self.device_gpt, self.gpt.dtype)
 
-            outputs: BaseModelOutputWithPast = self.gpt(
-                attention_mask=model_input.attention_mask,
-                position_ids=model_input.position_ids,
-                past_key_values=model_input.past_key_values,
-                inputs_embeds=model_input.inputs_embeds,
-                use_cache=model_input.use_cache,
-                output_attentions=return_attn,
-                cache_position=model_input.cache_position,
-            )
+            with torch.inference_mode(not compile):
+                with torch.no_grad():
+                    outputs: BaseModelOutputWithPast = self.gpt(
+                        attention_mask=model_input.attention_mask,
+                        position_ids=model_input.position_ids,
+                        past_key_values=model_input.past_key_values,
+                        inputs_embeds=model_input.inputs_embeds,
+                        use_cache=model_input.use_cache,
+                        output_attentions=return_attn,
+                        cache_position=model_input.cache_position,
+                    )
             del_all(model_input)
             attentions.append(outputs.attentions)
             hidden_states = outputs.last_hidden_state.to(

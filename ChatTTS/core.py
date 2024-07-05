@@ -259,6 +259,7 @@ class Chat:
             device = select_device()
             self.logger.info("use device %s", str(device))
         self.device = device
+        self.compile = compile
 
         if vocos_config_path:
             vocos = (
@@ -548,7 +549,10 @@ class Chat:
 
         input_ids, attention_mask, text_mask = self._text_to_token(text, gpt.device_gpt)
 
-        emb = gpt(input_ids, text_mask)
+        with torch.inference_mode(not self.compile):
+            with torch.no_grad():
+                emb = gpt(input_ids, text_mask)
+
         del text_mask
 
         if params.spk_emb is not None:
@@ -612,7 +616,10 @@ class Chat:
             repetition_penalty=params.repetition_penalty,
         )
 
-        emb = gpt(input_ids, text_mask)
+        with torch.inference_mode(not self.compile):
+            with torch.no_grad():
+                emb = gpt(input_ids, text_mask)
+
         del text_mask
 
         result = next(
