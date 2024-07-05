@@ -1,1 +1,0 @@
-pyaudio; sys_platform == 'linux'

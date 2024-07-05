@@ -1,7 +1,9 @@
 import datetime
 import os
-import requests
 import zipfile
+from io import BytesIO
+
+import requests
 
 chattts_service_host = os.environ.get("CHATTTS_SERVICE_HOST", "localhost")
 chattts_service_port = os.environ.get("CHATTTS_SERVICE_PORT", "8000")
@@ -61,15 +63,14 @@ body["params_infer_code"] = params_infer_code
 try:
     response = requests.post(CHATTTS_URL, json=body)
     response.raise_for_status()
-    chattts_zipfile = f"chattts_audio_files.zip"
-    with open(chattts_zipfile, "wb") as f:
-        f.write(response.content)
-    with zipfile.ZipFile(chattts_zipfile, "r") as zip_ref:
+    with zipfile.ZipFile(BytesIO(response.content), "r") as zip_ref:
         # save files for each request in a different folder
         dt = datetime.datetime.now()
         ts = int(dt.timestamp())
-        zip_ref.extractall(f"./output/{ts}/")
-    os.remove(chattts_zipfile)
+        tgt = f"./output/{ts}/"
+        os.makedirs(tgt, 0o755)
+        zip_ref.extractall(tgt)
+        print("Extracted files into", tgt)
 
 except requests.exceptions.RequestException as e:
-    print(f"Error: {e}")
+    print(f"Request Error: {e}")

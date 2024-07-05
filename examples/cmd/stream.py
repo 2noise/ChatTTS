@@ -3,7 +3,7 @@ import threading
 import time
 import random
 
-import pyaudio
+import pyaudio # please install it manually
 import numpy as np
 import ChatTTS
 

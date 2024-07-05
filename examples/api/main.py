@@ -13,7 +13,7 @@ if sys.platform == "darwin":
 now_dir = os.getcwd()
 sys.path.append(now_dir)
 
-from typing import Any, Optional
+from typing import Optional
 
 import ChatTTS
 
@@ -26,15 +26,6 @@ from pydantic import BaseModel
 
 
 logger = get_logger("Command")
-
-
-def save_mp3_file(wav, index):
-    data = wav_arr_to_mp3_view(wav)
-    mp3_filename = f"output_audio_{index}.mp3"
-    with open(mp3_filename, "wb") as f:
-        f.write(data)
-    logger.info(f"Audio saved to {mp3_filename}")
-
 
 app = FastAPI()
 
@@ -55,7 +46,7 @@ async def startup_event():
 class ChatTTSParams(BaseModel):
     text: list[str]
     stream: bool = False
-    lang: Any = None
+    lang: Optional[str] = None
     skip_refine_text: bool = False
     refine_text_only: bool = False
     use_decoder: bool = True
@@ -104,20 +95,14 @@ async def generate_voice(params: ChatTTSParams):
     )
     logger.info("Inference completed.")
 
-    # Save each generated wav file to a local file
-    for index, wav in enumerate(wavs):
-        save_mp3_file(wav, index)
-    logger.info("Audio generation successful.")
-
     # zip all of the audio files together
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
-        for idx in range(len(wavs)):
-            filepath = f"output_audio_{idx}.mp3"
-            zip_file.write(filepath, os.path.basename(filepath))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "a", compression=zipfile.ZIP_DEFLATED, allowZip64=False) as f:
+        for idx, wav in enumerate(wavs):
+            f.writestr(wav_arr_to_mp3_view(wav), f"{idx}.mp3")
+    logger.info("Audio generation successful.")
+    buf.seek(0)
 
-    zip_buffer.seek(0)
-
-    response = StreamingResponse(zip_buffer, media_type="application/zip")
+    response = StreamingResponse(buf, media_type="application/zip")
     response.headers["Content-Disposition"] = "attachment; filename=audio_files.zip"
     return response
