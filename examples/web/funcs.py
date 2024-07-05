@@ -142,7 +142,9 @@ def refine_text(
     return text[0] if isinstance(text, list) else text
 
 
-def generate_audio(text, temperature, top_P, top_K, spk_emb_text: str, stream, audio_seed_input):
+def generate_audio(
+    text, temperature, top_P, top_K, spk_emb_text: str, stream, audio_seed_input
+):
     global chat, has_interrupted
 
     if not text or has_interrupted or not spk_emb_text.startswith("蘁淰"):

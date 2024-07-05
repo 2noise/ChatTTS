@@ -302,7 +302,10 @@ class Chat:
                 spk_stat_path
             ), f"Missing spk_stat.pt: {spk_stat_path}"
             spk_stat: torch.Tensor = torch.load(
-                spk_stat_path, weights_only=True, mmap=True, map_location=device,
+                spk_stat_path,
+                weights_only=True,
+                mmap=True,
+                map_location=device,
             )
             self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
             self.logger.log(logging.INFO, "gpt loaded.")
