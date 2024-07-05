@@ -160,7 +160,7 @@ class Chat:
         return self._encode_spk_emb(self._sample_random_speaker())
 
     @staticmethod
-    @torch.inference_mode()
+    @torch.no_grad()
     def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
         arr: np.ndarray = spk_emb.to(dtype=torch.float16, device="cpu").numpy()
         s = b14.encode_to_string(
@@ -173,7 +173,7 @@ class Chat:
         del arr
         return s
 
-    @torch.inference_mode()
+    @torch.no_grad()
     def _sample_random_speaker(self) -> torch.Tensor:
         dim: int = self.gpt.gpt.layers[0].mlp.gate_proj.in_features
         spk = (
@@ -238,7 +238,7 @@ class Chat:
     def interrupt(self):
         self.context.set(True)
 
-    @torch.inference_mode()
+    @torch.no_grad()
     def _load(
         self,
         vocos_config_path: str = None,
@@ -477,7 +477,7 @@ class Chat:
             dtype=np.float16,
         ).copy()
 
-    @torch.inference_mode()
+    @torch.no_grad()
     def _apply_spk_emb(
         self,
         emb: torch.Tensor,
