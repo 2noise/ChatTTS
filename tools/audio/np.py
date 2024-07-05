@@ -13,6 +13,7 @@ def unsafe_float_to_int16(audio: np.ndarray) -> np.ndarray:
     audio16 = audio.astype(np.int16)
     return audio16
 
+
 @jit
 def batch_unsafe_float_to_int16(audios: list[np.ndarray]) -> list[np.ndarray]:
     """

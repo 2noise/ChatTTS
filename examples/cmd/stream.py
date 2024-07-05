@@ -3,11 +3,12 @@ import threading
 import time
 import random
 
-import pyaudio # please install it manually
+import pyaudio  # please install it manually
 import numpy as np
 import ChatTTS
 
 from tools.audio import batch_unsafe_float_to_int16
+
 
 # 流式声音处理器
 class AudioStreamer:
