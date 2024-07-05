@@ -301,11 +301,10 @@ class Chat:
             assert os.path.exists(
                 spk_stat_path
             ), f"Missing spk_stat.pt: {spk_stat_path}"
-            self.std, self.mean = torch.tensor(
-                torch.load(spk_stat_path, weights_only=True, mmap=True),
-                device=device,
-                requires_grad=False,
-            ).chunk(2)
+            spk_stat: torch.Tensor = torch.load(
+                spk_stat_path, weights_only=True, mmap=True, map_location=device,
+            )
+            self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
             self.logger.log(logging.INFO, "gpt loaded.")
 
         if decoder_config_path:
