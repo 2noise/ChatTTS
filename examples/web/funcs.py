@@ -168,10 +168,10 @@ def generate_audio(
             for gen in wav:
                 audio = gen[0]
                 if audio is not None and len(audio) > 0:
-                    yield 24000, unsafe_float_to_int16(audio)
+                    yield 24000, unsafe_float_to_int16(audio).T
                 del audio
         else:
-            yield 24000, unsafe_float_to_int16(wav[0])
+            yield 24000, unsafe_float_to_int16(wav[0]).T
 
 
 def interrupt_generate():
