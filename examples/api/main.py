@@ -101,7 +101,7 @@ async def generate_voice(params: ChatTTSParams):
         buf, "a", compression=zipfile.ZIP_DEFLATED, allowZip64=False
     ) as f:
         for idx, wav in enumerate(wavs):
-            f.writestr(wav_arr_to_mp3_view(wav), f"{idx}.mp3")
+            f.writestr(f"{idx}.mp3", wav_arr_to_mp3_view(wav))
     logger.info("Audio generation successful.")
     buf.seek(0)
 
