@@ -34,7 +34,7 @@ class Tokenizer:
         max_attention_mask_len = -1
         # avoid random speaker embedding of tokenizer in the other dims
         for t in text:
-            x = self._tokenizer(
+            x = self._tokenizer.encode_plus(
                 t, return_tensors="pt", add_special_tokens=False, padding=True
             )
             input_ids_lst.append(x["input_ids"].squeeze_(0))
