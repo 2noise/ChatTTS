@@ -401,7 +401,7 @@ class Chat:
                 for i in range(wavs.shape[0]):
                     if b[i] > len(wavs[i]):
                         b[i] = len(wavs[i])
-                    new_wavs[i, :b[i]-a[i]] = wavs[i, a[i]:b[i]]
+                    new_wavs[i, : b[i] - a[i]] = wavs[i, a[i] : b[i]]
                 length = b
                 yield new_wavs
             else:
@@ -410,8 +410,8 @@ class Chat:
             for i in range(wavs.shape[0]):
                 a = length[i]
                 b = len(wavs[i])
-                wavs[i, :b-a] = wavs[i, a:]
-                wavs[i, b-a:] = 0
+                wavs[i, : b - a] = wavs[i, a:]
+                wavs[i, b - a :] = 0
             yield wavs
 
     @torch.inference_mode()

@@ -45,7 +45,8 @@ def main(texts: List[str], spk: Optional[str] = None, stream=False):
 
     logger.info("Start inference.")
     wavs = chat.infer(
-        texts, stream,
+        texts,
+        stream,
         params_infer_code=ChatTTS.Chat.InferCodeParams(
             spk_emb=spk,
         ),
@@ -57,7 +58,7 @@ def main(texts: List[str], spk: Optional[str] = None, stream=False):
     for index, wav in enumerate(wavs):
         if stream:
             for i, w in enumerate(wav):
-                save_mp3_file(w, (i+1)*1000+index)
+                save_mp3_file(w, (i + 1) * 1000 + index)
             wavs_list.append(wav)
         else:
             save_mp3_file(wav, index)
@@ -82,10 +83,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--stream",
         help="Use stream mode",
-        action='store_true',
+        action="store_true",
     )
     parser.add_argument(
-        "texts", help="Original text", default=["YOUR TEXT HERE"], nargs=argparse.REMAINDER,
+        "texts",
+        help="Original text",
+        default=["YOUR TEXT HERE"],
+        nargs=argparse.REMAINDER,
     )
     args = parser.parse_args()
     main(args.texts, args.spk, args.stream)
