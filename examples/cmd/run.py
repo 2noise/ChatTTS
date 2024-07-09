@@ -9,6 +9,8 @@ sys.path.append(now_dir)
 import argparse
 from typing import Optional, List
 
+import numpy as np
+
 import ChatTTS
 
 from tools.audio import wav_arr_to_mp3_view
@@ -25,7 +27,7 @@ def save_mp3_file(wav, index):
     logger.info(f"Audio saved to {mp3_filename}")
 
 
-def main(texts: List[str], spk: Optional[str] = None):
+def main(texts: List[str], spk: Optional[str] = None, stream=False):
     logger.info("Text input: %s", str(texts))
 
     chat = ChatTTS.Chat(get_logger("ChatTTS"))
@@ -44,14 +46,25 @@ def main(texts: List[str], spk: Optional[str] = None):
     logger.info("Start inference.")
     wavs = chat.infer(
         texts,
+        stream,
         params_infer_code=ChatTTS.Chat.InferCodeParams(
             spk_emb=spk,
         ),
     )
     logger.info("Inference completed.")
     # Save each generated wav file to a local file
+    if stream:
+        wavs_list = []
     for index, wav in enumerate(wavs):
-        save_mp3_file(wav, index)
+        if stream:
+            for i, w in enumerate(wav):
+                save_mp3_file(w, (i + 1) * 1000 + index)
+            wavs_list.append(wav)
+        else:
+            save_mp3_file(wav, index)
+    if stream:
+        for index, wav in enumerate(np.concatenate(wavs_list, axis=1)):
+            save_mp3_file(wav, index)
     logger.info("Audio generation successful.")
 
 
@@ -59,7 +72,7 @@ if __name__ == "__main__":
     logger.info("Starting ChatTTS commandline demo...")
     parser = argparse.ArgumentParser(
         description="ChatTTS Command",
-        usage='[--spk xxx] "Your text 1." " Your text 2."',
+        usage='[--spk xxx] [--stream] "Your text 1." " Your text 2."',
     )
     parser.add_argument(
         "--spk",
@@ -68,8 +81,16 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "texts", help="Original text", default="YOUR TEXT HERE", nargs="*"
+        "--stream",
+        help="Use stream mode",
+        action="store_true",
+    )
+    parser.add_argument(
+        "texts",
+        help="Original text",
+        default=["YOUR TEXT HERE"],
+        nargs=argparse.REMAINDER,
     )
     args = parser.parse_args()
-    main(args.texts, args.spk)
+    main(args.texts, args.spk, args.stream)
     logger.info("ChatTTS process finished.")

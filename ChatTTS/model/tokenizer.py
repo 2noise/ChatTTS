@@ -13,7 +13,6 @@ class Tokenizer:
         tokenizer: BertTokenizerFast = torch.load(
             tokenizer_path, map_location=device, mmap=True
         )
-        tokenizer.padding_side = "left"
         self._tokenizer = tokenizer
 
         self.len = len(tokenizer)

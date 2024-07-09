@@ -203,6 +203,8 @@ class Chat:
         repetition_penalty: float = 1.05
         max_new_token: int = 2048
         stream_batch: int = 24
+        stream_speed: int = 12000
+        pass_first_n_batches: int = 2
 
     def infer(
         self,
@@ -374,7 +376,9 @@ class Chat:
                 yield text
                 return
 
-        length = np.zeros(len(text), dtype=np.uint16)
+        if stream:
+            length = np.zeros(len(text), dtype=np.uint32)
+            pass_batch_count = 0
         for result in self._infer_code(
             text,
             stream,
@@ -383,43 +387,67 @@ class Chat:
             params_infer_code,
         ):
             wavs = self._decode_to_wavs(
-                result,
-                length,
+                result.hiddens if use_decoder else result.ids,
                 use_decoder,
             )
             result.destroy()
+            if stream:
+                pass_batch_count += 1
+                if pass_batch_count <= params_infer_code.pass_first_n_batches:
+                    continue
+                a = length
+                b = a + params_infer_code.stream_speed
+                new_wavs = np.zeros((wavs.shape[0], params_infer_code.stream_speed))
+                for i in range(wavs.shape[0]):
+                    if b[i] > len(wavs[i]):
+                        b[i] = len(wavs[i])
+                    new_wavs[i, : b[i] - a[i]] = wavs[i, a[i] : b[i]]
+                length = b
+                yield new_wavs
+            else:
+                yield wavs
+        if stream:
+            for i in range(wavs.shape[0]):
+                a = length[i]
+                b = len(wavs[i])
+                wavs[i, : b - a] = wavs[i, a:]
+                wavs[i, b - a :] = 0
             yield wavs
 
     @torch.inference_mode()
     def _vocos_decode(self, spec: torch.Tensor) -> np.ndarray:
         if "mps" in str(self.device):
-            return self.vocos.decode(spec.cpu()).squeeze_(0).cpu().numpy()
+            return self.vocos.decode(spec.cpu()).cpu().numpy()
         else:
-            return self.vocos.decode(spec).squeeze_(0).cpu().numpy()
+            return self.vocos.decode(spec).cpu().numpy()
 
     @torch.inference_mode()
     def _decode_to_wavs(
         self,
-        result: GPT.GenerationOutputs,
-        start_seeks: np.ndarray,
+        result_list: List[torch.Tensor],
         use_decoder: bool,
     ):
-        x = result.hiddens if use_decoder else result.ids
-        wavs: List[Optional[np.ndarray]] = []
-        for i, chunk_data in enumerate(x):
-            start_seek: int = start_seeks[i]
-            length = len(chunk_data)
-            if length <= start_seek:
-                wavs.append(None)
-                continue
-            start_seeks[i] = length
-            chunk_data = chunk_data[start_seek:].to(self.device)
-            decoder = self.decoder if use_decoder else self.dvae
-            mel_spec = decoder(chunk_data.unsqueeze_(0).permute(0, 2, 1))
-            del chunk_data
-            wavs.append(self._vocos_decode(mel_spec))
-            del_all(mel_spec)
-        del_all(x)
+        decoder = self.decoder if use_decoder else self.dvae
+        max_x_len = -1
+        if len(result_list) == 0:
+            return np.array([], dtype=np.float32)
+        for result in result_list:
+            if result.size(0) > max_x_len:
+                max_x_len = result.size(0)
+        batch_result = torch.zeros(
+            (len(result_list), result_list[0].size(1), max_x_len),
+            dtype=result_list[0].dtype,
+            device=result_list[0].device,
+        )
+        for i in range(len(result_list)):
+            src = result_list[i]
+            batch_result[i].narrow(1, 0, src.size(0)).copy_(src.permute(1, 0))
+            del src
+        del_all(result_list)
+        mel_specs = decoder(batch_result)
+        del batch_result
+        wavs = self._vocos_decode(mel_specs)
+        del mel_specs
         return wavs
 
     @staticmethod
