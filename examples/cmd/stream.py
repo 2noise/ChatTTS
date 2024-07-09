@@ -6,6 +6,7 @@ import numpy as np
 
 from tools.audio import unsafe_float_to_int16
 
+# 流式推理数据获取器，支持流式获取音频编码字节流
 class BatchStreamer:
     @classmethod
     def _batch_unsafe_float_to_int16(cls,audios):
@@ -121,9 +122,61 @@ class BatchStreamer:
 
 
 
+# 直接播放
+def example_0(streamchat):
+    import time
+    p = pyaudio.PyAudio()
+    print(p.get_device_count())
+    # 设置音频流参数
+    FORMAT = pyaudio.paInt16  # 16位深度
+    CHANNELS = 1  # 单声道
+    RATE = 24000  # 采样率
+    CHUNK = 1024  # 每块音频数据大小
+
+    # 打开输出流（扬声器）
+    stream_out = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True,)
+
+    for i in (BatchStreamer.generate(streamchat,output_format='PCM16_byte')):
+        stream_out.write(i)    
+
+    stream_out.stop_stream()
+    stream_out.close()
+
+# 先存放一部分，存的差不多了再播放，适合生成速度比较慢的cpu玩家使用
+def example_1(streamchat,first_prefill_size=300000):
+    import time
+    p = pyaudio.PyAudio()
+    print(p.get_device_count())
+    # 设置音频流参数
+    FORMAT = pyaudio.paInt16  # 16位深度
+    CHANNELS = 1  # 单声道
+    RATE = 24000  # 采样率
+    CHUNK = 1024  # 每块音频数据大小
+
+    # 打开输出流（扬声器）
+    stream_out = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True,)
+
+    prefill_bytes=b''
+    meet=False
+    for i in (BatchStreamer.generate(streamchat,output_format='PCM16_byte')):
+        if not meet:
+            prefill_bytes+=i
+            if len(prefill_bytes)>first_prefill_size:
+                meet=True
+                stream_out.write(prefill_bytes)    
+        else:
+            stream_out.write(i)    
+    if not meet:
+        stream_out.write(prefill_bytes)    
+
+
+    stream_out.stop_stream()
+    stream_out.close()
+
 if __name__ == "__main__":
     import ChatTTS
     import pyaudio  # please install it manually
+
 
     # 加载 ChatTTS
     chat = ChatTTS.Chat()
@@ -137,6 +190,7 @@ if __name__ == "__main__":
         top_K=20,  # top K decode
     )
 
+    # 获取ChatTTS 流式推理generator
     streamchat = chat.infer(
         [
             "总结一下，AI Agent是大模型功能的扩展，让AI更接近于通用人工智能，也就是我们常说的AGI。",
@@ -147,23 +201,19 @@ if __name__ == "__main__":
         params_infer_code=params_infer_code,
         stream=True,
     )
+    # 直接播放
+    example_0(streamchat)
 
-    # 流式播放准备
-    p = pyaudio.PyAudio()
-    print(p.get_device_count())
-    # 设置音频流参数
-    FORMAT = pyaudio.paInt16  # 16位深度
-    CHANNELS = 1  # 单声道
-    RATE = 24000  # 采样率
-    CHUNK = 1024  # 每块音频数据大小
-
-    # 打开输出流（扬声器）
-    stream_out = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True,)
-
-    # 流式推理，以音频编码字节流格式输出，并流式播放
-    for i in BatchStreamer.generate(streamchat,output_format='PCM16_byte'):
-        stream_out.write(i)    
-        
-
-    stream_out.stop_stream()
-    stream_out.close()
+    # 获取ChatTTS 流式推理generator
+    streamchat = chat.infer(
+        [
+            "总结一下，AI Agent是大模型功能的扩展，让AI更接近于通用人工智能，也就是我们常说的AGI。",
+            "你太聪明啦。",
+            "举个例子，大模型可能可以写代码，但它不能独立完成一个完整的软件开发项目。这时候，AI Agent就根据大模型的智能，结合记忆和规划，一步步实现从需求分析到产品上线。",
+        ],
+        skip_refine_text=True,
+        stream=True,
+        params_infer_code=params_infer_code
+    )
+    # 先存放一部分，存的差不多了再播放，适合生成速度比较慢的cpu玩家使用
+    example_1(streamchat,first_prefill_size=300000)
