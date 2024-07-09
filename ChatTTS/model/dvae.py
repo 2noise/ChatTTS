@@ -195,6 +195,9 @@ class DVAE(nn.Module):
             self.coef.cpu().numpy().astype(np.float32).tobytes()
         )
 
+    def __call__(self, inp: torch.Tensor) -> torch.Tensor:
+        return super().__call__(inp)
+
     @torch.inference_mode()
     def forward(self, inp: torch.Tensor) -> torch.Tensor:
         if self.vq_layer is not None:
@@ -215,5 +218,7 @@ class DVAE(nn.Module):
                 x=vq_feats,
             ),
         )
+
+        del vq_feats
 
         return torch.mul(dec_out, self.coef, out=dec_out)

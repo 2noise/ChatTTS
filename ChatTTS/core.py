@@ -194,7 +194,6 @@ class Chat:
         min_new_token: int = 0
         show_tqdm: bool = True
         ensure_non_empty: bool = True
-        stream_batch: int = 24
 
     @dataclass(repr=False, eq=False)
     class InferCodeParams(RefineTextParams):
@@ -203,6 +202,7 @@ class Chat:
         temperature: float = 0.3
         repetition_penalty: float = 1.05
         max_new_token: int = 2048
+        stream_batch: int = 24
 
     def infer(
         self,
@@ -374,7 +374,7 @@ class Chat:
                 yield text
                 return
 
-        length = [0 for _ in range(len(text))]
+        length = np.zeros(len(text), dtype=np.uint16)
         for result in self._infer_code(
             text,
             stream,
@@ -382,9 +382,11 @@ class Chat:
             use_decoder,
             params_infer_code,
         ):
-            wav = self._decode_to_wavs(result, length, use_decoder)
+            wavs = self._decode_to_wavs(
+                result, length, use_decoder,
+            )
             result.destroy()
-            yield wav
+            yield wavs
 
     @torch.inference_mode()
     def _vocos_decode(self, spec: torch.Tensor) -> np.ndarray:
@@ -395,12 +397,15 @@ class Chat:
 
     @torch.inference_mode()
     def _decode_to_wavs(
-        self, result: GPT.GenerationOutputs, start_seeks: List[int], use_decoder: bool
+        self,
+        result: GPT.GenerationOutputs,
+        start_seeks: np.ndarray,
+        use_decoder: bool,
     ):
         x = result.hiddens if use_decoder else result.ids
         wavs: List[Optional[np.ndarray]] = []
         for i, chunk_data in enumerate(x):
-            start_seek = start_seeks[i]
+            start_seek: int = start_seeks[i]
             length = len(chunk_data)
             if length <= start_seek:
                 wavs.append(None)
@@ -585,7 +590,6 @@ class Chat:
                 stream=False,
                 show_tqdm=params.show_tqdm,
                 ensure_non_empty=params.ensure_non_empty,
-                stream_batch=params.stream_batch,
                 context=self.context,
             )
         )

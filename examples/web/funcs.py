@@ -6,7 +6,7 @@ from time import sleep
 import gradio as gr
 import numpy as np
 
-from tools.audio import unsafe_float_to_int16, has_ffmpeg_installed
+from tools.audio import float_to_int16, has_ffmpeg_installed
 from tools.logger import get_logger
 
 logger = get_logger(" WebUI ")
@@ -168,10 +168,10 @@ def generate_audio(
             for gen in wav:
                 audio = gen[0]
                 if audio is not None and len(audio) > 0:
-                    yield 24000, unsafe_float_to_int16(audio).T
+                    yield 24000, float_to_int16(audio).T
                 del audio
         else:
-            yield 24000, unsafe_float_to_int16(wav[0]).T
+            yield 24000, float_to_int16(wav[0]).T
 
 
 def interrupt_generate():

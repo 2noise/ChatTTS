@@ -509,6 +509,8 @@ class GPT(nn.Module):
 
             idx_next = torch.multinomial(scores, num_samples=1).to(finish.device)
 
+            del scores
+
             if not infer_text:
                 # idx_next = rearrange(idx_next, "(b n) 1 -> b n", n=self.num_vq)
                 idx_next = idx_next.view(-1, self.num_vq)
