@@ -383,7 +383,9 @@ class Chat:
             params_infer_code,
         ):
             wavs = self._decode_to_wavs(
-                result, length, use_decoder,
+                result,
+                length,
+                use_decoder,
             )
             result.destroy()
             yield wavs

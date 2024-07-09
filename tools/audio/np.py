@@ -1,6 +1,7 @@
 import numpy as np
 from numba import jit
 
+
 @jit
 def float_to_int16(audio: np.ndarray) -> np.ndarray:
     """
