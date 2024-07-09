@@ -57,7 +57,7 @@ class Normalizer:
 
         """
         self.coding = "utf-16-le" if sys.byteorder == "little" else "utf-16-be"
-        self.accept_pattern = re.compile(r"[^\u4e00-\u9fffA-Za-z，。、,\. ]")
+        self.reject_pattern = re.compile(r"[^\u4e00-\u9fffA-Za-z，。、,\. ]")
         self.sub_pattern = re.compile(r"\[uv_break\]|\[laugh\]|\[lbreak\]")
         self.chinese_char_pattern = re.compile(r"[\u4e00-\u9fff]")
         self.english_word_pattern = re.compile(r"\b[A-Za-z]+\b")
@@ -77,10 +77,6 @@ class Normalizer:
                 "《": "，",
                 "》": "，",
                 "－": "，",
-                "‘": "",
-                "“": "",
-                "’": "",
-                "”": "",
                 ":": ",",
                 ";": ",",
                 "!": ".",
@@ -156,6 +152,8 @@ class Normalizer:
                 text = arr.tobytes().decode(self.coding)
                 repl_res = ", ".join([f"{_[0]}->{_[1]}" for _ in replaced_words])
                 self.logger.info(f"replace homophones: {repl_res}")
+        if len(invalid_characters):
+            text = self.reject_pattern.sub("", text)
         return text
 
     def register(self, name: str, normalizer: Callable[[str], str]) -> bool:
@@ -192,7 +190,7 @@ class Normalizer:
 
     def _count_invalid_characters(self, s: str):
         s = self.sub_pattern.sub("", s)
-        non_alphabetic_chinese_chars = self.accept_pattern.findall(s)
+        non_alphabetic_chinese_chars = self.reject_pattern.findall(s)
         return set(non_alphabetic_chinese_chars)
 
     def _apply_half2full_map(self, text: str) -> str:
