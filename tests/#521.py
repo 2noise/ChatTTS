@@ -42,12 +42,12 @@ for i, result in enumerate(gen_result):
         if wav is None:
             continue
         logger.info("iter %d index %d len %d", i, j, len(wav))
-        if len(wav) == 12032:
+        if len(wav) == 12000:
             continue
         if not has_finished[j]:
             has_finished[j] = True
             logger.warning(
-                "iter %d index %d finished with non-12032 len %d", i, j, len(wav)
+                "iter %d index %d finished with non-12000 len %d", i, j, len(wav)
             )
         else:
             logger.warning(
