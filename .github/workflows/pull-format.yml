@@ -51,11 +51,10 @@ jobs:
     continue-on-error: true
 
     steps:
-      - name: Checkout
-        continue-on-error: true
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout PR # see https://github.com/orgs/community/discussions/24945
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr checkout ${{ github.event.pull_request.number }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -68,10 +67,12 @@ jobs:
         run: black .
 
       - name: Commit back
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
         run: |
           git config --local user.name 'github-actions[bot]'
           git config --local user.email 'github-actions[bot]@users.noreply.github.com'
           git add --all
           git commit -m "chore(format): run black on ${{github.ref_name}}"
-          git push origin HEAD:${{ github.event.pull_request.head.sha }}
+          git push
