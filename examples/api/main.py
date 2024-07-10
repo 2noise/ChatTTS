@@ -17,7 +17,7 @@ from typing import Optional
 
 import ChatTTS
 
-from tools.audio import wav_arr_to_mp3_view
+from tools.audio import pcm_arr_to_mp3_view
 from tools.logger import get_logger
 import torch
 
@@ -101,7 +101,7 @@ async def generate_voice(params: ChatTTSParams):
         buf, "a", compression=zipfile.ZIP_DEFLATED, allowZip64=False
     ) as f:
         for idx, wav in enumerate(wavs):
-            f.writestr(f"{idx}.mp3", wav_arr_to_mp3_view(wav))
+            f.writestr(f"{idx}.mp3", pcm_arr_to_mp3_view(wav))
     logger.info("Audio generation successful.")
     buf.seek(0)
 

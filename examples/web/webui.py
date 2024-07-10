@@ -155,6 +155,9 @@ def main():
                 streaming=stream,
                 interactive=False,
                 show_label=True,
+                waveform_options=gr.WaveformOptions(
+                    sample_rate=24000,
+                ),
             )
             generate_button.click(
                 fn=set_buttons_before_generate,

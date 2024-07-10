@@ -4,7 +4,6 @@ from typing import Optional
 from time import sleep
 
 import gradio as gr
-import numpy as np
 
 from tools.audio import float_to_int16, has_ffmpeg_installed
 from tools.logger import get_logger

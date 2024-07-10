@@ -13,14 +13,14 @@ import numpy as np
 
 import ChatTTS
 
-from tools.audio import wav_arr_to_mp3_view
+from tools.audio import pcm_arr_to_mp3_view
 from tools.logger import get_logger
 
 logger = get_logger("Command")
 
 
 def save_mp3_file(wav, index):
-    data = wav_arr_to_mp3_view(wav)
+    data = pcm_arr_to_mp3_view(wav)
     mp3_filename = f"output_audio_{index}.mp3"
     with open(mp3_filename, "wb") as f:
         f.write(data)

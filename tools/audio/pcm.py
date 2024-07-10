@@ -7,7 +7,7 @@ from .np import float_to_int16
 from .av import wav2
 
 
-def wav_arr_to_mp3_view(wav: np.ndarray):
+def pcm_arr_to_mp3_view(wav: np.ndarray):
     buf = BytesIO()
     with wave.open(buf, "wb") as wf:
         wf.setnchannels(1)  # Mono channel
