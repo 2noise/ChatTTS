@@ -20,6 +20,7 @@ from tools.logger import get_logger
 fail = False
 logger = get_logger("Test #521", lv=logging.WARN)
 
+
 # 计算rms
 # nan为噪声 ！！！
 def calculate_rms(data):
@@ -32,6 +33,7 @@ def calculate_rms(data):
     # data = np.nan_to_num(data)
     return np.sqrt(np.mean(np.square(data)))
 
+
 # 流式声音处理器
 class AudioStreamer:
     # 流式写入
@@ -42,6 +44,7 @@ class AudioStreamer:
         if np.isnan(rms):
             fail = True
             logger.warning("NAN RMS found")
+
 
 # ChatTTS流式处理
 class ChatStreamer:
@@ -166,6 +169,7 @@ class ChatStreamer:
         self.writer = threading.Thread(target=self.write, args=(streamchat,))
         self.writer.start()
 
+
 chat = ChatTTS.Chat(logger)
 chat.load(compile=False)  # Set to True for better performance
 
@@ -173,10 +177,10 @@ rand_spk = chat.sample_random_speaker()
 params_infer_code = ChatTTS.Chat.InferCodeParams(
     spk_emb=rand_spk,  # add sampled speaker
     temperature=0.0001,  # using custom temperature
-    prompt="[speed_0]"
+    prompt="[speed_0]",
 )
 params_refine_text = ChatTTS.Chat.RefineTextParams(
-    prompt='[oral_2][laugh_0][break_6]',
+    prompt="[oral_2][laugh_0][break_6]",
 )
 
 # 获取ChatTTS 流式推理generator
@@ -193,19 +197,23 @@ streamer = ChatStreamer()
 # 一次性生成
 streamer.write(streamchat)
 
-streamer.write(chat.infer(
-    "有一个神奇的故事，传说在很远很远的未来。",
-    skip_refine_text=True,
-    params_infer_code=params_infer_code,
-    stream=True,
-))
+streamer.write(
+    chat.infer(
+        "有一个神奇的故事，传说在很远很远的未来。",
+        skip_refine_text=True,
+        params_infer_code=params_infer_code,
+        stream=True,
+    )
+)
 
-streamer.write(chat.infer(
-    "有一种叫做奥特曼的物种。他是超人族的一员。",
-    skip_refine_text=True,
-    params_infer_code=params_infer_code,
-    stream=True,
-))
+streamer.write(
+    chat.infer(
+        "有一种叫做奥特曼的物种。他是超人族的一员。",
+        skip_refine_text=True,
+        params_infer_code=params_infer_code,
+        stream=True,
+    )
+)
 
 if fail:
     import sys
