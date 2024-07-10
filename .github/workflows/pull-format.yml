@@ -51,6 +51,10 @@ jobs:
     continue-on-error: true
 
     steps:
+      - name: Checkout Repo
+        continue-on-error: true
+        uses: actions/checkout@v4
+
       - name: Checkout PR # see https://github.com/orgs/community/discussions/24945
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
