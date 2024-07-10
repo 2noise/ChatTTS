@@ -2,7 +2,7 @@ name: Check Pull Request Format
 
 on:
   pull_request_target:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
 
 jobs:
   # This workflow closes invalid PR
@@ -57,10 +57,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.10
 
       - name: Install Black
         run: pip install "black[jupyter]"
@@ -76,4 +76,4 @@ jobs:
           git config --local user.email 'github-actions[bot]@users.noreply.github.com'
           git add --all
           git commit -m "chore(format): run black on ${{github.ref_name}}"
-          git push
+          git push origin HEAD:${{ github.event.pull_request.head.sha }}
