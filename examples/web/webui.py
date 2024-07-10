@@ -150,7 +150,7 @@ def main():
             audio_output = gr.Audio(
                 label="Output Audio",
                 value=None,
-                format="mp3" if use_mp3 else "wav",
+                format="mp3" if use_mp3 and not stream else "wav",
                 autoplay=autoplay,
                 streaming=stream,
                 interactive=False,
