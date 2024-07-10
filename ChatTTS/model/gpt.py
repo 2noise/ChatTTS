@@ -567,6 +567,7 @@ class GPT(nn.Module):
                         stream,
                         show_tqdm,
                         ensure_non_empty,
+                        stream_batch,
                         context,
                     )
                     for result in new_gen:
