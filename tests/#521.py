@@ -24,26 +24,23 @@ logger = get_logger("Test #521", lv=logging.WARN)
 # 计算rms
 # nan为噪声 ！！！
 def calculate_rms(data):
-    # 数据清洗 方法1
-    # data = data[~np.isnan(data)]
-    # 数据清洗 方法2
-    data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
-    if len(data) == 0:
-        return np.nan  #
-    # data = np.nan_to_num(data)
-    return np.sqrt(np.mean(np.square(data)))
-
+    m = np.mean(np.square(data.astype(np.int32)))
+    if m < 0:
+        logger.warning("neg RM: %f", m)
+    else:
+        logger.info("RM: %f", m)
+    return np.sqrt(m)
 
 # 流式声音处理器
 class AudioStreamer:
     # 流式写入
     @staticmethod
-    def write(waveform):
+    def write(waveform: np.ndarray):
         global fail, logger
         rms = calculate_rms(waveform)
         if np.isnan(rms):
             fail = True
-            logger.warning("NAN RMS found")
+            logger.warning("NAN RMS found.")
 
 
 # ChatTTS流式处理
@@ -178,9 +175,11 @@ params_infer_code = ChatTTS.Chat.InferCodeParams(
     spk_emb=rand_spk,  # add sampled speaker
     temperature=0.0001,  # using custom temperature
     prompt="[speed_0]",
+    show_tqdm=False,
 )
 params_refine_text = ChatTTS.Chat.RefineTextParams(
     prompt="[oral_2][laugh_0][break_6]",
+    show_tqdm=False,
 )
 
 # 获取ChatTTS 流式推理generator
