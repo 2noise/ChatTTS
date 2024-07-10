@@ -31,6 +31,7 @@ def calculate_rms(data):
         logger.info("RM: %f", m)
     return np.sqrt(m)
 
+
 # 流式声音处理器
 class AudioStreamer:
     # 流式写入
