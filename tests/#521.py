@@ -168,7 +168,7 @@ class ChatStreamer:
 
 
 chat = ChatTTS.Chat(logger)
-chat.load(compile=False)  # Set to True for better performance
+chat.load(compile=False, source="huggingface")  # Set to True for better performance
 
 rand_spk = chat.sample_random_speaker()
 params_infer_code = ChatTTS.Chat.InferCodeParams(
