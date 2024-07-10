@@ -42,7 +42,6 @@ class ChatStreamer:
     @staticmethod
     def batch_stream_formatted(stream_wav, output_format="PCM16_byte"):
         if output_format in ("PCM16_byte", "PCM16"):
-            # format_data=ChatStreamer._batch_unsafe_float_to_int16(stream_wav)
             format_data = float_to_int16(stream_wav)
         else:
             format_data = stream_wav
