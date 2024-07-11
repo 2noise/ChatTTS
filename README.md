@@ -161,7 +161,8 @@ texts = ["PUT YOUR 1st TEXT HERE", "PUT YOUR 2nd TEXT HERE"]
 
 wavs = chat.infer(texts)
 
-torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
+for i in range(len(wavs)):
+    torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]).unsqueeze(0), 24000)
 ```
 
 ### Advanced Usage
@@ -200,7 +201,7 @@ wavs = chat.infer(
 
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
 wavs = chat.infer(text, skip_refine_text=True, params_refine_text=params_refine_text,  params_infer_code=params_infer_code)
-torchaudio.save("output2.wav", torch.from_numpy(wavs[0]), 24000)
+torchaudio.save("word_level_output.wav", torch.from_numpy(wavs[0]).unsqueeze(0), 24000)
 ```
 
 <details open>
@@ -221,7 +222,7 @@ params_refine_text = ChatTTS.Chat.RefineTextParams(
 )
 
 audio_array_en = chat.infer(inputs_en, params_refine_text=params_refine_text)
-torchaudio.save("output3.wav", torch.from_numpy(audio_array_en[0]), 24000)
+torchaudio.save("self_introduction_output.wav", torch.from_numpy(audio_array_en[0]), 24000)
 ```
 
 <table>
