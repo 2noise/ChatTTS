@@ -414,8 +414,10 @@ class Chat:
                 new_wavs[i, : b - a] = wavs[i, a:]
                 new_wavs[i, b - a :] = 0
             # Remove padding zeros
+            keep_rows = np.any(new_wavs != 0, axis=1)
             keep_cols = np.sum(new_wavs != 0, axis=0) > 0
-            new_wavs = np.delete(new_wavs, np.where(~keep_cols)[0], axis=1)
+            # Filter both rows and columns using slicing
+            new_wavs = new_wavs[keep_rows, :][:, keep_cols]
             yield new_wavs
 
     @torch.inference_mode()
