@@ -407,12 +407,15 @@ class Chat:
             else:
                 yield wavs
         if stream:
+            new_wavs = np.zeros((wavs.shape[0], params_infer_code.stream_speed))
             for i in range(wavs.shape[0]):
                 a = length[i]
                 b = len(wavs[i])
-                wavs[i, : b - a] = wavs[i, a:]
-                wavs[i, b - a :] = 0
-            yield wavs
+                new_wavs[i, : b - a] = wavs[i, a:]
+            # Remove padding zeros
+            keep_cols = np.sum(new_wavs != 0, axis=0) > 0
+            new_wavs = np.delete(new_wavs, np.where(~keep_cols)[0], axis=1)
+            yield new_wavs
 
     @torch.inference_mode()
     def _vocos_decode(self, spec: torch.Tensor) -> np.ndarray:
