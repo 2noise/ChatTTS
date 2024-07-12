@@ -412,6 +412,7 @@ class Chat:
                 a = length[i]
                 b = len(wavs[i])
                 new_wavs[i, : b - a] = wavs[i, a:]
+                new_wavs[i, b - a :] = 0
             # Remove padding zeros
             keep_cols = np.sum(new_wavs != 0, axis=0) > 0
             new_wavs = np.delete(new_wavs, np.where(~keep_cols)[0], axis=1)
