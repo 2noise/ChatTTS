@@ -377,7 +377,7 @@ class Chat:
                 return
 
         if stream:
-            length = np.zeros(len(text), dtype=np.uint32)
+            length = 0
             pass_batch_count = 0
         for result in self._infer_code(
             text,
@@ -397,28 +397,21 @@ class Chat:
                     continue
                 a = length
                 b = a + params_infer_code.stream_speed
-                new_wavs = np.zeros((wavs.shape[0], params_infer_code.stream_speed))
-                for i in range(wavs.shape[0]):
-                    if b[i] > len(wavs[i]):
-                        b[i] = len(wavs[i])
-                    new_wavs[i, : b[i] - a[i]] = wavs[i, a[i] : b[i]]
+                if b > wavs.shape[1]:
+                    b = wavs.shape[1]
+                new_wavs = wavs[:, a:b]
                 length = b
                 yield new_wavs
             else:
                 yield wavs
         if stream:
-            new_wavs = np.zeros((wavs.shape[0], params_infer_code.stream_speed))
-            for i in range(wavs.shape[0]):
-                a = length[i]
-                b = len(wavs[i])
-                new_wavs[i, : b - a] = wavs[i, a:]
-                new_wavs[i, b - a :] = 0
-            # Remove padding zeros
-            keep_rows = np.any(new_wavs != 0, axis=1)
+            new_wavs = wavs[:, length:]
+            # Identify rows with non-zero elements using np.any
+            # keep_rows = np.any(array != 0, axis=1)
             keep_cols = np.sum(new_wavs != 0, axis=0) > 0
             # Filter both rows and columns using slicing
-            new_wavs = new_wavs[keep_rows, :][:, keep_cols]
-            yield new_wavs
+            result = new_wavs[:][:, keep_cols]
+            yield result
 
     @torch.inference_mode()
     def _vocos_decode(self, spec: torch.Tensor) -> np.ndarray:
