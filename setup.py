@@ -17,7 +17,7 @@ setup(
     package_data={
         "ChatTTS.res": ["homophones_map.json", "sha256_map.json"],
     },
-    license="CC BY-NC 4.0",
+    license="AGPLv3+",
     install_requires=[
         "numba",
         "numpy<2.0.0",
@@ -33,5 +33,6 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
+        "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     ],
 )

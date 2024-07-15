@@ -5,7 +5,7 @@
 # ChatTTS
 A generative speech model for daily dialogue.
 
-[![Licence](https://img.shields.io/badge/LICENSE-CC%20BY--NC%204.0-green.svg?style=for-the-badge)](https://github.com/2noise/ChatTTS/blob/main/LICENSE)
+[![Licence](https://img.shields.io/github/license/2noise/ChatTTS?style=for-the-badge)](https://github.com/2noise/ChatTTS/blob/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/ChatTTS.svg?style=for-the-badge)](https://pypi.org/project/ChatTTS)
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
@@ -38,6 +38,9 @@ ChatTTS is a text-to-speech model designed specifically for dialogue scenarios s
 3. **Better Prosody**: ChatTTS surpasses most of open-source TTS models in terms of prosody. We provide pretrained models to support further research and development.
 
 ### Dataset & Model
+> [!Important]
+> The released model is for academic purposes only.
+
 - The main model is trained with Chinese and English audio data of 100,000+ hours.
 - The open-source version on **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** is a 40,000 hours pre-trained model without SFT.
 
@@ -47,11 +50,17 @@ ChatTTS is a text-to-speech model designed specifically for dialogue scenarios s
 - [ ] Open-source the 40k hour version with multi-emotion control.
 - [ ] ChatTTS.cpp (new repo in `2noise` org is welcomed)
 
-### Disclaimer
-> [!Important]
-> This repo is for academic purposes only.
+### Licenses
 
-It is intended for educational and research use, and should not be used for any commercial or legal purposes. The authors do not guarantee the accuracy, completeness, or reliability of the information. The information and data used in this repo, are for academic and research purposes only. The data obtained from publicly available sources, and the authors do not claim any ownership or copyright over the data.
+#### The Code
+
+The code is published under `AGPLv3+` license.
+
+#### The model
+
+The model is published under `CC BY-NC 4.0` license. It is intended for educational and research use, and should not be used for any commercial or illegal purposes. The authors do not guarantee the accuracy, completeness, or reliability of the information. The information and data used in this repo, are for academic and research purposes only. The data obtained from publicly available sources, and the authors do not claim any ownership or copyright over the data.
+
+### Disclaimer
 
 ChatTTS is a powerful text-to-speech system. However, it is very important to utilize this technology responsibly and ethically. To limit the use of ChatTTS, we added a small amount of high-frequency noise during the training of the 40,000-hour model, and compressed the audio quality as much as possible using MP3 format, to prevent malicious actors from potentially using it for criminal purposes. At the same time, we have internally trained a detection model and plan to open-source it in the future.
 
