@@ -410,8 +410,7 @@ class Chat:
             # keep_rows = np.any(array != 0, axis=1)
             keep_cols = np.sum(new_wavs != 0, axis=0) > 0
             # Filter both rows and columns using slicing
-            result = new_wavs[:][:, keep_cols]
-            yield result
+            yield new_wavs[:][:, keep_cols]
 
     @torch.inference_mode()
     def _vocos_decode(self, spec: torch.Tensor) -> np.ndarray:
