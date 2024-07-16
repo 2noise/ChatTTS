@@ -1,15 +1,8 @@
-import os, platform
-
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-"""
-https://stackoverflow.com/questions/62691279/how-to-disable-tokenizers-parallelism-true-false-warning
-"""
-
+import platform
 from dataclasses import dataclass
 import logging
 from typing import Union, List, Optional, Tuple
 
-import omegaconf
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,9 +21,9 @@ from ..utils import del_all
 class GPT(nn.Module):
     def __init__(
         self,
-        gpt_config: omegaconf.DictConfig,
-        num_audio_tokens: int,
-        num_text_tokens: int,
+        gpt_config: dict,
+        num_audio_tokens: int = 626,
+        num_text_tokens: int = 21178,
         num_vq=4,
         use_flash_attn=False,
         device=torch.device("cpu"),
@@ -100,7 +93,7 @@ class GPT(nn.Module):
 
     def _build_llama(
         self,
-        config: omegaconf.DictConfig,
+        config: dict,
         device: torch.device,
     ) -> LlamaModel:
 

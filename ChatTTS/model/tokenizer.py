@@ -1,3 +1,10 @@
+import os
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+"""
+https://stackoverflow.com/questions/62691279/how-to-disable-tokenizers-parallelism-true-false-warning
+"""
+
 from typing import List, Tuple
 
 import torch

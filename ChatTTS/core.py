@@ -1,7 +1,7 @@
 import os
 import logging
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Literal, Optional, List, Tuple, Dict
 from json import load
 from pathlib import Path
@@ -12,9 +12,11 @@ import torch
 import torch.nn.functional as F
 from omegaconf import OmegaConf
 from vocos import Vocos
+from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
 import pybase16384 as b14
 
+from .config import Config
 from .model import DVAE, GPT, gen_logits, Tokenizer
 from .utils import (
     check_all_assets,
@@ -32,6 +34,8 @@ class Chat:
     def __init__(self, logger=logging.getLogger(__name__)):
         self.logger = logger
         utils_logger.set_logger(logger)
+
+        self.config = Config()
 
         self.normalizer = Normalizer(
             os.path.join(os.path.dirname(__file__), "res", "homophones_map.json"),
@@ -137,12 +141,7 @@ class Chat:
             compile=compile,
             coef=coef,
             use_flash_attn=use_flash_attn,
-            **{
-                k: os.path.join(download_path, v)
-                for k, v in OmegaConf.load(
-                    os.path.join(download_path, "config", "path.yaml")
-                ).items()
-            },
+            **asdict(self.config.path),
         )
 
     def unload(self):
@@ -243,13 +242,9 @@ class Chat:
     @torch.no_grad()
     def _load(
         self,
-        vocos_config_path: str = None,
         vocos_ckpt_path: str = None,
-        dvae_config_path: str = None,
         dvae_ckpt_path: str = None,
-        gpt_config_path: str = None,
         gpt_ckpt_path: str = None,
-        decoder_config_path: str = None,
         decoder_ckpt_path: str = None,
         tokenizer_path: str = None,
         device: Optional[torch.device] = None,
@@ -263,67 +258,75 @@ class Chat:
         self.device = device
         self.compile = compile
 
-        if vocos_config_path:
-            vocos = (
-                Vocos.from_hparams(vocos_config_path)
-                .to(
-                    # vocos on mps will crash, use cpu fallback
-                    "cpu"
-                    if "mps" in str(device)
-                    else device
-                )
-                .eval()
+        feature_extractor = instantiate_class(args=(), init=asdict(self.config.vocos.feature_extractor))
+        backbone = instantiate_class(args=(), init=asdict(self.config.vocos.backbone))
+        head = instantiate_class(args=(), init=asdict(self.config.vocos.head))
+        vocos = (
+            Vocos(feature_extractor=feature_extractor, backbone=backbone, head=head)
+            .to(
+                # vocos on mps will crash, use cpu fallback
+                "cpu"
+                if "mps" in str(device)
+                else device
             )
-            assert vocos_ckpt_path, "vocos_ckpt_path should not be None"
-            vocos.load_state_dict(
-                torch.load(vocos_ckpt_path, weights_only=True, mmap=True)
-            )
-            self.vocos = vocos
-            self.logger.log(logging.INFO, "vocos loaded.")
+            .eval()
+        )
+        assert vocos_ckpt_path, "vocos_ckpt_path should not be None"
+        vocos.load_state_dict(
+            torch.load(vocos_ckpt_path, weights_only=True, mmap=True)
+        )
+        self.vocos = vocos
+        self.logger.log(logging.INFO, "vocos loaded.")
 
-        if dvae_config_path:
-            cfg = OmegaConf.load(dvae_config_path)
-            dvae = DVAE(**cfg, coef=coef).to(device).eval()
-            coef = str(dvae)
-            assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
-            dvae.load_state_dict(
-                torch.load(dvae_ckpt_path, weights_only=True, mmap=True)
-            )
-            self.dvae = dvae
-            self.logger.log(logging.INFO, "dvae loaded.")
+        dvae = DVAE(
+            decoder_config=asdict(self.config.dvae.decoder),
+            vq_config=asdict(self.config.dvae.vq),
+            dim=self.config.dvae.decoder.idim,
+            coef=coef,
+        ).to(device).eval()
+        coef = str(dvae)
+        assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
+        dvae.load_state_dict(
+            torch.load(dvae_ckpt_path, weights_only=True, mmap=True)
+        )
+        self.dvae = dvae
+        self.logger.log(logging.INFO, "dvae loaded.")
 
-        if gpt_config_path:
-            cfg = OmegaConf.load(gpt_config_path)
-            gpt = GPT(
-                **cfg, use_flash_attn=use_flash_attn, device=device, logger=self.logger
-            ).eval()
-            assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
-            gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
-            gpt.prepare(compile=compile and "cuda" in str(device))
-            self.gpt = gpt
-            spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
-            assert os.path.exists(
-                spk_stat_path
-            ), f"Missing spk_stat.pt: {spk_stat_path}"
-            spk_stat: torch.Tensor = torch.load(
-                spk_stat_path,
-                weights_only=True,
-                mmap=True,
-                map_location=device,
-            )
-            self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
-            self.logger.log(logging.INFO, "gpt loaded.")
+        gpt = GPT(
+            gpt_config=asdict(self.config.gpt),
+            use_flash_attn=use_flash_attn,
+            device=device,
+            logger=self.logger,
+        ).eval()
+        assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
+        gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
+        gpt.prepare(compile=compile and "cuda" in str(device))
+        self.gpt = gpt
+        spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
+        assert os.path.exists(
+            spk_stat_path
+        ), f"Missing spk_stat.pt: {spk_stat_path}"
+        spk_stat: torch.Tensor = torch.load(
+            spk_stat_path,
+            weights_only=True,
+            mmap=True,
+            map_location=device,
+        )
+        self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
+        self.logger.log(logging.INFO, "gpt loaded.")
 
-        if decoder_config_path:
-            cfg = OmegaConf.load(decoder_config_path)
-            decoder = DVAE(**cfg, coef=coef).to(device).eval()
-            coef = str(decoder)
-            assert decoder_ckpt_path, "decoder_ckpt_path should not be None"
-            decoder.load_state_dict(
-                torch.load(decoder_ckpt_path, weights_only=True, mmap=True)
-            )
-            self.decoder = decoder
-            self.logger.log(logging.INFO, "decoder loaded.")
+        decoder = DVAE(
+            decoder_config=asdict(self.config.decoder),
+            dim=self.config.decoder.idim,
+            coef=coef,
+        ).to(device).eval()
+        coef = str(decoder)
+        assert decoder_ckpt_path, "decoder_ckpt_path should not be None"
+        decoder.load_state_dict(
+            torch.load(decoder_ckpt_path, weights_only=True, mmap=True)
+        )
+        self.decoder = decoder
+        self.logger.log(logging.INFO, "decoder loaded.")
 
         if tokenizer_path:
             self.tokenizer = Tokenizer(tokenizer_path, device)

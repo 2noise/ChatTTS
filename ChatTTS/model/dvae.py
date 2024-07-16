@@ -72,7 +72,7 @@ class GFSQ(nn.Module):
         super(GFSQ, self).__init__()
         self.quantizer = GroupedResidualFSQ(
             dim=dim,
-            levels=levels,
+            levels=list(levels),
             num_quantizers=R,
             groups=G,
         )
@@ -169,8 +169,8 @@ class DVAEDecoder(nn.Module):
 class DVAE(nn.Module):
     def __init__(
         self,
-        decoder_config,
-        vq_config,
+        decoder_config: dict,
+        vq_config: Optional[dict]=None,
         dim=512,
         coef: Optional[str] = None,
     ):

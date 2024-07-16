@@ -61,22 +61,6 @@ def check_all_assets(base_dir: Path, sha256_map: Dict[str, str], update=False) -
         ):
             return False
 
-    logger.get_logger().info("checking configs...")
-    current_dir = base_dir / "config"
-    names = [
-        "decoder.yaml",
-        "dvae.yaml",
-        "gpt.yaml",
-        "path.yaml",
-        "vocos.yaml",
-    ]
-    for model in names:
-        menv = model.replace(".", "_")
-        if not check_model(
-            current_dir, model, sha256_map[f"sha256_config_{menv}"], update
-        ):
-            return False
-
     logger.get_logger().info("all assets are already latest.")
     return True
 
@@ -117,7 +101,7 @@ def download_dns_yaml(url: str, folder: str):
         logger.get_logger().info(f"downloaded into {folder}")
 
 
-def download_all_assets(tmpdir: str, version="0.2.5"):
+def download_all_assets(tmpdir: str, version="0.2.6"):
     import subprocess
     import platform
 
