@@ -10,7 +10,7 @@ jobs:
   push-format:
     runs-on: ubuntu-latest
 
-    if: "!contains(github.event.head_commit.message, 'chore(format): ')"
+    if: "!contains(github.event.head_commit.message, 'chore(format): ') && !contains(github.event.head_commit.message, 'chore(env): ')"
   
     permissions:
       contents: write
