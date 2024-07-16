@@ -72,9 +72,9 @@ For formal inquiries about the model and roadmap, please contact us at **open-so
 
 #### Online Chat
 ##### 1. QQ Group (Chinese Social APP)
-- **Group 1**, 808364215 (Full)
-- **Group 2**, 230696694 (Full)
-- **Group 3**, 933639842 (Full)
+- **Group 1**, 808364215
+- **Group 2**, 230696694
+- **Group 3**, 933639842
 - **Group 4**, 608667975
 
 ##### 2. Discord Server
