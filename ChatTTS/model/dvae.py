@@ -170,7 +170,7 @@ class DVAE(nn.Module):
     def __init__(
         self,
         decoder_config: dict,
-        vq_config: Optional[dict]=None,
+        vq_config: Optional[dict] = None,
         dim=512,
         coef: Optional[str] = None,
     ):
