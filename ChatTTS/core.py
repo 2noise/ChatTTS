@@ -141,7 +141,10 @@ class Chat:
             compile=compile,
             coef=coef,
             use_flash_attn=use_flash_attn,
-            **asdict(self.config.path),
+            **{
+                k: os.path.join(download_path, v)
+                for k, v in asdict(self.config.path).items()
+            },
         )
 
     def unload(self):
