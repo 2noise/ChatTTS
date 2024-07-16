@@ -258,7 +258,9 @@ class Chat:
         self.device = device
         self.compile = compile
 
-        feature_extractor = instantiate_class(args=(), init=asdict(self.config.vocos.feature_extractor))
+        feature_extractor = instantiate_class(
+            args=(), init=asdict(self.config.vocos.feature_extractor)
+        )
         backbone = instantiate_class(args=(), init=asdict(self.config.vocos.backbone))
         head = instantiate_class(args=(), init=asdict(self.config.vocos.head))
         vocos = (
@@ -272,23 +274,23 @@ class Chat:
             .eval()
         )
         assert vocos_ckpt_path, "vocos_ckpt_path should not be None"
-        vocos.load_state_dict(
-            torch.load(vocos_ckpt_path, weights_only=True, mmap=True)
-        )
+        vocos.load_state_dict(torch.load(vocos_ckpt_path, weights_only=True, mmap=True))
         self.vocos = vocos
         self.logger.log(logging.INFO, "vocos loaded.")
 
-        dvae = DVAE(
-            decoder_config=asdict(self.config.dvae.decoder),
-            vq_config=asdict(self.config.dvae.vq),
-            dim=self.config.dvae.decoder.idim,
-            coef=coef,
-        ).to(device).eval()
+        dvae = (
+            DVAE(
+                decoder_config=asdict(self.config.dvae.decoder),
+                vq_config=asdict(self.config.dvae.vq),
+                dim=self.config.dvae.decoder.idim,
+                coef=coef,
+            )
+            .to(device)
+            .eval()
+        )
         coef = str(dvae)
         assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
-        dvae.load_state_dict(
-            torch.load(dvae_ckpt_path, weights_only=True, mmap=True)
-        )
+        dvae.load_state_dict(torch.load(dvae_ckpt_path, weights_only=True, mmap=True))
         self.dvae = dvae
         self.logger.log(logging.INFO, "dvae loaded.")
 
@@ -303,9 +305,7 @@ class Chat:
         gpt.prepare(compile=compile and "cuda" in str(device))
         self.gpt = gpt
         spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
-        assert os.path.exists(
-            spk_stat_path
-        ), f"Missing spk_stat.pt: {spk_stat_path}"
+        assert os.path.exists(spk_stat_path), f"Missing spk_stat.pt: {spk_stat_path}"
         spk_stat: torch.Tensor = torch.load(
             spk_stat_path,
             weights_only=True,
@@ -315,11 +315,15 @@ class Chat:
         self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
         self.logger.log(logging.INFO, "gpt loaded.")
 
-        decoder = DVAE(
-            decoder_config=asdict(self.config.decoder),
-            dim=self.config.decoder.idim,
-            coef=coef,
-        ).to(device).eval()
+        decoder = (
+            DVAE(
+                decoder_config=asdict(self.config.decoder),
+                dim=self.config.decoder.idim,
+                coef=coef,
+            )
+            .to(device)
+            .eval()
+        )
         coef = str(decoder)
         assert decoder_ckpt_path, "decoder_ckpt_path should not be None"
         decoder.load_state_dict(

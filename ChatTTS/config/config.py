@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass(repr=False, eq=False)
-class Path():
+class Path:
     vocos_ckpt_path: str = "asset/Vocos.pt"
     dvae_ckpt_path: str = "asset/DVAE.pt"
     gpt_ckpt_path: str = "asset/GPT.pt"
@@ -11,7 +11,7 @@ class Path():
 
 
 @dataclass(repr=False, eq=False)
-class Decoder():
+class Decoder:
     idim: int = 384
     odim: int = 384
     hidden: int = 512
@@ -20,26 +20,27 @@ class Decoder():
 
 
 @dataclass(repr=False, eq=False)
-class VQ():
+class VQ:
     dim: int = 1024
-    levels: tuple = (5,5,5,5)
+    levels: tuple = (5, 5, 5, 5)
     G: int = 2
     R: int = 2
 
 
 @dataclass(repr=False, eq=False)
-class DVAE():
+class DVAE:
     decoder: Decoder = Decoder(
-       idim=512,
-       odim=512,
-       hidden=256,
-       n_layer=12,
-       bn_dim=128,
+        idim=512,
+        odim=512,
+        hidden=256,
+        n_layer=12,
+        bn_dim=128,
     )
     vq: VQ = VQ()
 
+
 @dataclass(repr=False, eq=False)
-class GPT():
+class GPT:
     hidden_size: int = 768
     intermediate_size: int = 3072
     num_attention_heads: int = 12
@@ -54,53 +55,57 @@ class GPT():
 
 
 @dataclass(repr=False, eq=False)
-class FeatureExtractorInitArgs():
+class FeatureExtractorInitArgs:
     sample_rate: int = 24000
     n_fft: int = 1024
     hop_length: int = 256
     n_mels: int = 100
     padding: str = "center"
 
+
 @dataclass(repr=False, eq=False)
-class FeatureExtractor():
+class FeatureExtractor:
     class_path: str = "vocos.feature_extractors.MelSpectrogramFeatures"
     init_args: FeatureExtractorInitArgs = FeatureExtractorInitArgs()
 
 
 @dataclass(repr=False, eq=False)
-class BackboneInitArgs():
+class BackboneInitArgs:
     input_channels: int = 100
     dim: int = 512
     intermediate_dim: int = 1536
     num_layers: int = 8
 
+
 @dataclass(repr=False, eq=False)
-class Backbone():
+class Backbone:
     class_path: str = "vocos.models.VocosBackbone"
     init_args: BackboneInitArgs = BackboneInitArgs()
 
 
 @dataclass(repr=False, eq=False)
-class FourierHeadInitArgs():
+class FourierHeadInitArgs:
     dim: int = 512
     n_fft: int = 1024
     hop_length: int = 256
     padding: str = "center"
 
+
 @dataclass(repr=False, eq=False)
-class FourierHead():
+class FourierHead:
     class_path: str = "vocos.heads.ISTFTHead"
     init_args: FourierHeadInitArgs = FourierHeadInitArgs()
 
 
 @dataclass(repr=False, eq=False)
-class Vocos():
+class Vocos:
     feature_extractor: FeatureExtractor = FeatureExtractor()
     backbone: Backbone = Backbone()
     head: FourierHead = FourierHead()
 
+
 @dataclass(repr=False, eq=False)
-class Config():
+class Config:
     path: Path = Path()
     decoder: Decoder = Decoder()
     dvae: DVAE = DVAE()
