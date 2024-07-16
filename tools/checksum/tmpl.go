@@ -15,6 +15,6 @@ const jsontmpl = `{
 	"sha256_asset_GPT_pt"       : "%s",
 	"sha256_asset_spk_stat_pt"  : "%s",
 	"sha256_asset_tokenizer_pt" : "%s",
-	"sha256_asset_Vocos_pt"     : "%s",
+	"sha256_asset_Vocos_pt"     : "%s"
 }
 `
