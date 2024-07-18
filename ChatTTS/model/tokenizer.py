@@ -106,12 +106,13 @@ class Tokenizer:
                 ).fill_(1)
         del_all(attention_mask_lst)
 
-        text_mask = torch.ones(input_ids.shape, dtype=bool, device=device)
+        text_mask = attention_mask.bool()
         new_input_ids = input_ids.unsqueeze_(-1).expand(-1, -1, num_vq).clone()
+        del input_ids
 
         if prompt_size > 0:
             text_mask.narrow(1, max_input_ids_len - prompt_size, prompt_size).fill_(0)
-            prompt_t = prompt.t().unsqueeze_(0).expand(input_ids.size(0), -1, -1)
+            prompt_t = prompt.t().unsqueeze_(0).expand(new_input_ids.size(0), -1, -1)
             new_input_ids.narrow(
                 1,
                 max_input_ids_len - prompt_size,
