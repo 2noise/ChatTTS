@@ -45,9 +45,10 @@ ChatTTS is a text-to-speech model designed specifically for dialogue scenarios s
 - The open-source version on **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** is a 40,000 hours pre-trained model without SFT.
 
 ### Roadmap
-- [x] Open-source the 40k hour base model and spk_stats file.
+- [x] Open-source the 40k-hours-base model and spk_stats file.
 - [x] Streaming audio generation.
-- [ ] Open-source the 40k hour version with multi-emotion control.
+- [x] Open-source DVAE encoder and zero shot inferring code.
+- [ ] Multi-emotion controlling.
 - [ ] ChatTTS.cpp (new repo in `2noise` org is welcomed)
 
 ### Licenses

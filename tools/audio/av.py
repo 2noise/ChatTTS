@@ -40,6 +40,10 @@ def wav2(i: BytesIO, o: BufferedWriter, format: str):
 
 
 def load_audio(file: str, sr: int) -> np.ndarray:
+    """
+    https://github.com/fumiama/Retrieval-based-Voice-Conversion-WebUI/blob/412a9950a1e371a018c381d1bfb8579c4b0de329/infer/lib/audio.py#L39
+    """
+
     if not Path(file).exists():
         raise FileNotFoundError(f"File not found: {file}")
 
