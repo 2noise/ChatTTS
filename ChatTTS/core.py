@@ -223,7 +223,8 @@ class Chat:
     class InferCodeParams(RefineTextParams):
         prompt: str = "[speed_5]"
         spk_emb: Optional[str] = None
-        sample: Optional[str] = None
+        spk_smp: Optional[str] = None
+        txt_smp: Optional[str] = None
         temperature: float = 0.3
         repetition_penalty: float = 1.05
         max_new_token: int = 2048
@@ -572,18 +573,19 @@ class Chat:
 
         if params.prompt:
             text = [params.prompt + i for i in text]
-
+        
+        txt_smp = "" if params.txt_smp is None else params.txt_smp
         if params.spk_emb is not None:
-            text = [f"[Stts][spk_emb]{i}[Ptts]" for i in text]
+            text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
         else:
-            text = [f"[Stts][empty_spk]{i}[Ptts]" for i in text]
+            text = [f"[Stts][empty_spk]{txt_smp}{i}[Ptts]" for i in text]
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             text,
             self.gpt.num_vq,
             prompt=(
-                self._decode_prompt(params.sample)
-                if params.sample is not None
+                self._decode_prompt(params.spk_smp)
+                if params.spk_smp is not None
                 else None
             ),
             device=gpt.device_gpt,
