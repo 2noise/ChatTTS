@@ -573,7 +573,7 @@ class Chat:
 
         if params.prompt:
             text = [params.prompt + i for i in text]
-        
+
         txt_smp = "" if params.txt_smp is None else params.txt_smp
         if params.spk_emb is not None:
             text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
