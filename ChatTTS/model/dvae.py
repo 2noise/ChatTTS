@@ -1,11 +1,12 @@
 import math
-from typing import List, Optional
+from typing import List, Optional, Literal, Tuple
 
 import numpy as np
 import pybase16384 as b14
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchaudio
 from vector_quantize_pytorch import GroupedResidualFSQ
 
 
@@ -94,9 +95,13 @@ class GFSQ(nn.Module):
         feat = self.quantizer.get_output_from_indices(x)
         return feat.transpose_(1, 2) if self.transpose else feat
 
-    def forward(self, x):
+
+    def __call__(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        return super().__call__(x)
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         if self.transpose:
-            x = x.transpose(1, 2)
+            x.transpose_(1, 2)
         feat, ind = self.quantizer(x)
         """
         ind = rearrange(
@@ -117,7 +122,6 @@ class GFSQ(nn.Module):
             torch.zeros(perplexity.shape, dtype=x.dtype, device=x.device),
             feat.transpose_(1, 2) if self.transpose else feat,
             perplexity,
-            None,
             ind.transpose_(1, 2) if self.transpose else ind,
         )
 
@@ -166,10 +170,42 @@ class DVAEDecoder(nn.Module):
         return x
 
 
+class MelSpectrogramFeatures(torch.nn.Module):
+    def __init__(
+        self,
+        sample_rate=24000,
+        n_fft=1024,
+        hop_length=256,
+        n_mels=100,
+        padding: Literal["center", "same"]="center",
+    ):
+        super().__init__()
+        if padding not in ["center", "same"]:
+            raise ValueError("Padding must be 'center' or 'same'.")
+        self.padding = padding
+        self.mel_spec = torchaudio.transforms.MelSpectrogram(
+            sample_rate=sample_rate,
+            n_fft=n_fft,
+            hop_length=hop_length,
+            n_mels=n_mels,
+            center=padding == "center",
+            power=1,
+        )
+
+    def __call__(self, audio: torch.Tensor) -> torch.Tensor:
+        return super().__call__(audio)
+
+    def forward(self, audio: torch.Tensor) -> torch.Tensor:
+        mel: torch.Tensor = self.mel_spec(audio)
+        features = torch.log(torch.clip(mel, min=1e-5))
+        return features
+
+
 class DVAE(nn.Module):
     def __init__(
         self,
         decoder_config: dict,
+        encoder_config: Optional[dict] = None,
         vq_config: Optional[dict] = None,
         dim=512,
         coef: Optional[str] = None,
@@ -183,6 +219,16 @@ class DVAE(nn.Module):
             )
         self.register_buffer("coef", coef.unsqueeze(0).unsqueeze_(2))
 
+        if encoder_config is not None:
+            self.downsample_conv = nn.Sequential(
+                nn.Conv1d(100, dim, 3, 1, 1), 
+                nn.GELU(), 
+                nn.Conv1d(dim, dim, 4, 2, 1), 
+                nn.GELU()
+            )
+            self.preprocessor_mel = MelSpectrogramFeatures()
+            self.encoder: Optional[DVAEDecoder] = DVAEDecoder(**encoder_config)
+
         self.decoder = DVAEDecoder(**decoder_config)
         self.out_conv = nn.Conv1d(dim, 100, 3, 1, 1, bias=False)
         if vq_config is not None:
@@ -195,11 +241,18 @@ class DVAE(nn.Module):
             self.coef.cpu().numpy().astype(np.float32).tobytes()
         )
 
-    def __call__(self, inp: torch.Tensor) -> torch.Tensor:
-        return super().__call__(inp)
+    def __call__(self, inp: torch.Tensor, mode: Literal["encode", "decode"]="decode") -> torch.Tensor:
+        return super().__call__(inp, mode)
 
     @torch.inference_mode()
-    def forward(self, inp: torch.Tensor) -> torch.Tensor:
+    def forward(self, inp: torch.Tensor, mode: Literal["encode", "decode"]="decode") -> torch.Tensor:
+        if mode == "encode" and hasattr(self, "encoder") and self.vq_layer is not None:
+            mel = self.preprocessor_mel(inp)
+            x: torch.Tensor = self.downsample_conv(mel / self.coef)
+            x = self.encoder(x)
+            ind = self.vq_layer(x)[3]
+            return ind
+
         if self.vq_layer is not None:
             vq_feats = self.vq_layer._embed(inp)
         else:

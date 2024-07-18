@@ -284,6 +284,7 @@ class Chat:
         dvae = (
             DVAE(
                 decoder_config=asdict(self.config.dvae.decoder),
+                encoder_config=asdict(self.config.dvae.encoder),
                 vq_config=asdict(self.config.dvae.vq),
                 dim=self.config.dvae.decoder.idim,
                 coef=coef,

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 @dataclass(repr=False, eq=False)
 class Path:
     vocos_ckpt_path: str = "asset/Vocos.pt"
-    dvae_ckpt_path: str = "asset/DVAE.pt"
+    dvae_ckpt_path: str = "asset/DVAE_full.pt"
     gpt_ckpt_path: str = "asset/GPT.pt"
     decoder_ckpt_path: str = "asset/Decoder.pt"
     tokenizer_path: str = "asset/tokenizer.pt"
@@ -29,6 +29,13 @@ class VQ:
 
 @dataclass(repr=False, eq=False)
 class DVAE:
+    encoder: Decoder = Decoder(
+        idim=512,
+        odim=1024,
+        hidden=256,
+        n_layer=12,
+        bn_dim=128,
+    )
     decoder: Decoder = Decoder(
         idim=512,
         odim=512,

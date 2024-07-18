@@ -48,7 +48,7 @@ def check_all_assets(base_dir: Path, sha256_map: Dict[str, str], update=False) -
     current_dir = base_dir / "asset"
     names = [
         "Decoder.pt",
-        "DVAE.pt",
+        "DVAE_full.pt",
         "GPT.pt",
         "spk_stat.pt",
         "tokenizer.pt",
@@ -140,13 +140,13 @@ def download_all_assets(tmpdir: str, version="0.2.6"):
     except Exception:
         BASE_URL = "https://raw.gitcode.com/u011570312/RVC-Models-Downloader/assets/"
         suffix = {
-            "darwin_amd64": "555",
-            "darwin_arm64": "556",
-            "linux_386": "557",
-            "linux_amd64": "558",
-            "linux_arm64": "559",
-            "windows_386": "562",
-            "windows_amd64": "563",
+            "darwin_amd64": "987",
+            "darwin_arm64": "988",
+            "linux_386": "989",
+            "linux_amd64": "990",
+            "linux_arm64": "991",
+            "windows_386": "992",
+            "windows_amd64": "993",
         }[f"{system_type}_{architecture}"]
         RVCMD_URL = BASE_URL + suffix
         download_dns_yaml(

@@ -24,6 +24,7 @@ setup(
         "omegaconf>=2.3.0",
         "pybase16384",
         "torch>=2.1.0",
+        "torchaudio",
         "tqdm",
         "transformers>=4.41.1",
         "vector_quantize_pytorch",
