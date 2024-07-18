@@ -31,7 +31,11 @@ class Tokenizer:
 
     @torch.inference_mode()
     def encode(
-        self, text: List[str], num_vq: int, prompt: Optional[torch.Tensor]=None, device="cpu",
+        self,
+        text: List[str],
+        num_vq: int,
+        prompt: Optional[torch.Tensor] = None,
+        device="cpu",
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         input_ids_lst = []
@@ -72,9 +76,11 @@ class Tokenizer:
         for i in range(len(input_ids_lst)):
             input_ids.narrow(0, i, 1).narrow(
                 1,
-                max_input_ids_len-prompt_size-input_ids_lst[i].size(0),
+                max_input_ids_len - prompt_size - input_ids_lst[i].size(0),
                 input_ids_lst[i].size(0),
-            ).copy_(input_ids_lst[i]) # left padding
+            ).copy_(
+                input_ids_lst[i]
+            )  # left padding
         del_all(input_ids_lst)
 
         attention_mask = torch.zeros(
@@ -87,12 +93,16 @@ class Tokenizer:
             attn = attention_mask.narrow(0, i, 1)
             attn.narrow(
                 1,
-                max_attention_mask_len-prompt_size-attention_mask_lst[i].size(0),
+                max_attention_mask_len - prompt_size - attention_mask_lst[i].size(0),
                 attention_mask_lst[i].size(0),
-            ).copy_(attention_mask_lst[i]) # left padding
+            ).copy_(
+                attention_mask_lst[i]
+            )  # left padding
             if prompt_size > 0:
                 attn.narrow(
-                    1, max_attention_mask_len-prompt_size, prompt_size,
+                    1,
+                    max_attention_mask_len - prompt_size,
+                    prompt_size,
                 ).fill_(1)
         del_all(attention_mask_lst)
 
@@ -100,11 +110,11 @@ class Tokenizer:
         new_input_ids = input_ids.unsqueeze_(-1).expand(-1, -1, num_vq).clone()
 
         if prompt_size > 0:
-            text_mask.narrow(1, max_input_ids_len-prompt_size, prompt_size).fill_(0)
+            text_mask.narrow(1, max_input_ids_len - prompt_size, prompt_size).fill_(0)
             prompt_t = prompt.t().unsqueeze_(0).expand(input_ids.size(0), -1, -1)
             new_input_ids.narrow(
                 1,
-                max_input_ids_len-prompt_size,
+                max_input_ids_len - prompt_size,
                 prompt_size,
             ).copy_(prompt_t)
             del prompt_t

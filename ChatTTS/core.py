@@ -173,7 +173,8 @@ class Chat:
         shp = arr.shape
         assert len(shp) == 2, "prompt must be a 2D tensor"
         s = b14.encode_to_string(
-            np.array(shp, dtype="<u2").tobytes() + lzma.compress(
+            np.array(shp, dtype="<u2").tobytes()
+            + lzma.compress(
                 arr.astype("<u2").tobytes(),
                 format=lzma.FORMAT_RAW,
                 filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
@@ -222,7 +223,7 @@ class Chat:
     class InferCodeParams(RefineTextParams):
         prompt: str = "[speed_5]"
         spk_emb: Optional[str] = None
-        sample: Optional[str]=None
+        sample: Optional[str] = None
         temperature: float = 0.3
         repetition_penalty: float = 1.05
         max_new_token: int = 2048
@@ -580,7 +581,11 @@ class Chat:
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             text,
             self.gpt.num_vq,
-            prompt=self._decode_prompt(params.sample) if params.sample is not None else None,
+            prompt=(
+                self._decode_prompt(params.sample)
+                if params.sample is not None
+                else None
+            ),
             device=gpt.device_gpt,
         )
 
@@ -641,7 +646,9 @@ class Chat:
         text = [f"[Sbreak]{i}[Pbreak]{params.prompt}" for i in text]
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            text, self.gpt.num_vq, device=gpt.device_gpt,
+            text,
+            self.gpt.num_vq,
+            device=gpt.device_gpt,
         )
 
         logits_warpers, logits_processors = gen_logits(
