@@ -6,8 +6,12 @@ https://stackoverflow.com/questions/62691279/how-to-disable-tokenizers-paralleli
 """
 
 from typing import List, Tuple, Optional
+import lzma
 
+import numpy as np
+import pybase16384 as b14
 import torch
+import torch.nn.functional as F
 from transformers import BertTokenizerFast
 
 from ..utils import del_all
@@ -34,7 +38,7 @@ class Tokenizer:
         self,
         text: List[str],
         num_vq: int,
-        prompt: Optional[torch.Tensor] = None,
+        prompt_str: Optional[str] = None,
         device="cpu",
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
@@ -43,6 +47,8 @@ class Tokenizer:
         max_input_ids_len = -1
         max_attention_mask_len = -1
         prompt_size = 0
+
+        prompt = self._decode_prompt(prompt_str) if prompt_str is not None else None
 
         if prompt is not None:
             assert prompt.size(0) == num_vq, "prompt dim 0 must equal to num_vq"
@@ -121,3 +127,90 @@ class Tokenizer:
             del prompt_t
 
         return new_input_ids, attention_mask, text_mask
+
+    @staticmethod
+    def _decode_spk_emb(spk_emb: str) -> np.ndarray:
+        return np.frombuffer(
+            lzma.decompress(
+                b14.decode_from_string(spk_emb),
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+            ),
+            dtype=np.float16,
+        ).copy()
+
+    @torch.no_grad()
+    def apply_spk_emb(
+        self,
+        emb: torch.Tensor,
+        spk_emb: str,
+        input_ids: torch.Tensor,
+        device: torch.device,
+    ):
+        n = (
+            F.normalize(
+                torch.from_numpy(
+                    self._decode_spk_emb(spk_emb),
+                ),
+                p=2.0,
+                dim=0,
+                eps=1e-12,
+            )
+            .to(device)
+            .unsqueeze_(0)
+            .expand(emb.size(0), -1)
+            .unsqueeze_(1)
+            .expand(emb.shape)
+        )
+        cond = (
+            input_ids.narrow(-1, 0, 1).eq(self.spk_emb_ids).expand(emb.shape)
+        )
+        torch.where(cond, n, emb, out=emb)
+        del cond, n
+
+    @staticmethod
+    @torch.no_grad()
+    def _decode_prompt(prompt: str) -> torch.Tensor:
+        dec = b14.decode_from_string(prompt)
+        shp = np.frombuffer(dec[:4], dtype="<u2")
+        p = np.frombuffer(
+            lzma.decompress(
+                dec[4:],
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+            ),
+            dtype="<u2",
+        ).copy()
+        del dec
+        return torch.from_numpy(p).view(*shp)
+    
+    @staticmethod
+    @torch.no_grad()
+    def _encode_prompt(prompt: torch.Tensor) -> str:
+        arr: np.ndarray = prompt.to(dtype=torch.uint16, device="cpu").numpy()
+        shp = arr.shape
+        assert len(shp) == 2, "prompt must be a 2D tensor"
+        s = b14.encode_to_string(
+            np.array(shp, dtype="<u2").tobytes()
+            + lzma.compress(
+                arr.astype("<u2").tobytes(),
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+            ),
+        )
+        del arr
+        return s
+
+    @staticmethod
+    @torch.no_grad()
+    def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
+        arr: np.ndarray = spk_emb.to(dtype=torch.float16, device="cpu").numpy()
+        s = b14.encode_to_string(
+            lzma.compress(
+                arr.tobytes(),
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+            ),
+        )
+        del arr
+        return s

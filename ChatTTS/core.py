@@ -9,7 +9,6 @@ import lzma
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 from vocos import Vocos
 from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
@@ -158,44 +157,13 @@ class Chat:
         self.__init__(logger)
 
     def sample_random_speaker(self) -> str:
-        return self._encode_spk_emb(self._sample_random_speaker())
+        return self.tokenizer._encode_spk_emb(self._sample_random_speaker())
 
     @torch.inference_mode()
     def sample_audio_speaker(self, wav: Union[np.ndarray, torch.Tensor]) -> str:
         if isinstance(wav, np.ndarray):
             wav = torch.from_numpy(wav)
-        return self._encode_prompt(self.dvae(wav, "encode").squeeze_(0))
-
-    @staticmethod
-    @torch.no_grad()
-    def _encode_prompt(prompt: torch.Tensor) -> str:
-        arr: np.ndarray = prompt.to(dtype=torch.uint16, device="cpu").numpy()
-        shp = arr.shape
-        assert len(shp) == 2, "prompt must be a 2D tensor"
-        s = b14.encode_to_string(
-            np.array(shp, dtype="<u2").tobytes()
-            + lzma.compress(
-                arr.astype("<u2").tobytes(),
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-        )
-        del arr
-        return s
-
-    @staticmethod
-    @torch.no_grad()
-    def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
-        arr: np.ndarray = spk_emb.to(dtype=torch.float16, device="cpu").numpy()
-        s = b14.encode_to_string(
-            lzma.compress(
-                arr.tobytes(),
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-        )
-        del arr
-        return s
+        return self.tokenizer._encode_prompt(self.dvae(wav, "encode").squeeze_(0))
 
     @torch.no_grad()
     def _sample_random_speaker(self) -> torch.Tensor:
@@ -483,61 +451,6 @@ class Chat:
         del mel_specs
         return wavs
 
-    @staticmethod
-    @torch.no_grad()
-    def _decode_prompt(prompt: str) -> torch.Tensor:
-        dec = b14.decode_from_string(prompt)
-        shp = np.frombuffer(dec[:4], dtype="<u2")
-        p = np.frombuffer(
-            lzma.decompress(
-                dec[4:],
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-            dtype="<u2",
-        ).copy()
-        del dec
-        return torch.from_numpy(p).view(*shp)
-
-    @staticmethod
-    def _decode_spk_emb(spk_emb: str) -> np.ndarray:
-        return np.frombuffer(
-            lzma.decompress(
-                b14.decode_from_string(spk_emb),
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-            dtype=np.float16,
-        ).copy()
-
-    @torch.no_grad()
-    def _apply_spk_emb(
-        self,
-        emb: torch.Tensor,
-        spk_emb: str,
-        input_ids: torch.Tensor,
-    ):
-        n = (
-            F.normalize(
-                torch.from_numpy(
-                    self._decode_spk_emb(spk_emb),
-                ),
-                p=2.0,
-                dim=0,
-                eps=1e-12,
-            )
-            .to(self.gpt.device_gpt)
-            .unsqueeze_(0)
-            .expand(emb.size(0), -1)
-            .unsqueeze_(1)
-            .expand(emb.shape)
-        )
-        cond = (
-            input_ids.narrow(-1, 0, 1).eq(self.tokenizer.spk_emb_ids).expand(emb.shape)
-        )
-        torch.where(cond, n, emb, out=emb)
-        del cond, n
-
     @torch.no_grad()
     def _infer_code(
         self,
@@ -583,11 +496,7 @@ class Chat:
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             text,
             self.gpt.num_vq,
-            prompt=(
-                self._decode_prompt(params.spk_smp)
-                if params.spk_smp is not None
-                else None
-            ),
+            prompt_str=params.spk_smp,
             device=gpt.device_gpt,
         )
 
@@ -596,7 +505,7 @@ class Chat:
         del text_mask
 
         if params.spk_emb is not None:
-            self._apply_spk_emb(emb, params.spk_emb, input_ids)
+            self.tokenizer.apply_spk_emb(emb, params.spk_emb, input_ids, self.gpt.device_gpt)
 
         num_code = int(gpt.emb_code[0].num_embeddings - 1)
 
