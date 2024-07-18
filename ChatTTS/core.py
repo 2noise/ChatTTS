@@ -2,7 +2,7 @@ import os
 import logging
 import tempfile
 from dataclasses import dataclass, asdict
-from typing import Literal, Optional, List, Tuple, Dict
+from typing import Literal, Optional, List, Tuple, Dict, Union
 from json import load
 from pathlib import Path
 import lzma
@@ -10,7 +10,6 @@ import lzma
 import numpy as np
 import torch
 import torch.nn.functional as F
-from omegaconf import OmegaConf
 from vocos import Vocos
 from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
@@ -161,6 +160,28 @@ class Chat:
     def sample_random_speaker(self) -> str:
         return self._encode_spk_emb(self._sample_random_speaker())
 
+    @torch.inference_mode()
+    def sample_audio_speaker(self, wav: Union[np.ndarray, torch.Tensor]) -> str:
+        if isinstance(wav, np.ndarray):
+            wav = torch.from_numpy(wav)
+        return self._encode_prompt(self.dvae(wav, "encode").squeeze_(0))
+
+    @staticmethod
+    @torch.no_grad()
+    def _encode_prompt(prompt: torch.Tensor) -> str:
+        arr: np.ndarray = prompt.to(dtype=torch.uint16, device="cpu").numpy()
+        shp = arr.shape
+        assert len(shp) == 2, "prompt must be a 2D tensor"
+        s = b14.encode_to_string(
+            np.array(shp, dtype="<u2").tobytes() + lzma.compress(
+                arr.astype("<u2").tobytes(),
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+            ),
+        )
+        del arr
+        return s
+
     @staticmethod
     @torch.no_grad()
     def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
@@ -201,6 +222,7 @@ class Chat:
     class InferCodeParams(RefineTextParams):
         prompt: str = "[speed_5]"
         spk_emb: Optional[str] = None
+        sample: Optional[str]=None
         temperature: float = 0.3
         repetition_penalty: float = 1.05
         max_new_token: int = 2048
@@ -460,6 +482,22 @@ class Chat:
         return wavs
 
     @staticmethod
+    @torch.no_grad()
+    def _decode_prompt(prompt: str) -> torch.Tensor:
+        dec = b14.decode_from_string(prompt)
+        shp = np.frombuffer(dec[:4], dtype="<u2")
+        p = np.frombuffer(
+            lzma.decompress(
+                dec[4:],
+                format=lzma.FORMAT_RAW,
+                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
+            ),
+            dtype="<u2",
+        ).copy()
+        del dec
+        return torch.from_numpy(p).view(*shp)
+
+    @staticmethod
     def _decode_spk_emb(spk_emb: str) -> np.ndarray:
         return np.frombuffer(
             lzma.decompress(
@@ -540,7 +578,10 @@ class Chat:
             text = [f"[Stts][empty_spk]{i}[Ptts]" for i in text]
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            text, self.gpt.num_vq, gpt.device_gpt
+            text,
+            self.gpt.num_vq,
+            prompt=self._decode_prompt(params.sample) if params.sample is not None else None,
+            device=gpt.device_gpt,
         )
 
         emb = gpt(input_ids, text_mask)
@@ -600,7 +641,7 @@ class Chat:
         text = [f"[Sbreak]{i}[Pbreak]{params.prompt}" for i in text]
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            text, self.gpt.num_vq, gpt.device_gpt
+            text, self.gpt.num_vq, device=gpt.device_gpt,
         )
 
         logits_warpers, logits_processors = gen_logits(

@@ -95,17 +95,14 @@ class GFSQ(nn.Module):
         feat = self.quantizer.get_output_from_indices(x)
         return feat.transpose_(1, 2) if self.transpose else feat
 
-    def __call__(
-        self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
         return super().__call__(x)
 
-    def forward(
-        self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.transpose:
             x.transpose_(1, 2)
-        feat, ind = self.quantizer(x)
+        # feat, ind = self.quantizer(x)
+        _, ind = self.quantizer(x)
         """
         ind = rearrange(
             ind, "g b t r ->b t (g r)",
@@ -113,6 +110,7 @@ class GFSQ(nn.Module):
         """
         ind = ind.permute(1, 2, 0, 3).contiguous()
         ind = ind.view(ind.size(0), ind.size(1), -1)
+        """
         embed_onehot_tmp = F.one_hot(ind.long(), self.n_ind)
         embed_onehot = embed_onehot_tmp.to(x.dtype)
         del embed_onehot_tmp
@@ -121,12 +119,12 @@ class GFSQ(nn.Module):
         torch.div(e_mean, (e_mean.sum(dim=1) + self.eps).unsqueeze(1), out=e_mean)
         perplexity = torch.exp(-torch.sum(e_mean * torch.log(e_mean + self.eps), dim=1))
 
-        return (
+        return 
             torch.zeros(perplexity.shape, dtype=x.dtype, device=x.device),
             feat.transpose_(1, 2) if self.transpose else feat,
             perplexity,
-            ind.transpose_(1, 2) if self.transpose else ind,
-        )
+        """
+        return ind.transpose_(1, 2) if self.transpose else ind
 
 
 class DVAEDecoder(nn.Module):
@@ -255,9 +253,13 @@ class DVAE(nn.Module):
     ) -> torch.Tensor:
         if mode == "encode" and hasattr(self, "encoder") and self.vq_layer is not None:
             mel = self.preprocessor_mel(inp)
-            x: torch.Tensor = self.downsample_conv(mel / self.coef)
+            x: torch.Tensor = self.downsample_conv(
+                torch.div(mel, self.coef.view(100, 1).expand(mel.shape), out=mel),
+            ).unsqueeze_(0)
+            del mel
             x = self.encoder(x)
-            ind = self.vq_layer(x)[3]
+            ind = self.vq_layer(x)
+            del x
             return ind
 
         if self.vq_layer is not None:
