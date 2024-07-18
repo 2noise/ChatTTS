@@ -18,9 +18,9 @@ chat = ChatTTS.Chat(logger)
 chat.load(compile=False, source="huggingface")  # Set to True for better performance
 
 texts = [
-        "总结一下，AI Agent是大模型功能的扩展，让AI更接近于通用人工智能，也就是我们常说的AGI。",
-        "你真是太聪明啦。",
-    ]
+    "总结一下，AI Agent是大模型功能的扩展，让AI更接近于通用人工智能，也就是我们常说的AGI。",
+    "你真是太聪明啦。",
+]
 
 fail = False
 
@@ -28,11 +28,11 @@ refined = chat.infer(
     texts,
     refine_text_only=True,
     stream=False,
-    params_refine_text=ChatTTS.Chat.RefineTextParams(show_tqdm=False)
+    params_refine_text=ChatTTS.Chat.RefineTextParams(show_tqdm=False),
 )
 
 for i, t in enumerate(refined):
-    if len(t) > 4*len(texts[i]):
+    if len(t) > 4 * len(texts[i]):
         fail = True
         logger.warning("in: %s, out: %s", texts[i], t)
 
