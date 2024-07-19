@@ -307,9 +307,7 @@ class GPT(nn.Module):
             # The `contiguous()` here is necessary to have a static stride during decoding. torchdynamo otherwise
             # recompiles graphs as the stride of the inputs is a guard. Ref: https://github.com/huggingface/transformers/pull/29114
             # TODO: use `next_tokens` directly instead.
-            #
-            # The `contiguous()` is removed for introducing the continuous inputs_ids buf
-            model_inputs.input_ids = input_ids
+            model_inputs.input_ids = input_ids.contiguous()
 
         model_inputs.past_key_values = past_key_values
         model_inputs.attention_mask = attention_mask
