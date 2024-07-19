@@ -81,12 +81,14 @@ class GPT(nn.Module):
                 for _ in range(self.num_vq)
             ],
         )
-    
+
     def from_pretrained(self, file_path: str):
 
         self.load_state_dict(torch.load(file_path, weights_only=True, mmap=True))
 
-        if "cuda" in str(self.device_gpt) and platform.system().lower() == "linux": # is TELlamaModel
+        if (
+            "cuda" in str(self.device_gpt) and platform.system().lower() == "linux"
+        ):  # is TELlamaModel
             try:
                 from .cuda import TELlamaModel
 
