@@ -112,7 +112,9 @@ class TELlamaModel:
 
     @classmethod
     def from_state_dict(
-        cls, state_dict: Dict[str, torch.Tensor], config: LlamaConfig,
+        cls,
+        state_dict: Dict[str, torch.Tensor],
+        config: LlamaConfig,
     ):
         """
         Custom method adapted from `from_pretrained` method in HuggingFace
