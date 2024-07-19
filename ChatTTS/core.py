@@ -297,7 +297,7 @@ class Chat:
             logger=self.logger,
         ).eval()
         assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
-        gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
+        gpt.from_pretrained(gpt_ckpt_path)
         gpt.prepare(compile=compile and "cuda" in str(device))
         self.gpt = gpt
         spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")

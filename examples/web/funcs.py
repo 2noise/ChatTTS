@@ -5,7 +5,7 @@ from time import sleep
 
 import gradio as gr
 
-from tools.audio import float_to_int16, has_ffmpeg_installed
+from tools.audio import float_to_int16, has_ffmpeg_installed, load_audio
 from tools.logger import get_logger
 
 logger = get_logger(" WebUI ")
@@ -114,6 +114,15 @@ def reload_chat(coef: Optional[str]) -> str:
     return chat.coef
 
 
+def on_upload_sample_audio(sample_audio_input: Optional[str]) -> str:
+    if sample_audio_input is None:
+        return ""
+    sample_audio = load_audio(sample_audio_input, 24000)
+    spk_smp = chat.sample_audio_speaker(sample_audio)
+    del sample_audio
+    return spk_smp
+
+
 def _set_generate_buttons(generate_button, interrupt_button, is_reset=False):
     return gr.update(
         value=generate_button, visible=is_reset, interactive=is_reset
@@ -142,7 +151,7 @@ def refine_text(
 
 
 def generate_audio(
-    text, temperature, top_P, top_K, spk_emb_text: str, stream, audio_seed_input
+    text, temperature, top_P, top_K, spk_emb_text: str, stream, audio_seed_input, sample_text_input, sample_audio_code_input,
 ):
     global chat, has_interrupted
 
@@ -155,6 +164,11 @@ def generate_audio(
         top_P=top_P,
         top_K=top_K,
     )
+
+    if sample_text_input and sample_audio_code_input:
+        params_infer_code.txt_smp = sample_text_input
+        params_infer_code.spk_smp = sample_audio_code_input
+        params_infer_code.spk_emb = None
 
     with TorchSeedContext(audio_seed_input):
         wav = chat.infer(

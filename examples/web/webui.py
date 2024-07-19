@@ -21,13 +21,43 @@ def main():
         gr.Markdown("- **GitHub Repo**: https://github.com/2noise/ChatTTS")
         gr.Markdown("- **HuggingFace Repo**: https://huggingface.co/2Noise/ChatTTS")
 
-        text_input = gr.Textbox(
-            label="Input Text",
-            lines=4,
-            placeholder="Please Input Text...",
-            value=ex[0][0],
-            interactive=True,
-        )
+        with gr.Row():
+            with gr.Column(scale=2):
+                text_input = gr.Textbox(
+                    label="Input Text",
+                    lines=4,
+                    max_lines=4,
+                    placeholder="Please Input Text...",
+                    value=ex[0][0],
+                    interactive=True,
+                )
+                sample_text_input = gr.Textbox(
+                    label="Sample Text",
+                    lines=4,
+                    max_lines=4,
+                    placeholder="If Sample Audio and Sample Text are available, the Speaker Embedding will be disabled.",
+                    interactive=True,
+                )
+            with gr.Column():
+                with gr.Tab(label="Sample Audio"):
+                    sample_audio_input = gr.Audio(
+                        value=None,
+                        type="filepath",
+                        interactive=True,
+                        show_label=False,
+                        waveform_options=gr.WaveformOptions(
+                            sample_rate=24000,
+                        ),
+                        scale=1,
+                    )
+                with gr.Tab(label="Sample Audio Code"):
+                    sample_audio_code_input = gr.Textbox(
+                        lines=12,
+                        max_lines=12,
+                        show_label=False,
+                        placeholder="Paste the Code copied before after uploading Sample Audio.",
+                        interactive=True,
+                    )
 
         with gr.Row():
             refine_text_checkbox = gr.Checkbox(
@@ -126,6 +156,11 @@ def main():
             show_copy_button=True,
         )
 
+        sample_audio_input.change(
+            fn=on_upload_sample_audio,
+            inputs=sample_audio_input, outputs=sample_audio_code_input,
+        ).then(fn=lambda: gr.Info("Sampled Audio Code generated at another Tab."))
+
         # 使用Gradio的回调功能来更新数值输入框
         voice_selection.change(
             fn=on_voice_change, inputs=voice_selection, outputs=audio_seed_input
@@ -181,6 +216,8 @@ def main():
                     spk_emb_text,
                     stream_mode_checkbox,
                     audio_seed_input,
+                    sample_text_input,
+                    sample_audio_code_input,
                 ],
                 outputs=audio_output,
             ).then(
