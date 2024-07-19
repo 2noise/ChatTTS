@@ -2,6 +2,7 @@ import platform
 from dataclasses import dataclass
 import logging
 from typing import Union, List, Optional, Tuple
+import gc
 
 import torch
 import torch.nn as nn
@@ -41,7 +42,7 @@ class GPT(nn.Module):
 
         self.use_flash_attn = use_flash_attn
 
-        self.gpt = self._build_llama(gpt_config, self.device_gpt)
+        self.gpt, self.llama_config = self._build_llama(gpt_config, self.device_gpt)
         self.model_dim = int(self.gpt.config.hidden_size)
         self.emb_code = nn.ModuleList(
             [
@@ -80,6 +81,26 @@ class GPT(nn.Module):
                 for _ in range(self.num_vq)
             ],
         )
+    
+    def from_pretrained(self, file_path: str):
+
+        self.load_state_dict(torch.load(file_path, weights_only=True, mmap=True))
+
+        if "cuda" in str(self.device_gpt) and platform.system().lower() == "linux": # is TELlamaModel
+            try:
+                from .cuda import TELlamaModel
+
+                self.logger.info("Linux with CUDA, try NVIDIA accelerated TELlamaModel")
+                state_dict = self.gpt.state_dict()
+                vanilla = TELlamaModel.from_state_dict(state_dict, self.llama_config)
+                # Force mem release. Taken from huggingface code
+                del state_dict, self.gpt
+                gc.collect()
+                self.gpt = vanilla
+            except Exception as e:
+                self.logger.warning(
+                    f"use default LlamaModel for importing TELlamaModel error: {e}"
+                )
 
     class Context:
         def __init__(self):
@@ -95,37 +116,23 @@ class GPT(nn.Module):
         self,
         config: dict,
         device: torch.device,
-    ) -> LlamaModel:
+    ) -> Tuple[LlamaModel, LlamaConfig]:
 
-        model = None
+        if self.use_flash_attn and is_flash_attn_2_available():
+            llama_config = LlamaConfig(
+                **config,
+                attn_implementation="flash_attention_2",
+            )
+            self.logger.warning(
+                "enabling flash_attention_2 may make gpt be even slower"
+            )
+        else:
+            llama_config = LlamaConfig(**config)
 
-        if "cuda" in str(device) and platform.system().lower() == "linux":
-            try:
-                from .cuda import TELlamaModel
-
-                model = TELlamaModel(LlamaConfig(**config))
-                self.logger.info("Linux with CUDA, try NVIDIA accelerated TELlamaModel")
-            except Exception as e:
-                model = None
-                self.logger.warning(
-                    f"use default LlamaModel for importing TELlamaModel error: {e}"
-                )
-
-        if model is None:
-            if self.use_flash_attn and is_flash_attn_2_available():
-                llama_config = LlamaConfig(
-                    **config,
-                    attn_implementation="flash_attention_2",
-                )
-                self.logger.warning(
-                    "enabling flash_attention_2 may make gpt be even slower"
-                )
-            else:
-                llama_config = LlamaConfig(**config)
-            model = LlamaModel(llama_config)
+        model = LlamaModel(llama_config)
         del model.embed_tokens
 
-        return model.to(device)
+        return model.to(device), llama_config
 
     def prepare(self, compile=False):
         if self.use_flash_attn and is_flash_attn_2_available():

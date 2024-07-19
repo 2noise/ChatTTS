@@ -10,10 +10,13 @@ import os
 import re
 import gc
 from contextlib import contextmanager
+from typing import Dict
 
 import transformer_engine as te
 from transformer_engine.pytorch.attention import RotaryPositionEmbedding
 from transformer_engine.pytorch.fp8 import fp8_model_init
+
+import torch
 
 import transformers
 from transformers.models.llama.modeling_llama import (
@@ -108,69 +111,20 @@ class TELlamaModel:
         return model
 
     @classmethod
-    def from_pretrained_local(
-        cls, pretrained_model_name_or_path, *args, config, **kwargs
+    def from_state_dict(
+        cls, state_dict: Dict[str, torch.Tensor], config: LlamaConfig,
     ):
         """
         Custom method adapted from `from_pretrained` method in HuggingFace
         Transformers repo: https://github.com/huggingface/transformers/blob/f497f564bb76697edab09184a252fc1b1a326d1e/src/transformers/modeling_utils.py#L2579
         """
-        vanilla_model = cls(config).to(kwargs["torch_dtype"])
-        subfolder = ""
-        variant = None
-        if os.path.isfile(
-            os.path.join(
-                pretrained_model_name_or_path,
-                subfolder,
-                _add_variant("model.safetensors.index.json", variant),
-            )
-        ):
-            # Load from a sharded PyTorch checkpoint
-            archive_file = os.path.join(
-                pretrained_model_name_or_path,
-                subfolder,
-                _add_variant("model.safetensors.index.json", variant),
-            )
-            is_sharded = True
-        elif os.path.isfile(
-            os.path.join(
-                pretrained_model_name_or_path,
-                subfolder,
-                _add_variant(WEIGHTS_INDEX_NAME, variant),
-            )
-        ):
-            # Load from a sharded PyTorch checkpoint
-            archive_file = os.path.join(
-                pretrained_model_name_or_path,
-                subfolder,
-                _add_variant(WEIGHTS_INDEX_NAME, variant),
-            )
-            is_sharded = True
-        else:
-            raise AssertionError(
-                "Only sharded PyTorch ckpt format supported at the moment"
-            )
 
-        resolved_archive_file, sharded_metadata = get_checkpoint_shard_files(
-            pretrained_model_name_or_path,
-            archive_file,
-        )
+        vanilla_model = cls(config)
 
-        # If the checkpoint is not sharded, it's a trivial sharding case
-        if not is_sharded:
-            assert not isinstance(resolved_archive_file, list)
-            resolved_archive_file = [resolved_archive_file]
-
-        for shard_file in resolved_archive_file:
-            state_dict = load_state_dict(shard_file)
-            # replace_params copies parameters relevant only to TransformerEngine
-            _replace_params(state_dict, vanilla_model.state_dict(), config)
-            # _load_state_dict_into_model copies parameters other than those in TransformerEngine
-            _load_state_dict_into_model(vanilla_model, state_dict, start_prefix="")
-
-            # Force mem release. Taken from huggingface code
-            del state_dict
-            gc.collect()
+        # replace_params copies parameters relevant only to TransformerEngine
+        _replace_params(state_dict, vanilla_model.state_dict(), config)
+        # _load_state_dict_into_model copies parameters other than those in TransformerEngine
+        _load_state_dict_into_model(vanilla_model, state_dict, start_prefix="")
 
         return vanilla_model
 
