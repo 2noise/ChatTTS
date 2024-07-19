@@ -43,6 +43,7 @@ class GPT(nn.Module):
         self.use_flash_attn = use_flash_attn
 
         self.gpt, self.llama_config = self._build_llama(gpt_config, self.device_gpt)
+        self.is_te_llama = False
         self.model_dim = int(self.gpt.config.hidden_size)
         self.emb_code = nn.ModuleList(
             [
@@ -99,6 +100,7 @@ class GPT(nn.Module):
                 del state_dict, self.gpt
                 gc.collect()
                 self.gpt = vanilla
+                self.is_te_llama = True
             except Exception as e:
                 self.logger.warning(
                     f"use default LlamaModel for importing TELlamaModel error: {e}"
@@ -139,7 +141,7 @@ class GPT(nn.Module):
     def prepare(self, compile=False):
         if self.use_flash_attn and is_flash_attn_2_available():
             self.gpt = self.gpt.to(dtype=torch.float16)
-        if compile:
+        if compile and not self.is_te_llama:
             try:
                 self.compile(backend="inductor", dynamic=True)
                 self.gpt.compile(backend="inductor", dynamic=True)
@@ -217,9 +219,10 @@ class GPT(nn.Module):
         # TODO joao: standardize interface for the different Cache classes and remove of this if
         has_static_cache = False
         if past_key_values is None:
-            past_key_values = getattr(
-                self.gpt.layers[0].self_attn, "past_key_value", None
-            )
+            if hasattr(self.gpt.layers[0], "self_attn"):
+                past_key_values = getattr(
+                    self.gpt.layers[0].self_attn, "past_key_value", None
+                )
             has_static_cache = past_key_values is not None
 
         past_length = 0
@@ -418,7 +421,7 @@ class GPT(nn.Module):
                 inputs_ids,
                 past_key_values,
                 attention_mask_cache.narrow(1, 0, inputs_ids.shape[1]),
-                use_cache=True,
+                use_cache=not self.is_te_llama,
             )
 
             if i > 0:

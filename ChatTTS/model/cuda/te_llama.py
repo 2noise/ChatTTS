@@ -6,15 +6,12 @@
 #
 # Edited by fumiama.
 
-import os
 import re
-import gc
 from contextlib import contextmanager
 from typing import Dict
 
 import transformer_engine as te
 from transformer_engine.pytorch.attention import RotaryPositionEmbedding
-from transformer_engine.pytorch.fp8 import fp8_model_init
 
 import torch
 
@@ -23,17 +20,13 @@ from transformers.models.llama.modeling_llama import (
     LlamaModel,
     LlamaConfig,
 )
-from transformers.modeling_utils import (
-    _add_variant,
-    load_state_dict,
-    _load_state_dict_into_model,
-)
-from transformers.utils import WEIGHTS_INDEX_NAME
-from transformers.utils.hub import get_checkpoint_shard_files
+from transformers.modeling_utils import _load_state_dict_into_model
+
+from .patch import LlamaRMSNorm
 
 
 @contextmanager
-def replace_decoder(te_decoder_cls):
+def replace_decoder(te_decoder_cls, llama_rms_norm_cls):
     """
     Replace `LlamaDecoderLayer` with custom `TELlamaDecoderLayer`.
     """
@@ -41,12 +34,17 @@ def replace_decoder(te_decoder_cls):
         transformers.models.llama.modeling_llama.LlamaDecoderLayer
     )
     transformers.models.llama.modeling_llama.LlamaDecoderLayer = te_decoder_cls
+    original_llama_rms_norm_cls = (
+        transformers.models.llama.modeling_llama.LlamaRMSNorm
+    )
+    transformers.models.llama.modeling_llama.LlamaRMSNorm = llama_rms_norm_cls
     try:
         yield
     finally:
         transformers.models.llama.modeling_llama.LlamaDecoderLayer = (
             original_llama_decoder_cls
         )
+        transformers.models.llama.modeling_llama.LlamaRMSNorm = original_llama_rms_norm_cls
 
 
 class TELlamaDecoderLayer(te.pytorch.TransformerLayer):
@@ -106,7 +104,7 @@ class TELlamaModel:
     """
 
     def __new__(cls, config: LlamaConfig):
-        with replace_decoder(te_decoder_cls=TELlamaDecoderLayer):
+        with replace_decoder(te_decoder_cls=TELlamaDecoderLayer, llama_rms_norm_cls=LlamaRMSNorm):
             model = LlamaModel(config)
         return model
 
