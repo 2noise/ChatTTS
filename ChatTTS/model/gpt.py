@@ -406,12 +406,15 @@ class GPT(nn.Module):
             attention_mask_cache.narrow(1, 0, attention_mask.shape[1]).copy_(
                 attention_mask
             )
-        
+
         progress = inputs_ids.size(1)
         # pre-allocate inputs_ids
         inputs_ids_buf = torch.zeros(
-            inputs_ids.size(0), progress+max_new_token, inputs_ids.size(2),
-            dtype=inputs_ids.dtype, device=inputs_ids.device,
+            inputs_ids.size(0),
+            progress + max_new_token,
+            inputs_ids.size(2),
+            dtype=inputs_ids.dtype,
+            device=inputs_ids.device,
         )
         inputs_ids_buf.narrow(1, 0, progress).copy_(inputs_ids)
         del inputs_ids
@@ -502,7 +505,9 @@ class GPT(nn.Module):
                 logits = logits.reshape(-1, logits.size(2))
                 # logits_token = rearrange(inputs_ids[:, start_idx:], "b c n -> (b n) c")
                 inputs_ids_sliced = inputs_ids.narrow(
-                    1, start_idx, inputs_ids.size(1)-start_idx,
+                    1,
+                    start_idx,
+                    inputs_ids.size(1) - start_idx,
                 ).permute(0, 2, 1)
                 logits_token = inputs_ids_sliced.reshape(
                     inputs_ids_sliced.size(0) * inputs_ids_sliced.size(1),
@@ -510,9 +515,15 @@ class GPT(nn.Module):
                 ).to(self.device)
                 del inputs_ids_sliced
             else:
-                logits_token = inputs_ids.narrow(
-                    1, start_idx, inputs_ids.size(1)-start_idx,
-                ).narrow(2, 0, 1).to(self.device)
+                logits_token = (
+                    inputs_ids.narrow(
+                        1,
+                        start_idx,
+                        inputs_ids.size(1) - start_idx,
+                    )
+                    .narrow(2, 0, 1)
+                    .to(self.device)
+                )
 
             logits /= temperature
 
