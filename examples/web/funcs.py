@@ -151,7 +151,15 @@ def refine_text(
 
 
 def generate_audio(
-    text, temperature, top_P, top_K, spk_emb_text: str, stream, audio_seed_input, sample_text_input, sample_audio_code_input,
+    text,
+    temperature,
+    top_P,
+    top_K,
+    spk_emb_text: str,
+    stream,
+    audio_seed_input,
+    sample_text_input,
+    sample_audio_code_input,
 ):
     global chat, has_interrupted
 

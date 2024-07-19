@@ -34,9 +34,7 @@ def replace_decoder(te_decoder_cls, llama_rms_norm_cls):
         transformers.models.llama.modeling_llama.LlamaDecoderLayer
     )
     transformers.models.llama.modeling_llama.LlamaDecoderLayer = te_decoder_cls
-    original_llama_rms_norm_cls = (
-        transformers.models.llama.modeling_llama.LlamaRMSNorm
-    )
+    original_llama_rms_norm_cls = transformers.models.llama.modeling_llama.LlamaRMSNorm
     transformers.models.llama.modeling_llama.LlamaRMSNorm = llama_rms_norm_cls
     try:
         yield
@@ -44,7 +42,9 @@ def replace_decoder(te_decoder_cls, llama_rms_norm_cls):
         transformers.models.llama.modeling_llama.LlamaDecoderLayer = (
             original_llama_decoder_cls
         )
-        transformers.models.llama.modeling_llama.LlamaRMSNorm = original_llama_rms_norm_cls
+        transformers.models.llama.modeling_llama.LlamaRMSNorm = (
+            original_llama_rms_norm_cls
+        )
 
 
 class TELlamaDecoderLayer(te.pytorch.TransformerLayer):
@@ -104,7 +104,9 @@ class TELlamaModel:
     """
 
     def __new__(cls, config: LlamaConfig):
-        with replace_decoder(te_decoder_cls=TELlamaDecoderLayer, llama_rms_norm_cls=LlamaRMSNorm):
+        with replace_decoder(
+            te_decoder_cls=TELlamaDecoderLayer, llama_rms_norm_cls=LlamaRMSNorm
+        ):
             model = LlamaModel(config)
         return model
 
