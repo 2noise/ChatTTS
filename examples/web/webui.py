@@ -158,7 +158,8 @@ def main():
 
         sample_audio_input.change(
             fn=on_upload_sample_audio,
-            inputs=sample_audio_input, outputs=sample_audio_code_input,
+            inputs=sample_audio_input,
+            outputs=sample_audio_code_input,
         ).then(fn=lambda: gr.Info("Sampled Audio Code generated at another Tab."))
 
         # 使用Gradio的回调功能来更新数值输入框
