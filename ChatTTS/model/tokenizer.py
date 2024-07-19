@@ -162,9 +162,7 @@ class Tokenizer:
             .unsqueeze_(1)
             .expand(emb.shape)
         )
-        cond = (
-            input_ids.narrow(-1, 0, 1).eq(self.spk_emb_ids).expand(emb.shape)
-        )
+        cond = input_ids.narrow(-1, 0, 1).eq(self.spk_emb_ids).expand(emb.shape)
         torch.where(cond, n, emb, out=emb)
         del cond, n
 
@@ -183,7 +181,7 @@ class Tokenizer:
         ).copy()
         del dec
         return torch.from_numpy(p).view(*shp)
-    
+
     @staticmethod
     @torch.no_grad()
     def _encode_prompt(prompt: torch.Tensor) -> str:

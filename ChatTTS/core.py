@@ -505,7 +505,9 @@ class Chat:
         del text_mask
 
         if params.spk_emb is not None:
-            self.tokenizer.apply_spk_emb(emb, params.spk_emb, input_ids, self.gpt.device_gpt)
+            self.tokenizer.apply_spk_emb(
+                emb, params.spk_emb, input_ids, self.gpt.device_gpt
+            )
 
         num_code = int(gpt.emb_code[0].num_embeddings - 1)
 
