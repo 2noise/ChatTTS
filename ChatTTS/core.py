@@ -162,7 +162,7 @@ class Chat:
     @torch.inference_mode()
     def sample_audio_speaker(self, wav: Union[np.ndarray, torch.Tensor]) -> str:
         if isinstance(wav, np.ndarray):
-            wav = torch.from_numpy(wav)
+            wav = torch.from_numpy(wav).to(self.device)
         return self.tokenizer._encode_prompt(self.dvae(wav, "encode").squeeze_(0))
 
     @torch.no_grad()

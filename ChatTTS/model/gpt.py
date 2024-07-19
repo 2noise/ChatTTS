@@ -252,8 +252,8 @@ class GPT(nn.Module):
                 attention_mask is not None
                 and attention_mask.shape[1] > input_ids.shape[1]
             ):
-                start = -(attention_mask.shape[1] - past_length)
-                input_ids = input_ids.narrow(1, start, -start)
+                start = attention_mask.shape[1] - past_length
+                input_ids = input_ids.narrow(1, -start, start)
             # 2 - If the past_length is smaller than input_ids', then input_ids holds all input tokens. We can discard
             # input_ids based on the past_length.
             elif past_length < input_ids.shape[1]:
@@ -307,7 +307,9 @@ class GPT(nn.Module):
             # The `contiguous()` here is necessary to have a static stride during decoding. torchdynamo otherwise
             # recompiles graphs as the stride of the inputs is a guard. Ref: https://github.com/huggingface/transformers/pull/29114
             # TODO: use `next_tokens` directly instead.
-            model_inputs.input_ids = input_ids.contiguous()
+            #
+            # The `contiguous()` is removed for introducing the continuous inputs_ids buf
+            model_inputs.input_ids = input_ids
 
         model_inputs.past_key_values = past_key_values
         model_inputs.attention_mask = attention_mask
@@ -404,6 +406,15 @@ class GPT(nn.Module):
             attention_mask_cache.narrow(1, 0, attention_mask.shape[1]).copy_(
                 attention_mask
             )
+        
+        progress = inputs_ids.size(1)
+        # pre-allocate inputs_ids
+        inputs_ids_buf = torch.zeros(
+            inputs_ids.size(0), progress+max_new_token, inputs_ids.size(2),
+            dtype=inputs_ids.dtype, device=inputs_ids.device,
+        )
+        inputs_ids_buf.narrow(1, 0, progress).copy_(inputs_ids)
+        del inputs_ids
 
         pbar: Optional[tqdm] = None
 
@@ -417,6 +428,9 @@ class GPT(nn.Module):
         past_key_values = None
 
         for i in range(max_new_token):
+
+            inputs_ids = inputs_ids_buf.narrow(1, 0, progress)
+
             model_input = self._prepare_generation_inputs(
                 inputs_ids,
                 past_key_values,
@@ -487,13 +501,18 @@ class GPT(nn.Module):
                 logits = logits.permute(0, 2, 1)
                 logits = logits.reshape(-1, logits.size(2))
                 # logits_token = rearrange(inputs_ids[:, start_idx:], "b c n -> (b n) c")
-                inputs_ids_sliced = inputs_ids[:, start_idx:].permute(0, 2, 1)
+                inputs_ids_sliced = inputs_ids.narrow(
+                    1, start_idx, inputs_ids.size(1)-start_idx,
+                ).permute(0, 2, 1)
                 logits_token = inputs_ids_sliced.reshape(
                     inputs_ids_sliced.size(0) * inputs_ids_sliced.size(1),
                     -1,
                 ).to(self.device)
+                del inputs_ids_sliced
             else:
-                logits_token = inputs_ids[:, start_idx:, 0].to(self.device)
+                logits_token = inputs_ids.narrow(
+                    1, start_idx, inputs_ids.size(1)-start_idx,
+                ).narrow(2, 0, 1).to(self.device)
 
             logits /= temperature
 
@@ -522,17 +541,13 @@ class GPT(nn.Module):
                 finish_or = idx_next.eq(eos_token).any(1)
                 finish.logical_or_(finish_or)
                 del finish_or
-                inputs_ids_tmp = torch.cat([inputs_ids, idx_next.unsqueeze_(1)], 1)
+                inputs_ids_buf.narrow(1, progress, 1).copy_(idx_next.unsqueeze_(1))
             else:
                 finish_or = idx_next.eq(eos_token).any(1)
                 finish.logical_or_(finish_or)
                 del finish_or
-                inputs_ids_tmp = torch.cat(
-                    [
-                        inputs_ids,
-                        idx_next.unsqueeze_(-1).expand(-1, -1, self.num_vq),
-                    ],
-                    1,
+                inputs_ids_buf.narrow(1, progress, 1).copy_(
+                    idx_next.unsqueeze_(-1).expand(-1, -1, self.num_vq),
                 )
 
             if i == 0 and finish.any():
@@ -554,7 +569,7 @@ class GPT(nn.Module):
                         attention_mask_cache,
                         past_key_values,
                         idx_next,
-                        inputs_ids_tmp,
+                        inputs_ids_buf,
                     )
                     new_gen = self.generate(
                         emb,
@@ -577,11 +592,11 @@ class GPT(nn.Module):
                     )
                     for result in new_gen:
                         yield result
+                    del inputs_ids
                 return
 
-            del inputs_ids
-            inputs_ids = inputs_ids_tmp
-            del inputs_ids_tmp, idx_next
+            del idx_next
+            progress += 1
 
             not_finished = finish.logical_not().to(end_idx.device)
             end_idx.add_(not_finished.int())
@@ -616,7 +631,7 @@ class GPT(nn.Module):
                     f"incomplete result. hit max_new_token: {max_new_token}"
                 )
 
-        del finish
+        del finish, inputs_ids_buf
 
         yield self._prepare_generation_outputs(
             inputs_ids,
