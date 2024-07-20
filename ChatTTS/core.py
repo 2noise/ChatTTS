@@ -9,6 +9,7 @@ import lzma
 import pathlib
 from ChatTTS.vllm_engine.post_model import Post_model
 from safetensors.torch import save_file, safe_open
+from omegaconf import OmegaConf
 import numpy as np
 import torch
 from vocos import Vocos
@@ -29,14 +30,13 @@ from .utils import (
 from .utils import logger as utils_logger
 
 from .norm import Normalizer
+import pybase16384 as b14
 
 
 class Chat:
     def __init__(self, logger=logging.getLogger(__name__)):
         self.logger = logger
         utils_logger.set_logger(logger)
-
-        self.config = Config()
 
         self.normalizer = Normalizer(
             os.path.join(os.path.dirname(__file__), "res", "homophones_map.json"),
@@ -144,7 +144,9 @@ class Chat:
             use_flash_attn=use_flash_attn,
             **{
                 k: os.path.join(download_path, v)
-                for k, v in asdict(self.config.path).items()
+                for k, v in OmegaConf.load(
+                    os.path.join(download_path, "config", "path.yaml")
+                ).items()
             },
         )
 
@@ -240,9 +242,13 @@ class Chat:
     @torch.no_grad()
     def _load(
         self,
+        vocos_config_path: str = None,
         vocos_ckpt_path: str = None,
+        dvae_config_path: str = None,
         dvae_ckpt_path: str = None,
+        gpt_config_path: str = None,
         gpt_ckpt_path: str = None,
+        decoder_config_path: str = None,
         decoder_ckpt_path: str = None,
         tokenizer_path: str = None,
         device: Optional[torch.device] = None,
@@ -256,21 +262,35 @@ class Chat:
         self.device = device
         self.compile = compile
 
-        feature_extractor = instantiate_class(
-            args=(), init=asdict(self.config.vocos.feature_extractor)
-        )
-        backbone = instantiate_class(args=(), init=asdict(self.config.vocos.backbone))
-        head = instantiate_class(args=(), init=asdict(self.config.vocos.head))
-        vocos = (
-            Vocos(feature_extractor=feature_extractor, backbone=backbone, head=head)
-            .to(
-                # vocos on mps will crash, use cpu fallback
-                "cpu"
-                if "mps" in str(device)
-                else device
+        if vocos_config_path:
+            vocos = (
+                Vocos.from_hparams(vocos_config_path)
+                .to(
+                    # vocos on mps will crash, use cpu fallback
+                    "cpu"
+                    if "mps" in str(device)
+                    else device
+                )
+                .eval()
+            )
+            assert vocos_ckpt_path, "vocos_ckpt_path should not be None"
+            vocos.load_state_dict(
+                torch.load(vocos_ckpt_path, weights_only=True, mmap=True)
+            )
+            self.vocos = vocos
+            self.logger.log(logging.INFO, "vocos loaded.")
+
+        if dvae_config_path:
+            cfg = OmegaConf.load(dvae_config_path)
+            dvae = DVAE(**cfg, coef=coef).to(device).eval()
+            coef = str(dvae)
+            assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
+            dvae.load_state_dict(
+                torch.load(dvae_ckpt_path, weights_only=True, mmap=True)
             )
             self.dvae = dvae
             self.logger.log(logging.INFO, "dvae loaded.")
+
 
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
@@ -320,6 +340,17 @@ class Chat:
                 post_model_path="asset/vllm_model/post_model.safetensors",
             )
             
+        if dvae_config_path:
+            cfg = OmegaConf.load(dvae_config_path)
+            dvae = DVAE(**cfg, coef=coef).to(device).eval()
+            coef = str(dvae)
+            assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
+            dvae.load_state_dict(
+                torch.load(dvae_ckpt_path, weights_only=True, mmap=True)
+            )
+            self.dvae = dvae
+            self.logger.log(logging.INFO, "dvae loaded.")
+
         if decoder_config_path:
             cfg = OmegaConf.load(decoder_config_path)
             decoder = DVAE(**cfg, coef=coef).to(device).eval()
@@ -328,16 +359,8 @@ class Chat:
             decoder.load_state_dict(
                 torch.load(decoder_ckpt_path, weights_only=True, mmap=True)
             )
-            .to(device)
-            .eval()
-        )
-        coef = str(decoder)
-        assert decoder_ckpt_path, "decoder_ckpt_path should not be None"
-        decoder.load_state_dict(
-            torch.load(decoder_ckpt_path, weights_only=True, mmap=True)
-        )
-        self.decoder = decoder
-        self.logger.log(logging.INFO, "decoder loaded.")
+            self.decoder = decoder
+            self.logger.log(logging.INFO, "decoder loaded.")
 
         if tokenizer_path:
             self.tokenizer = Tokenizer(tokenizer_path, device)
@@ -473,33 +496,6 @@ class Chat:
             dtype=np.float16,
         ).copy()
 
-    @torch.no_grad()
-    def _apply_spk_emb(
-        self,
-        emb: torch.Tensor,
-        spk_emb: str,
-        input_ids: torch.Tensor,
-    ):
-        n = (
-            F.normalize(
-                torch.from_numpy(
-                    self._decode_spk_emb(spk_emb),
-                ),
-                p=2.0,
-                dim=0,
-                eps=1e-12,
-            )
-            .to(self.gpt.device_gpt)
-            .unsqueeze_(0)
-            .expand(emb.size(0), -1)
-            .unsqueeze_(1)
-            .expand(emb.shape)
-        )
-        cond = (
-            input_ids.narrow(-1, 0, 1).eq(self.tokenizer.spk_emb_ids).expand(emb.shape)
-        )
-        torch.where(cond, n, emb, out=emb)
-        del cond, n
     @dataclass(repr=False, eq=False)
     class GenerationOutputs:
         ids: List[torch.Tensor]
@@ -552,9 +548,12 @@ class Chat:
             text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
         else:
             text = [f"[Stts][empty_spk]{txt_smp}{i}[Ptts]" for i in text]
-
+        print(params.spk_smp, txt_smp, text)
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            text, self.num_vq, self.device
+            text,
+            self.num_vq,
+            prompt_str=params.spk_smp,
+            device=self.device,
         )
         start_idx = input_ids.shape[-2]
     
@@ -611,8 +610,11 @@ class Chat:
         text = [f"[Sbreak]{i}[Pbreak]{params.prompt}" for i in text]
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            text, self.num_vq, self.device
+            text,
+            self.num_vq,
+            device=self.device,
         )
+        
         start_idx = input_ids.shape[-2]
         # print(start_idx)
         logits_warpers, logits_processors = gen_logits(
