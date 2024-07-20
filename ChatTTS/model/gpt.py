@@ -416,6 +416,7 @@ class GPT(nn.Module):
         )
         inputs_ids_buf.narrow(1, 0, progress).copy_(inputs_ids)
         del inputs_ids
+        inputs_ids = inputs_ids_buf.narrow(1, 0, progress)
 
         pbar: Optional[tqdm] = None
 
@@ -429,8 +430,6 @@ class GPT(nn.Module):
         past_key_values = None
 
         for i in range(max_new_token):
-
-            inputs_ids = inputs_ids_buf.narrow(1, 0, progress)
 
             model_input = self._prepare_generation_inputs(
                 inputs_ids,
@@ -606,6 +605,7 @@ class GPT(nn.Module):
 
             del idx_next
             progress += 1
+            inputs_ids = inputs_ids_buf.narrow(1, 0, progress)
 
             not_finished = finish.logical_not().to(end_idx.device)
             end_idx.add_(not_finished.int())
