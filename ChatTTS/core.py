@@ -548,7 +548,7 @@ class Chat:
             text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
         else:
             text = [f"[Stts][empty_spk]{txt_smp}{i}[Ptts]" for i in text]
-        print(params.spk_smp, txt_smp, text)
+        
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             text,
             self.num_vq,
