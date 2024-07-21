@@ -1,4 +1,5 @@
 """Utilities for selecting and loading models."""
+
 import contextlib
 from typing import Type
 
@@ -8,9 +9,9 @@ from transformers import PretrainedConfig
 
 from vllm.config import ModelConfig
 from vllm.model_executor.models import ModelRegistry
-from vllm.model_executor.weight_utils import (get_quant_config,
-                                              initialize_dummy_weights)
+from vllm.model_executor.weight_utils import get_quant_config, initialize_dummy_weights
 import importlib
+
 
 @contextlib.contextmanager
 def _set_default_torch_dtype(dtype: torch.dtype):
@@ -22,8 +23,11 @@ def _set_default_torch_dtype(dtype: torch.dtype):
 
 
 def _get_model_architecture(config: PretrainedConfig) -> Type[nn.Module]:
-    model_cls = getattr(importlib.import_module("ChatTTS.model.velocity.llama"), "LlamaModel", None)
+    model_cls = getattr(
+        importlib.import_module("ChatTTS.model.velocity.llama"), "LlamaModel", None
+    )
     return model_cls
+
 
 def get_model(model_config: ModelConfig) -> nn.Module:
     model_class = _get_model_architecture(model_config.hf_config)
@@ -31,10 +35,12 @@ def get_model(model_config: ModelConfig) -> nn.Module:
     # Get the (maybe quantized) linear method.
     linear_method = None
     if model_config.quantization is not None:
-        quant_config = get_quant_config(model_config.quantization,
-                                        model_config.model,
-                                        model_config.hf_config,
-                                        model_config.download_dir)
+        quant_config = get_quant_config(
+            model_config.quantization,
+            model_config.model,
+            model_config.hf_config,
+            model_config.download_dir,
+        )
         capability = torch.cuda.get_device_capability()
         capability = capability[0] * 10 + capability[1]
         if capability < quant_config.get_min_capability():
@@ -42,13 +48,15 @@ def get_model(model_config: ModelConfig) -> nn.Module:
                 f"The quantization method {model_config.quantization} is not "
                 "supported for the current GPU. "
                 f"Minimum capability: {quant_config.get_min_capability()}. "
-                f"Current capability: {capability}.")
+                f"Current capability: {capability}."
+            )
         supported_dtypes = quant_config.get_supported_act_dtypes()
         if model_config.dtype not in supported_dtypes:
             raise ValueError(
                 f"{model_config.dtype} is not supported for quantization "
                 f"method {model_config.quantization}. Supported dtypes: "
-                f"{supported_dtypes}")
+                f"{supported_dtypes}"
+            )
         linear_method = quant_config.get_linear_method()
 
     with _set_default_torch_dtype(model_config.dtype):
@@ -62,6 +70,10 @@ def get_model(model_config: ModelConfig) -> nn.Module:
             initialize_dummy_weights(model)
         else:
             # Load the weights from the cached or downloaded files.
-            model.load_weights(model_config.model, model_config.download_dir,
-                               model_config.load_format, model_config.revision)
+            model.load_weights(
+                model_config.model,
+                model_config.download_dir,
+                model_config.load_format,
+                model_config.revision,
+            )
     return model.eval()

@@ -291,33 +291,44 @@ class Chat:
             self.dvae = dvae
             self.logger.log(logging.INFO, "dvae loaded.")
 
-
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
             self.num_vq = 4
             if not os.path.exists("asset/vllm_model"):
                 gpt = GPT(
-                    **cfg, use_flash_attn=use_flash_attn, device=device, logger=self.logger
+                    **cfg,
+                    use_flash_attn=use_flash_attn,
+                    device=device,
+                    logger=self.logger,
                 ).eval()
                 assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
-                gpt.load_state_dict(torch.load(gpt_ckpt_path, weights_only=True, mmap=True))
+                gpt.load_state_dict(
+                    torch.load(gpt_ckpt_path, weights_only=True, mmap=True)
+                )
                 gpt.prepare(compile=compile and "cuda" in str(device))
                 self.gpt = gpt
                 pathlib.Path("asset/vllm_model").mkdir(parents=True, exist_ok=True)
                 self.gpt.gpt.save_pretrained("asset/vllm_model/gpt")
-                self.post_model = Post_model(
-                    cfg.gpt_config.hidden_size,
-                    cfg.num_audio_tokens,
-                    cfg.num_text_tokens,
-                    device = device
-                ).to(device).eval()
-                
+                self.post_model = (
+                    Post_model(
+                        cfg.gpt_config.hidden_size,
+                        cfg.num_audio_tokens,
+                        cfg.num_text_tokens,
+                        device=device,
+                    )
+                    .to(device)
+                    .eval()
+                )
+
                 self.post_model.emb_code = self.gpt.emb_code
                 self.post_model.emb_text = self.gpt.emb_text
                 self.post_model.head_text = self.gpt.head_text
                 self.post_model.head_code = self.gpt.head_code
-                save_file(self.post_model.state_dict(), "asset/vllm_model/post_model.safetensors")
-            
+                save_file(
+                    self.post_model.state_dict(),
+                    "asset/vllm_model/post_model.safetensors",
+                )
+
             self.num_audio_tokens = cfg.num_audio_tokens
             spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
             assert os.path.exists(
@@ -331,15 +342,15 @@ class Chat:
             )
             self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
             self.logger.log(logging.INFO, "gpt loaded.")
-            
+
             self.hidden_size = cfg.gpt_config.hidden_size
             self.gpt = LLM(
                 model="asset/vllm_model/gpt",
-                num_audio_tokens = cfg.num_audio_tokens,
-                num_text_tokens = cfg.num_text_tokens,
+                num_audio_tokens=cfg.num_audio_tokens,
+                num_text_tokens=cfg.num_text_tokens,
                 post_model_path="asset/vllm_model/post_model.safetensors",
             )
-            
+
         if dvae_config_path:
             cfg = OmegaConf.load(dvae_config_path)
             dvae = DVAE(**cfg, coef=coef).to(device).eval()
@@ -369,7 +380,7 @@ class Chat:
         self.coef = coef
 
         return self.has_loaded()
-    
+
     def _infer(
         self,
         text,
@@ -506,7 +517,7 @@ class Chat:
             del_all(self.ids)
             # del_all(self.attentions)
             # del_all(self.hiddens)
-            
+
     @torch.no_grad()
     def _infer_code(
         self,
@@ -548,7 +559,7 @@ class Chat:
             text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
         else:
             text = [f"[Stts][empty_spk]{txt_smp}{i}[Ptts]" for i in text]
-        
+
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             text,
             self.num_vq,
@@ -556,7 +567,7 @@ class Chat:
             device=self.device,
         )
         start_idx = input_ids.shape[-2]
-    
+
         num_code = self.num_audio_tokens - 1
 
         logits_warpers, logits_processors = gen_logits(
@@ -565,34 +576,35 @@ class Chat:
             top_K=params.top_K,
             repetition_penalty=params.repetition_penalty,
         )
-        
+
         sample_params = SamplingParams(
             temperature=temperature,
             max_new_token=params.max_new_token,
-            max_tokens = 8192,
+            max_tokens=8192,
             min_new_token=params.min_new_token,
             logits_processors=(logits_warpers, logits_processors),
-            eos_token = num_code,
+            eos_token=num_code,
             infer_text=False,
-            start_idx=start_idx
+            start_idx=start_idx,
         )
         input_ids = [i.tolist() for i in input_ids]
-        
+
         result = gpt.generate(
             None,
             sample_params,
             input_ids,
         )
-        
+
         token_ids = []
         hidden_states = []
         for i in result:
             token_ids.append(torch.tensor(i.outputs[0].token_ids))
-            hidden_states.append(i.outputs[0].hidden_states.to(torch.float32).to(self.device))
-        return [self.GenerationOutputs(
-            ids=token_ids,
-            hiddens=hidden_states
-        ),]
+            hidden_states.append(
+                i.outputs[0].hidden_states.to(torch.float32).to(self.device)
+            )
+        return [
+            self.GenerationOutputs(ids=token_ids, hiddens=hidden_states),
+        ]
 
     @torch.no_grad()
     def _refine_text(
@@ -602,7 +614,7 @@ class Chat:
         params: RefineTextParams,
     ):
 
-        gpt:LLM = self.gpt
+        gpt: LLM = self.gpt
 
         if not isinstance(text, list):
             text = [text]
@@ -614,7 +626,7 @@ class Chat:
             self.num_vq,
             device=self.device,
         )
-        
+
         start_idx = input_ids.shape[-2]
         # print(start_idx)
         logits_warpers, logits_processors = gen_logits(
@@ -627,26 +639,19 @@ class Chat:
         sample_params = SamplingParams(
             temperature=params.temperature,
             max_new_token=params.max_new_token,
-            max_tokens = 8192,
+            max_tokens=8192,
             min_new_token=params.min_new_token,
             logits_processors=(logits_warpers, logits_processors),
-            eos_token = self.tokenizer.eos_token,
+            eos_token=self.tokenizer.eos_token,
             infer_text=True,
-            start_idx=start_idx
+            start_idx=start_idx,
         )
         input_ids = [i.tolist() for i in input_ids]
-        
-        result = gpt.generate(
-            None,
-            sample_params,
-            input_ids
-        )
+
+        result = gpt.generate(None, sample_params, input_ids)
         token_ids = []
         hidden_states = []
         for i in result:
             token_ids.append(torch.tensor(i.outputs[0].token_ids))
             hidden_states.append(i.outputs[0].hidden_states)
-        return self.GenerationOutputs(
-            ids=token_ids,
-            hiddens=hidden_states
-        )
+        return self.GenerationOutputs(ids=token_ids, hiddens=hidden_states)

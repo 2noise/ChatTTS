@@ -1,17 +1,15 @@
 """A GPU worker class."""
+
 import os
 from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.distributed
 
-from vllm.config import (CacheConfig, ModelConfig, ParallelConfig,
-                         SchedulerConfig)
+from vllm.config import CacheConfig, ModelConfig, ParallelConfig, SchedulerConfig
 from vllm.model_executor import set_random_seed
-from vllm.model_executor.parallel_utils.communication_op import (
-    broadcast_object_list)
-from vllm.model_executor.parallel_utils.parallel_state import (
-    initialize_model_parallel)
+from vllm.model_executor.parallel_utils.communication_op import broadcast_object_list
+from vllm.model_executor.parallel_utils.parallel_state import initialize_model_parallel
 from vllm.sequence import SamplerOutput, SequenceGroupMetadata
 from vllm.worker.cache_engine import CacheEngine
 from ChatTTS.model.velocity.model_runner import ModelRunner
@@ -33,7 +31,7 @@ class Worker:
         local_rank: int,
         rank: int,
         distributed_init_method: str,
-        post_model_path:str,
+        post_model_path: str,
         is_driver_worker: bool = False,
     ) -> None:
         self.model_config = model_config
@@ -44,12 +42,17 @@ class Worker:
         self.distributed_init_method = distributed_init_method
         self.is_driver_worker = is_driver_worker
         self.post_model_path = post_model_path
-        
+
         if self.is_driver_worker:
             assert self.rank == 0, "The driver worker must have rank 0."
 
-        self.model_runner = ModelRunner(model_config, parallel_config,
-                                        scheduler_config, is_driver_worker, post_model_path)
+        self.model_runner = ModelRunner(
+            model_config,
+            parallel_config,
+            scheduler_config,
+            is_driver_worker,
+            post_model_path,
+        )
         # Uninitialized cache engine. Will be initialized by
         # self.init_cache_engine().
         self.cache_config = None
@@ -74,8 +77,9 @@ class Worker:
         _check_if_gpu_supports_dtype(self.model_config.dtype)
 
         # Initialize the distributed environment.
-        _init_distributed_environment(self.parallel_config, self.rank,
-                                      self.distributed_init_method)
+        _init_distributed_environment(
+            self.parallel_config, self.rank, self.distributed_init_method
+        )
 
         # Initialize the model.
         set_random_seed(self.model_config.seed)
@@ -105,10 +109,12 @@ class Worker:
         peak_memory = total_gpu_memory - free_gpu_memory
 
         cache_block_size = CacheEngine.get_cache_block_size(
-            block_size, self.model_config, self.parallel_config)
+            block_size, self.model_config, self.parallel_config
+        )
         num_gpu_blocks = int(
-            (total_gpu_memory * gpu_memory_utilization - peak_memory) //
-            cache_block_size)
+            (total_gpu_memory * gpu_memory_utilization - peak_memory)
+            // cache_block_size
+        )
         num_cpu_blocks = int(cpu_swap_space // cache_block_size)
         num_gpu_blocks = max(num_gpu_blocks, 0)
         num_cpu_blocks = max(num_cpu_blocks, 0)
@@ -117,8 +123,9 @@ class Worker:
 
     def init_cache_engine(self, cache_config: CacheConfig) -> None:
         self.cache_config = cache_config
-        self.cache_engine = CacheEngine(self.cache_config, self.model_config,
-                                        self.parallel_config)
+        self.cache_engine = CacheEngine(
+            self.cache_config, self.model_config, self.parallel_config
+        )
         self.cache_events = self.cache_engine.events
         self.gpu_cache = self.cache_engine.gpu_cache
         self.model_runner.set_block_size(self.cache_engine.block_size)
@@ -171,10 +178,11 @@ class Worker:
             assert blocks_to_swap_out is not None
             assert blocks_to_copy is not None
             block_swapping_info = [
-                blocks_to_swap_in, blocks_to_swap_out, blocks_to_copy
+                blocks_to_swap_in,
+                blocks_to_swap_out,
+                blocks_to_copy,
             ]
-            broadcast_object_list([num_seq_groups] + block_swapping_info,
-                                  src=0)
+            broadcast_object_list([num_seq_groups] + block_swapping_info, src=0)
         else:
             # num_seq_groups, blocks_to_swap_in, blocks_to_swap_out,
             # blocks_to_copy (4 elements)
@@ -189,8 +197,9 @@ class Worker:
         if num_seq_groups == 0:
             return {}
 
-        output = self.model_runner.execute_model(seq_group_metadata_list,
-                                                 self.gpu_cache)
+        output = self.model_runner.execute_model(
+            seq_group_metadata_list, self.gpu_cache
+        )
         return output
 
 
@@ -206,11 +215,13 @@ def _init_distributed_environment(
             raise RuntimeError(
                 "torch.distributed is already initialized but the torch world "
                 "size does not match parallel_config.world_size "
-                f"({torch_world_size} vs. {parallel_config.world_size}).")
+                f"({torch_world_size} vs. {parallel_config.world_size})."
+            )
     elif not distributed_init_method:
         raise ValueError(
             "distributed_init_method must be set if torch.distributed "
-            "is not already initialized")
+            "is not already initialized"
+        )
     else:
         torch.distributed.init_process_group(
             backend="nccl",
@@ -221,8 +232,9 @@ def _init_distributed_environment(
 
     # A small all_reduce for warmup.
     torch.distributed.all_reduce(torch.zeros(1).cuda())
-    initialize_model_parallel(parallel_config.tensor_parallel_size,
-                              parallel_config.pipeline_parallel_size)
+    initialize_model_parallel(
+        parallel_config.tensor_parallel_size, parallel_config.pipeline_parallel_size
+    )
 
 
 def _check_if_gpu_supports_dtype(torch_dtype: torch.dtype):
@@ -234,4 +246,5 @@ def _check_if_gpu_supports_dtype(torch_dtype: torch.dtype):
             raise ValueError(
                 "Bfloat16 is only supported on GPUs with compute capability "
                 f"of at least 8.0. Your {gpu_name} GPU has compute capability "
-                f"{compute_capability[0]}.{compute_capability[1]}.")
+                f"{compute_capability[0]}.{compute_capability[1]}."
+            )
