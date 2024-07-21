@@ -5,20 +5,18 @@ from dataclasses import dataclass, asdict
 from typing import Literal, Optional, List, Tuple, Dict, Union
 from json import load
 from pathlib import Path
-import lzma
-import pathlib
-from ChatTTS.model.velocity.post_model import Post_model
-from safetensors.torch import save_file, safe_open
-from omegaconf import OmegaConf
+
+from safetensors.torch import save_file
 import numpy as np
 import torch
 from vocos import Vocos
 from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
-import pybase16384 as b14
-from ChatTTS.model.velocity.llm import LLM
-from ChatTTS.model.velocity.sampling_params import SamplingParams
-import yaml
+
+from .config import Config
+from .model.velocity.llm import LLM
+from .model.velocity.post_model import Post_model
+from .model.velocity.sampling_params import SamplingParams
 from .model import DVAE, GPT, gen_logits, Tokenizer
 from .utils import (
     check_all_assets,
@@ -30,13 +28,14 @@ from .utils import (
 from .utils import logger as utils_logger
 
 from .norm import Normalizer
-import pybase16384 as b14
 
 
 class Chat:
     def __init__(self, logger=logging.getLogger(__name__)):
         self.logger = logger
         utils_logger.set_logger(logger)
+
+        self.config = Config()
 
         self.normalizer = Normalizer(
             os.path.join(os.path.dirname(__file__), "res", "homophones_map.json"),
@@ -144,9 +143,7 @@ class Chat:
             use_flash_attn=use_flash_attn,
             **{
                 k: os.path.join(download_path, v)
-                for k, v in OmegaConf.load(
-                    os.path.join(download_path, "config", "path.yaml")
-                ).items()
+                for k, v in asdict(self.config.path).items()
             },
         )
 
@@ -172,7 +169,7 @@ class Chat:
 
     @torch.no_grad()
     def _sample_random_speaker(self) -> torch.Tensor:
-        dim: int = self.hidden_size
+        dim: int = self.config.gpt.hidden_size
         spk = (
             torch.randn(dim, device=self.std.device, dtype=self.std.dtype)
             .mul_(self.std)
@@ -242,13 +239,9 @@ class Chat:
     @torch.no_grad()
     def _load(
         self,
-        vocos_config_path: str = None,
         vocos_ckpt_path: str = None,
-        dvae_config_path: str = None,
         dvae_ckpt_path: str = None,
-        gpt_config_path: str = None,
         gpt_ckpt_path: str = None,
-        decoder_config_path: str = None,
         decoder_ckpt_path: str = None,
         tokenizer_path: str = None,
         device: Optional[torch.device] = None,
@@ -262,34 +255,42 @@ class Chat:
         self.device = device
         self.compile = compile
 
-        if vocos_config_path:
-            vocos = (
-                Vocos.from_hparams(vocos_config_path)
-                .to(
-                    # vocos on mps will crash, use cpu fallback
-                    "cpu"
-                    if "mps" in str(device)
-                    else device
-                )
-                .eval()
+        feature_extractor = instantiate_class(
+            args=(), init=asdict(self.config.vocos.feature_extractor)
+        )
+        backbone = instantiate_class(args=(), init=asdict(self.config.vocos.backbone))
+        head = instantiate_class(args=(), init=asdict(self.config.vocos.head))
+        vocos = (
+            Vocos(feature_extractor=feature_extractor, backbone=backbone, head=head)
+            .to(
+                # vocos on mps will crash, use cpu fallback
+                "cpu"
+                if "mps" in str(device)
+                else device
             )
-            assert vocos_ckpt_path, "vocos_ckpt_path should not be None"
-            vocos.load_state_dict(
-                torch.load(vocos_ckpt_path, weights_only=True, mmap=True)
-            )
-            self.vocos = vocos
-            self.logger.log(logging.INFO, "vocos loaded.")
+            .eval()
+        )
+        assert vocos_ckpt_path, "vocos_ckpt_path should not be None"
+        vocos.load_state_dict(torch.load(vocos_ckpt_path, weights_only=True, mmap=True))
+        self.vocos = vocos
+        self.logger.log(logging.INFO, "vocos loaded.")
 
-        if dvae_config_path:
-            cfg = OmegaConf.load(dvae_config_path)
-            dvae = DVAE(**cfg, coef=coef).to(device).eval()
-            coef = str(dvae)
-            assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
-            dvae.load_state_dict(
-                torch.load(dvae_ckpt_path, weights_only=True, mmap=True)
+        dvae = (
+            DVAE(
+                decoder_config=asdict(self.config.dvae.decoder),
+                encoder_config=asdict(self.config.dvae.encoder),
+                vq_config=asdict(self.config.dvae.vq),
+                dim=self.config.dvae.decoder.idim,
+                coef=coef,
             )
-            self.dvae = dvae
-            self.logger.log(logging.INFO, "dvae loaded.")
+            .to(device)
+            .eval()
+        )
+        coef = str(dvae)
+        assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
+        dvae.load_state_dict(torch.load(dvae_ckpt_path, weights_only=True, mmap=True))
+        self.dvae = dvae
+        self.logger.log(logging.INFO, "dvae loaded.")
 
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
@@ -343,7 +344,6 @@ class Chat:
             self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
             self.logger.log(logging.INFO, "gpt loaded.")
 
-            self.hidden_size = cfg.gpt_config.hidden_size
             self.gpt = LLM(
                 model="asset/vllm_model/gpt",
                 num_audio_tokens=cfg.num_audio_tokens,
@@ -351,27 +351,22 @@ class Chat:
                 post_model_path="asset/vllm_model/post_model.safetensors",
             )
 
-        if dvae_config_path:
-            cfg = OmegaConf.load(dvae_config_path)
-            dvae = DVAE(**cfg, coef=coef).to(device).eval()
-            coef = str(dvae)
-            assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
-            dvae.load_state_dict(
-                torch.load(dvae_ckpt_path, weights_only=True, mmap=True)
+        decoder = (
+            DVAE(
+                decoder_config=asdict(self.config.decoder),
+                dim=self.config.decoder.idim,
+                coef=coef,
             )
-            self.dvae = dvae
-            self.logger.log(logging.INFO, "dvae loaded.")
-
-        if decoder_config_path:
-            cfg = OmegaConf.load(decoder_config_path)
-            decoder = DVAE(**cfg, coef=coef).to(device).eval()
-            coef = str(decoder)
-            assert decoder_ckpt_path, "decoder_ckpt_path should not be None"
-            decoder.load_state_dict(
-                torch.load(decoder_ckpt_path, weights_only=True, mmap=True)
-            )
-            self.decoder = decoder
-            self.logger.log(logging.INFO, "decoder loaded.")
+            .to(device)
+            .eval()
+        )
+        coef = str(decoder)
+        assert decoder_ckpt_path, "decoder_ckpt_path should not be None"
+        decoder.load_state_dict(
+            torch.load(decoder_ckpt_path, weights_only=True, mmap=True)
+        )
+        self.decoder = decoder
+        self.logger.log(logging.INFO, "decoder loaded.")
 
         if tokenizer_path:
             self.tokenizer = Tokenizer(tokenizer_path, device)
@@ -495,28 +490,6 @@ class Chat:
         wavs = self._vocos_decode(mel_specs)
         del mel_specs
         return wavs
-
-    @staticmethod
-    def _decode_spk_emb(spk_emb: str) -> np.ndarray:
-        return np.frombuffer(
-            lzma.decompress(
-                b14.decode_from_string(spk_emb),
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-            dtype=np.float16,
-        ).copy()
-
-    @dataclass(repr=False, eq=False)
-    class GenerationOutputs:
-        ids: List[torch.Tensor]
-        # attentions: List[Optional[Tuple[torch.FloatTensor, ...]]]
-        hiddens: List[torch.Tensor]
-
-        def destroy(self):
-            del_all(self.ids)
-            # del_all(self.attentions)
-            # del_all(self.hiddens)
 
     @torch.no_grad()
     def _infer_code(
