@@ -7,7 +7,7 @@ from json import load
 from pathlib import Path
 import lzma
 import pathlib
-from ChatTTS.vllm_engine.post_model import Post_model
+from ChatTTS.model.velocity.post_model import Post_model
 from safetensors.torch import save_file, safe_open
 from omegaconf import OmegaConf
 import numpy as np
@@ -16,8 +16,8 @@ from vocos import Vocos
 from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
 import pybase16384 as b14
-from ChatTTS.vllm_engine.llm import LLM
-from ChatTTS.vllm_engine.sampling_params import SamplingParams
+from ChatTTS.model.velocity.llm import LLM
+from ChatTTS.model.velocity.sampling_params import SamplingParams
 import yaml
 from .model import DVAE, GPT, gen_logits, Tokenizer
 from .utils import (

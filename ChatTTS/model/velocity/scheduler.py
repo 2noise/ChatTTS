@@ -3,10 +3,10 @@ import time
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from vllm.config import CacheConfig, SchedulerConfig
-from ChatTTS.vllm_engine.block_manager import AllocStatus, BlockSpaceManager
+from ChatTTS.model.velocity.block_manager import AllocStatus, BlockSpaceManager
 from vllm.core.policy import PolicyFactory
 from vllm.logger import init_logger
-from ChatTTS.vllm_engine.sequence import (Sequence, SequenceData, SequenceGroup,
+from ChatTTS.model.velocity.sequence import (Sequence, SequenceData, SequenceGroup,
                            SequenceGroupMetadata, SequenceStatus)
 
 logger = init_logger(__name__)

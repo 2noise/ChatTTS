@@ -7,14 +7,14 @@ from typing import (TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple,
 
 from vllm.config import (CacheConfig, ModelConfig, ParallelConfig,
                          SchedulerConfig)
-from ChatTTS.vllm_engine.scheduler import Scheduler, SchedulerOutputs
-from ChatTTS.vllm_engine.configs import EngineArgs
+from ChatTTS.model.velocity.scheduler import Scheduler, SchedulerOutputs
+from ChatTTS.model.velocity.configs import EngineArgs
 from vllm.engine.metrics import record_metrics
 from vllm.engine.ray_utils import RayWorkerVllm, initialize_cluster, ray
 from vllm.logger import init_logger
-from ChatTTS.vllm_engine.output import RequestOutput
-from ChatTTS.vllm_engine.sampling_params import SamplingParams
-from ChatTTS.vllm_engine.sequence import (SamplerOutput, Sequence, SequenceGroup,
+from ChatTTS.model.velocity.output import RequestOutput
+from ChatTTS.model.velocity.sampling_params import SamplingParams
+from ChatTTS.model.velocity.sequence import (SamplerOutput, Sequence, SequenceGroup,
                            SequenceGroupOutput, SequenceOutput, SequenceStatus)
 from vllm.transformers_utils.tokenizer import (detokenize_incrementally,
                                                get_tokenizer)
@@ -123,7 +123,7 @@ class LLMEngine:
     def _init_workers(self):
         # Lazy import the Worker to avoid importing torch.cuda/xformers
         # before CUDA_VISIBLE_DEVICES is set in the Worker
-        from ChatTTS.vllm_engine.worker import Worker
+        from ChatTTS.model.velocity.worker import Worker
 
         assert self.parallel_config.world_size == 1, (
             "Ray is required if parallel_config.world_size > 1.")

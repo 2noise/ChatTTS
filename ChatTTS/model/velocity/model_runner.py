@@ -5,16 +5,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from ChatTTS.vllm_engine.configs import ModelConfig, ParallelConfig, SchedulerConfig
+from ChatTTS.model.velocity.configs import ModelConfig, ParallelConfig, SchedulerConfig
 from vllm.logger import init_logger
-from ChatTTS.vllm_engine.model_loader import get_model
+from ChatTTS.model.velocity.model_loader import get_model
 from vllm.model_executor import InputMetadata, SamplingMetadata
 from vllm.model_executor.parallel_utils.communication_op import (
     broadcast, broadcast_object_list)
-from ChatTTS.vllm_engine.sampling_params import SamplingParams, SamplingType
-from ChatTTS.vllm_engine.sequence import SamplerOutput, SequenceData, SequenceGroupMetadata, SequenceGroupOutput, SequenceOutput
+from ChatTTS.model.velocity.sampling_params import SamplingParams, SamplingType
+from ChatTTS.model.velocity.sequence import SamplerOutput, SequenceData, SequenceGroupMetadata, SequenceGroupOutput, SequenceOutput
 from vllm.utils import in_wsl
-from ChatTTS.vllm_engine.post_model import Post_model, Sampler
+from ChatTTS.model.velocity.post_model import Post_model, Sampler
 from safetensors.torch import safe_open
 
 logger = init_logger(__name__)

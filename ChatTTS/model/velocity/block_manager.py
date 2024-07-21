@@ -3,7 +3,7 @@ import enum
 from typing import Dict, List, Optional, Set, Tuple
 
 from vllm.block import PhysicalTokenBlock
-from ChatTTS.vllm_engine.sequence import Sequence, SequenceGroup, SequenceStatus
+from ChatTTS.model.velocity.sequence import Sequence, SequenceGroup, SequenceStatus
 from vllm.utils import Device
 
 # Mapping: logical block number -> physical block.

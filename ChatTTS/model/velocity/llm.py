@@ -3,10 +3,10 @@ from typing import List, Optional, Union
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 
-from ChatTTS.vllm_engine.configs import EngineArgs
-from ChatTTS.vllm_engine.llm_engine import LLMEngine
-from ChatTTS.vllm_engine.output import RequestOutput
-from ChatTTS.vllm_engine.sampling_params import SamplingParams
+from ChatTTS.model.velocity.configs import EngineArgs
+from ChatTTS.model.velocity.llm_engine import LLMEngine
+from ChatTTS.model.velocity.output import RequestOutput
+from ChatTTS.model.velocity.sampling_params import SamplingParams
 from vllm.utils import Counter
 
 
