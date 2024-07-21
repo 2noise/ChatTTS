@@ -6,8 +6,8 @@ from typing import Literal, Optional, List, Tuple, Dict, Union
 from json import load
 from pathlib import Path
 
-from safetensors.torch import save_file
 import numpy as np
+from safetensors.torch import save_file
 import torch
 from vocos import Vocos
 from vocos.pretrained import instantiate_class
@@ -294,7 +294,7 @@ class Chat:
 
         if gpt_config_path:
             cfg = OmegaConf.load(gpt_config_path)
-            self.num_vq = 4
+            self.config.gpt.num_vq = 4
             if not os.path.exists("asset/vllm_model"):
                 gpt = GPT(
                     **cfg,
@@ -501,7 +501,7 @@ class Chat:
         params: InferCodeParams,
     ):
 
-        gpt: LLM = self.gpt
+        gpt = self.gpt
 
         if not isinstance(text, list):
             text = [text]
@@ -509,7 +509,7 @@ class Chat:
         assert len(text), "text should not be empty"
 
         if not isinstance(params.temperature, list):
-            temperature = [params.temperature] * self.num_vq
+            temperature = [params.temperature] * self.config.gpt.num_vq
         else:
             temperature = params.temperature
 
@@ -535,7 +535,7 @@ class Chat:
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             text,
-            self.num_vq,
+            self.config.gpt.num_vq,
             prompt_str=params.spk_smp,
             device=self.device,
         )
@@ -587,7 +587,7 @@ class Chat:
         params: RefineTextParams,
     ):
 
-        gpt: LLM = self.gpt
+        gpt = self.gpt
 
         if not isinstance(text, list):
             text = [text]
@@ -596,7 +596,7 @@ class Chat:
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             text,
-            self.num_vq,
+            self.config.gpt.num_vq,
             device=self.device,
         )
 
