@@ -253,6 +253,7 @@ class Chat:
             device = select_device()
             self.logger.info("use device %s", str(device))
         self.device = device
+        self.device_gpt = device if "mps" not in str(device) else torch.device("cpu")
         self.compile = compile
 
         feature_extractor = instantiate_class(
@@ -299,7 +300,8 @@ class Chat:
                 gpt = GPT(
                     **cfg,
                     use_flash_attn=use_flash_attn,
-                    device=device,
+                    device=self.device,
+                    device_gpt=self.device_gpt,
                     logger=self.logger,
                 ).eval()
                 assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
@@ -537,7 +539,7 @@ class Chat:
             text,
             self.config.gpt.num_vq,
             prompt_str=params.spk_smp,
-            device=self.device,
+            device=self.device_gpt,
         )
         start_idx = input_ids.shape[-2]
 
@@ -597,7 +599,7 @@ class Chat:
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             text,
             self.config.gpt.num_vq,
-            device=self.device,
+            device=self.device_gpt,
         )
 
         start_idx = input_ids.shape[-2]

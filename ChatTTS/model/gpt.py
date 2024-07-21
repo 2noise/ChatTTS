@@ -28,6 +28,7 @@ class GPT(nn.Module):
         num_vq=4,
         use_flash_attn=False,
         device=torch.device("cpu"),
+        device_gpt=torch.device("cpu"),
         logger=logging.getLogger(__name__),
     ):
         super().__init__()
@@ -35,7 +36,7 @@ class GPT(nn.Module):
         self.logger = logger
 
         self.device = device
-        self.device_gpt = device if "mps" not in str(device) else torch.device("cpu")
+        self.device_gpt = device_gpt
 
         self.num_vq = num_vq
         self.num_audio_tokens = num_audio_tokens
