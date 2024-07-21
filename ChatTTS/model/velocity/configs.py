@@ -79,7 +79,7 @@ class ModelConfig:
         enforce_eager: bool = False,
         max_context_len_to_capture: Optional[int] = None,
         num_audio_tokens: int = 1024,
-        num_text_tokens: int = 80
+        num_text_tokens: int = 80,
     ) -> None:
         self.model = model
         self.tokenizer = tokenizer
@@ -95,22 +95,24 @@ class ModelConfig:
         self.max_context_len_to_capture = max_context_len_to_capture
         self.num_audio_tokens = num_audio_tokens
         self.num_text_tokens = num_text_tokens
-        
+
         if os.environ.get("VLLM_USE_MODELSCOPE", "False").lower() == "true":
             # download model from ModelScope hub,
             # lazy import so that modelscope is not required for normal use.
-            from modelscope.hub.snapshot_download import snapshot_download  # pylint: disable=C
-            model_path = snapshot_download(model_id=model,
-                                           cache_dir=download_dir,
-                                           revision=revision)
+            from modelscope.hub.snapshot_download import (
+                snapshot_download,
+            )  # pylint: disable=C
+
+            model_path = snapshot_download(
+                model_id=model, cache_dir=download_dir, revision=revision
+            )
             self.model = model_path
             self.download_dir = model_path
             self.tokenizer = model_path
 
         self.hf_config = get_config(self.model, trust_remote_code, revision)
         self.dtype = _get_and_verify_dtype(self.hf_config, dtype)
-        self.max_model_len = _get_and_verify_max_len(self.hf_config,
-                                                     max_model_len)
+        self.max_model_len = _get_and_verify_max_len(self.hf_config, max_model_len)
         self._verify_load_format()
         self._verify_tokenizer_mode()
         self._verify_quantization()
@@ -118,30 +120,32 @@ class ModelConfig:
 
     def _verify_load_format(self) -> None:
         load_format = self.load_format.lower()
-        supported_load_format = [
-            "auto", "pt", "safetensors", "npcache", "dummy"
-        ]
+        supported_load_format = ["auto", "pt", "safetensors", "npcache", "dummy"]
         rocm_not_supported_load_format = []
         if load_format not in supported_load_format:
             raise ValueError(
                 f"Unknown load format: {self.load_format}. Must be one of "
-                "'auto', 'pt', 'safetensors', 'npcache', or 'dummy'.")
+                "'auto', 'pt', 'safetensors', 'npcache', or 'dummy'."
+            )
         if is_hip() and load_format in rocm_not_supported_load_format:
             rocm_supported_load_format = [
-                f for f in supported_load_format
+                f
+                for f in supported_load_format
                 if (f not in rocm_not_supported_load_format)
             ]
             raise ValueError(
-                f"load format \'{load_format}\' is not supported in ROCm. "
+                f"load format '{load_format}' is not supported in ROCm. "
                 f"Supported load format are "
-                f"{rocm_supported_load_format}")
+                f"{rocm_supported_load_format}"
+            )
 
         # TODO: Remove this check once HF updates the pt weights of Mixtral.
         architectures = getattr(self.hf_config, "architectures", [])
         if "MixtralForCausalLM" in architectures and load_format == "pt":
             raise ValueError(
                 "Currently, the 'pt' format is not supported for Mixtral. "
-                "Please use the 'safetensors' format instead. ")
+                "Please use the 'safetensors' format instead. "
+            )
         self.load_format = load_format
 
     def _verify_tokenizer_mode(self) -> None:
@@ -149,7 +153,8 @@ class ModelConfig:
         if tokenizer_mode not in ["auto", "slow"]:
             raise ValueError(
                 f"Unknown tokenizer mode: {self.tokenizer_mode}. Must be "
-                "either 'auto' or 'slow'.")
+                "either 'auto' or 'slow'."
+            )
         self.tokenizer_mode = tokenizer_mode
 
     def _verify_quantization(self) -> None:
@@ -169,27 +174,32 @@ class ModelConfig:
                     "Quantization method specified in the model config "
                     f"({hf_quant_method}) does not match the quantization "
                     f"method specified in the `quantization` argument "
-                    f"({self.quantization}).")
+                    f"({self.quantization})."
+                )
 
         if self.quantization is not None:
             if self.quantization not in supported_quantization:
                 raise ValueError(
                     f"Unknown quantization method: {self.quantization}. Must "
-                    f"be one of {supported_quantization}.")
-            if is_hip(
-            ) and self.quantization in rocm_not_supported_quantization:
+                    f"be one of {supported_quantization}."
+                )
+            if is_hip() and self.quantization in rocm_not_supported_quantization:
                 raise ValueError(
                     f"{self.quantization} quantization is currently not supported "
-                    f"in ROCm.")
-            logger.warning(f"{self.quantization} quantization is not fully "
-                           "optimized yet. The speed can be slower than "
-                           "non-quantized models.")
+                    f"in ROCm."
+                )
+            logger.warning(
+                f"{self.quantization} quantization is not fully "
+                "optimized yet. The speed can be slower than "
+                "non-quantized models."
+            )
 
     def _verify_cuda_graph(self) -> None:
         if self.max_context_len_to_capture is None:
             self.max_context_len_to_capture = self.max_model_len
-        self.max_context_len_to_capture = min(self.max_context_len_to_capture,
-                                              self.max_model_len)
+        self.max_context_len_to_capture = min(
+            self.max_context_len_to_capture, self.max_model_len
+        )
 
     def verify_with_parallel_config(
         self,
@@ -201,7 +211,8 @@ class ModelConfig:
             raise ValueError(
                 f"Total number of attention heads ({total_num_attention_heads})"
                 " must be divisible by tensor parallel size "
-                f"({tensor_parallel_size}).")
+                f"({tensor_parallel_size})."
+            )
 
         total_num_hidden_layers = self.hf_config.num_hidden_layers
         pipeline_parallel_size = parallel_config.pipeline_parallel_size
@@ -209,7 +220,8 @@ class ModelConfig:
             raise ValueError(
                 f"Total number of hidden layers ({total_num_hidden_layers}) "
                 "must be divisible by pipeline parallel size "
-                f"({pipeline_parallel_size}).")
+                f"({pipeline_parallel_size})."
+            )
 
     def get_sliding_window(self) -> Optional[int]:
         return getattr(self.hf_config, "sliding_window", None)
@@ -233,9 +245,11 @@ class ModelConfig:
         falcon_model_types = ["falcon", "RefinedWeb", "RefinedWebModel"]
         new_decoder_arch_falcon = (
             self.hf_config.model_type in falcon_model_types
-            and getattr(self.hf_config, "new_decoder_architecture", False))
-        if not new_decoder_arch_falcon and getattr(self.hf_config,
-                                                   "multi_query", False):
+            and getattr(self.hf_config, "new_decoder_architecture", False)
+        )
+        if not new_decoder_arch_falcon and getattr(
+            self.hf_config, "multi_query", False
+        ):
             # Multi-query attention, only one KV head.
             # Currently, tensor parallelism is not supported in this case.
             return 1
@@ -265,8 +279,7 @@ class ModelConfig:
         # the tensor parallel size. We will replicate the KV heads in the
         # case where the number of KV heads is smaller than the tensor
         # parallel size so each GPU has at least one KV head.
-        return max(1,
-                   total_num_kv_heads // parallel_config.tensor_parallel_size)
+        return max(1, total_num_kv_heads // parallel_config.tensor_parallel_size)
 
     def get_num_layers(self, parallel_config: "ParallelConfig") -> int:
         total_num_hidden_layers = self.hf_config.num_hidden_layers
@@ -304,7 +317,8 @@ class CacheConfig:
         if self.gpu_memory_utilization > 1.0:
             raise ValueError(
                 "GPU memory utilization must be less than 1.0. Got "
-                f"{self.gpu_memory_utilization}.")
+                f"{self.gpu_memory_utilization}."
+            )
 
     def verify_with_parallel_config(
         self,
@@ -316,9 +330,11 @@ class CacheConfig:
         num_gpus_per_node = parallel_config.tensor_parallel_size
         cpu_memory_usage = self.swap_space_bytes * num_gpus_per_node
 
-        msg = (f"{cpu_memory_usage / _GB:.2f} GiB out of "
-               f"the {total_cpu_memory / _GB:.2f} GiB total CPU memory is "
-               "allocated for the swap space.")
+        msg = (
+            f"{cpu_memory_usage / _GB:.2f} GiB out of "
+            f"the {total_cpu_memory / _GB:.2f} GiB total CPU memory is "
+            "allocated for the swap space."
+        )
         if cpu_memory_usage > 0.7 * total_cpu_memory:
             raise ValueError("Too large swap space. " + msg)
         elif cpu_memory_usage > 0.4 * total_cpu_memory:
@@ -355,8 +371,7 @@ class ParallelConfig:
 
     def _verify_args(self) -> None:
         if self.pipeline_parallel_size > 1:
-            raise NotImplementedError(
-                "Pipeline parallelism is not supported yet.")
+            raise NotImplementedError("Pipeline parallelism is not supported yet.")
 
 
 class SchedulerConfig:
@@ -398,12 +413,14 @@ class SchedulerConfig:
                 "This effectively limits the maximum sequence length to "
                 "max_num_batched_tokens and makes vLLM reject longer "
                 "sequences. Please increase max_num_batched_tokens or "
-                "decrease max_model_len.")
+                "decrease max_model_len."
+            )
         if self.max_num_batched_tokens < self.max_num_seqs:
             raise ValueError(
                 f"max_num_batched_tokens ({self.max_num_batched_tokens}) must "
                 "be greater than or equal to max_num_seqs "
-                f"({self.max_num_seqs}).")
+                f"({self.max_num_seqs})."
+            )
 
 
 _STR_DTYPE_TO_TORCH_DTYPE = {
@@ -447,11 +464,14 @@ def _get_and_verify_dtype(
 
     if is_hip() and torch_dtype == torch.float32:
         rocm_supported_dtypes = [
-            k for k, v in _STR_DTYPE_TO_TORCH_DTYPE.items()
+            k
+            for k, v in _STR_DTYPE_TO_TORCH_DTYPE.items()
             if (k not in _ROCM_NOT_SUPPORTED_DTYPE)
         ]
-        raise ValueError(f"dtype \'{dtype}\' is not supported in ROCm. "
-                         f"Supported dtypes are {rocm_supported_dtypes}")
+        raise ValueError(
+            f"dtype '{dtype}' is not supported in ROCm. "
+            f"Supported dtypes are {rocm_supported_dtypes}"
+        )
 
     # Verify the dtype.
     if torch_dtype != config_dtype:
@@ -502,7 +522,8 @@ def _get_and_verify_max_len(
             "The model's config.json does not contain any of the following "
             "keys to determine the original maximum length of the model: "
             f"{possible_keys}. Assuming the model's maximum length is "
-            f"{default_max_len}.")
+            f"{default_max_len}."
+        )
         derived_max_model_len = default_max_len
 
     rope_scaling = getattr(hf_config, "rope_scaling", None)
@@ -510,8 +531,7 @@ def _get_and_verify_max_len(
         assert "factor" in rope_scaling
         scaling_factor = rope_scaling["factor"]
         if rope_scaling["type"] == "yarn":
-            derived_max_model_len = rope_scaling[
-                "original_max_position_embeddings"]
+            derived_max_model_len = rope_scaling["original_max_position_embeddings"]
         derived_max_model_len *= scaling_factor
 
     if max_model_len is None:
@@ -522,20 +542,22 @@ def _get_and_verify_max_len(
             f"the derived max_model_len ({max_len_key}={derived_max_model_len}"
             " in model's config.json). This may lead to incorrect model "
             "outputs or CUDA errors. Make sure the value is correct and "
-            "within the model context size.")
+            "within the model context size."
+        )
     return int(max_model_len)
 
 
 @dataclass
 class EngineArgs:
     """Arguments for vLLM engine."""
+
     model: str
     tokenizer: Optional[str] = None
-    tokenizer_mode: str = 'auto'
+    tokenizer_mode: str = "auto"
     trust_remote_code: bool = False
     download_dir: Optional[str] = None
-    load_format: str = 'auto'
-    dtype: str = 'auto'
+    load_format: str = "auto"
+    dtype: str = "auto"
     seed: int = 0
     max_model_len: Optional[int] = None
     worker_use_ray: bool = False
@@ -556,14 +578,13 @@ class EngineArgs:
     max_context_len_to_capture: int = 8192
     num_audio_tokens: int = 1024
     num_text_tokens: int = 80
-    
+
     def __post_init__(self):
         if self.tokenizer is None:
             self.tokenizer = self.model
 
     @staticmethod
-    def add_cli_args(
-            parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    def add_cli_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         """Shared CLI arguments for vLLM engine."""
 
         # NOTE: If you update any of the arguments below, please also
@@ -571,162 +592,198 @@ class EngineArgs:
 
         # Model arguments
         parser.add_argument(
-            '--model',
+            "--model",
             type=str,
-            default='facebook/opt-125m',
-            help='name or path of the huggingface model to use')
+            default="facebook/opt-125m",
+            help="name or path of the huggingface model to use",
+        )
         parser.add_argument(
-            '--tokenizer',
+            "--tokenizer",
             type=str,
             default=EngineArgs.tokenizer,
-            help='name or path of the huggingface tokenizer to use')
+            help="name or path of the huggingface tokenizer to use",
+        )
         parser.add_argument(
-            '--revision',
+            "--revision",
             type=str,
             default=None,
-            help='the specific model version to use. It can be a branch '
-            'name, a tag name, or a commit id. If unspecified, will use '
-            'the default version.')
+            help="the specific model version to use. It can be a branch "
+            "name, a tag name, or a commit id. If unspecified, will use "
+            "the default version.",
+        )
         parser.add_argument(
-            '--tokenizer-revision',
+            "--tokenizer-revision",
             type=str,
             default=None,
-            help='the specific tokenizer version to use. It can be a branch '
-            'name, a tag name, or a commit id. If unspecified, will use '
-            'the default version.')
-        parser.add_argument('--tokenizer-mode',
-                            type=str,
-                            default=EngineArgs.tokenizer_mode,
-                            choices=['auto', 'slow'],
-                            help='tokenizer mode. "auto" will use the fast '
-                            'tokenizer if available, and "slow" will '
-                            'always use the slow tokenizer.')
-        parser.add_argument('--trust-remote-code',
-                            action='store_true',
-                            help='trust remote code from huggingface')
-        parser.add_argument('--download-dir',
-                            type=str,
-                            default=EngineArgs.download_dir,
-                            help='directory to download and load the weights, '
-                            'default to the default cache dir of '
-                            'huggingface')
+            help="the specific tokenizer version to use. It can be a branch "
+            "name, a tag name, or a commit id. If unspecified, will use "
+            "the default version.",
+        )
         parser.add_argument(
-            '--load-format',
+            "--tokenizer-mode",
+            type=str,
+            default=EngineArgs.tokenizer_mode,
+            choices=["auto", "slow"],
+            help='tokenizer mode. "auto" will use the fast '
+            'tokenizer if available, and "slow" will '
+            "always use the slow tokenizer.",
+        )
+        parser.add_argument(
+            "--trust-remote-code",
+            action="store_true",
+            help="trust remote code from huggingface",
+        )
+        parser.add_argument(
+            "--download-dir",
+            type=str,
+            default=EngineArgs.download_dir,
+            help="directory to download and load the weights, "
+            "default to the default cache dir of "
+            "huggingface",
+        )
+        parser.add_argument(
+            "--load-format",
             type=str,
             default=EngineArgs.load_format,
-            choices=['auto', 'pt', 'safetensors', 'npcache', 'dummy'],
-            help='The format of the model weights to load. '
+            choices=["auto", "pt", "safetensors", "npcache", "dummy"],
+            help="The format of the model weights to load. "
             '"auto" will try to load the weights in the safetensors format '
-            'and fall back to the pytorch bin format if safetensors format '
-            'is not available. '
+            "and fall back to the pytorch bin format if safetensors format "
+            "is not available. "
             '"pt" will load the weights in the pytorch bin format. '
             '"safetensors" will load the weights in the safetensors format. '
             '"npcache" will load the weights in pytorch format and store '
-            'a numpy cache to speed up the loading. '
+            "a numpy cache to speed up the loading. "
             '"dummy" will initialize the weights with random values, '
-            'which is mainly for profiling.')
+            "which is mainly for profiling.",
+        )
         parser.add_argument(
-            '--dtype',
+            "--dtype",
             type=str,
             default=EngineArgs.dtype,
-            choices=[
-                'auto', 'half', 'float16', 'bfloat16', 'float', 'float32'
-            ],
-            help='data type for model weights and activations. '
+            choices=["auto", "half", "float16", "bfloat16", "float", "float32"],
+            help="data type for model weights and activations. "
             'The "auto" option will use FP16 precision '
-            'for FP32 and FP16 models, and BF16 precision '
-            'for BF16 models.')
-        parser.add_argument('--max-model-len',
-                            type=int,
-                            default=None,
-                            help='model context length. If unspecified, '
-                            'will be automatically derived from the model.')
-        # Parallel arguments
-        parser.add_argument('--worker-use-ray',
-                            action='store_true',
-                            help='use Ray for distributed serving, will be '
-                            'automatically set when using more than 1 GPU')
-        parser.add_argument('--pipeline-parallel-size',
-                            '-pp',
-                            type=int,
-                            default=EngineArgs.pipeline_parallel_size,
-                            help='number of pipeline stages')
-        parser.add_argument('--tensor-parallel-size',
-                            '-tp',
-                            type=int,
-                            default=EngineArgs.tensor_parallel_size,
-                            help='number of tensor parallel replicas')
+            "for FP32 and FP16 models, and BF16 precision "
+            "for BF16 models.",
+        )
         parser.add_argument(
-            '--max-parallel-loading-workers',
+            "--max-model-len",
             type=int,
-            help='load model sequentially in multiple batches, '
-            'to avoid RAM OOM when using tensor '
-            'parallel and large models')
-        # KV cache arguments
-        parser.add_argument('--block-size',
-                            type=int,
-                            default=EngineArgs.block_size,
-                            choices=[8, 16, 32],
-                            help='token block size')
-        # TODO(woosuk): Support fine-grained seeds (e.g., seed per request).
-        parser.add_argument('--seed',
-                            type=int,
-                            default=EngineArgs.seed,
-                            help='random seed')
-        parser.add_argument('--swap-space',
-                            type=int,
-                            default=EngineArgs.swap_space,
-                            help='CPU swap space size (GiB) per GPU')
+            default=None,
+            help="model context length. If unspecified, "
+            "will be automatically derived from the model.",
+        )
+        # Parallel arguments
         parser.add_argument(
-            '--gpu-memory-utilization',
+            "--worker-use-ray",
+            action="store_true",
+            help="use Ray for distributed serving, will be "
+            "automatically set when using more than 1 GPU",
+        )
+        parser.add_argument(
+            "--pipeline-parallel-size",
+            "-pp",
+            type=int,
+            default=EngineArgs.pipeline_parallel_size,
+            help="number of pipeline stages",
+        )
+        parser.add_argument(
+            "--tensor-parallel-size",
+            "-tp",
+            type=int,
+            default=EngineArgs.tensor_parallel_size,
+            help="number of tensor parallel replicas",
+        )
+        parser.add_argument(
+            "--max-parallel-loading-workers",
+            type=int,
+            help="load model sequentially in multiple batches, "
+            "to avoid RAM OOM when using tensor "
+            "parallel and large models",
+        )
+        # KV cache arguments
+        parser.add_argument(
+            "--block-size",
+            type=int,
+            default=EngineArgs.block_size,
+            choices=[8, 16, 32],
+            help="token block size",
+        )
+        # TODO(woosuk): Support fine-grained seeds (e.g., seed per request).
+        parser.add_argument(
+            "--seed", type=int, default=EngineArgs.seed, help="random seed"
+        )
+        parser.add_argument(
+            "--swap-space",
+            type=int,
+            default=EngineArgs.swap_space,
+            help="CPU swap space size (GiB) per GPU",
+        )
+        parser.add_argument(
+            "--gpu-memory-utilization",
             type=float,
             default=EngineArgs.gpu_memory_utilization,
-            help='the fraction of GPU memory to be used for '
-            'the model executor, which can range from 0 to 1.'
-            'If unspecified, will use the default value of 0.9.')
-        parser.add_argument('--max-num-batched-tokens',
-                            type=int,
-                            default=EngineArgs.max_num_batched_tokens,
-                            help='maximum number of batched tokens per '
-                            'iteration')
-        parser.add_argument('--max-num-seqs',
-                            type=int,
-                            default=EngineArgs.max_num_seqs,
-                            help='maximum number of sequences per iteration')
-        parser.add_argument('--max-paddings',
-                            type=int,
-                            default=EngineArgs.max_paddings,
-                            help='maximum number of paddings in a batch')
-        parser.add_argument('--disable-log-stats',
-                            action='store_true',
-                            help='disable logging statistics')
+            help="the fraction of GPU memory to be used for "
+            "the model executor, which can range from 0 to 1."
+            "If unspecified, will use the default value of 0.9.",
+        )
+        parser.add_argument(
+            "--max-num-batched-tokens",
+            type=int,
+            default=EngineArgs.max_num_batched_tokens,
+            help="maximum number of batched tokens per " "iteration",
+        )
+        parser.add_argument(
+            "--max-num-seqs",
+            type=int,
+            default=EngineArgs.max_num_seqs,
+            help="maximum number of sequences per iteration",
+        )
+        parser.add_argument(
+            "--max-paddings",
+            type=int,
+            default=EngineArgs.max_paddings,
+            help="maximum number of paddings in a batch",
+        )
+        parser.add_argument(
+            "--disable-log-stats",
+            action="store_true",
+            help="disable logging statistics",
+        )
         # Quantization settings.
-        parser.add_argument('--quantization',
-                            '-q',
-                            type=str,
-                            choices=['awq', 'gptq', 'squeezellm', None],
-                            default=None,
-                            help='Method used to quantize the weights. If '
-                            'None, we first check the `quantization_config` '
-                            'attribute in the model config file. If that is '
-                            'None, we assume the model weights are not '
-                            'quantized and use `dtype` to determine the data '
-                            'type of the weights.')
-        parser.add_argument('--enforce-eager',
-                            action='store_true',
-                            help='Always use eager-mode PyTorch. If False, '
-                            'will use eager mode and CUDA graph in hybrid '
-                            'for maximal performance and flexibility.')
-        parser.add_argument('--max-context-len-to-capture',
-                            type=int,
-                            default=EngineArgs.max_context_len_to_capture,
-                            help='maximum context length covered by CUDA '
-                            'graphs. When a sequence has context length '
-                            'larger than this, we fall back to eager mode.')
+        parser.add_argument(
+            "--quantization",
+            "-q",
+            type=str,
+            choices=["awq", "gptq", "squeezellm", None],
+            default=None,
+            help="Method used to quantize the weights. If "
+            "None, we first check the `quantization_config` "
+            "attribute in the model config file. If that is "
+            "None, we assume the model weights are not "
+            "quantized and use `dtype` to determine the data "
+            "type of the weights.",
+        )
+        parser.add_argument(
+            "--enforce-eager",
+            action="store_true",
+            help="Always use eager-mode PyTorch. If False, "
+            "will use eager mode and CUDA graph in hybrid "
+            "for maximal performance and flexibility.",
+        )
+        parser.add_argument(
+            "--max-context-len-to-capture",
+            type=int,
+            default=EngineArgs.max_context_len_to_capture,
+            help="maximum context length covered by CUDA "
+            "graphs. When a sequence has context length "
+            "larger than this, we fall back to eager mode.",
+        )
         return parser
 
     @classmethod
-    def from_cli_args(cls, args: argparse.Namespace) -> 'EngineArgs':
+    def from_cli_args(cls, args: argparse.Namespace) -> "EngineArgs":
         # Get the list of attributes of this dataclass.
         attrs = [attr.name for attr in dataclasses.fields(cls)]
         # Set the attributes from the parsed arguments.
@@ -736,52 +793,73 @@ class EngineArgs:
     def create_engine_configs(
         self,
     ) -> Tuple[ModelConfig, CacheConfig, ParallelConfig, SchedulerConfig]:
-        model_config = ModelConfig(self.model, self.tokenizer,
-                                   self.tokenizer_mode, self.trust_remote_code,
-                                   self.download_dir, self.load_format,
-                                   self.dtype, self.seed, self.revision,
-                                   self.tokenizer_revision, self.max_model_len,
-                                   self.quantization, self.enforce_eager,
-                                   self.max_context_len_to_capture,
-                                   self.num_audio_tokens, self.num_text_tokens,
-                                   )
-        cache_config = CacheConfig(self.block_size,
-                                   self.gpu_memory_utilization,
-                                   self.swap_space,
-                                   model_config.get_sliding_window())
-        parallel_config = ParallelConfig(self.pipeline_parallel_size,
-                                         self.tensor_parallel_size,
-                                         self.worker_use_ray,
-                                         self.max_parallel_loading_workers)
-        scheduler_config = SchedulerConfig(self.max_num_batched_tokens,
-                                           self.max_num_seqs,
-                                           model_config.max_model_len,
-                                           self.max_paddings)
+        model_config = ModelConfig(
+            self.model,
+            self.tokenizer,
+            self.tokenizer_mode,
+            self.trust_remote_code,
+            self.download_dir,
+            self.load_format,
+            self.dtype,
+            self.seed,
+            self.revision,
+            self.tokenizer_revision,
+            self.max_model_len,
+            self.quantization,
+            self.enforce_eager,
+            self.max_context_len_to_capture,
+            self.num_audio_tokens,
+            self.num_text_tokens,
+        )
+        cache_config = CacheConfig(
+            self.block_size,
+            self.gpu_memory_utilization,
+            self.swap_space,
+            model_config.get_sliding_window(),
+        )
+        parallel_config = ParallelConfig(
+            self.pipeline_parallel_size,
+            self.tensor_parallel_size,
+            self.worker_use_ray,
+            self.max_parallel_loading_workers,
+        )
+        scheduler_config = SchedulerConfig(
+            self.max_num_batched_tokens,
+            self.max_num_seqs,
+            model_config.max_model_len,
+            self.max_paddings,
+        )
         return model_config, cache_config, parallel_config, scheduler_config
 
 
 @dataclass
 class AsyncEngineArgs(EngineArgs):
     """Arguments for asynchronous vLLM engine."""
+
     engine_use_ray: bool = False
     disable_log_requests: bool = False
     max_log_len: Optional[int] = None
 
     @staticmethod
-    def add_cli_args(
-            parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    def add_cli_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         parser = EngineArgs.add_cli_args(parser)
-        parser.add_argument('--engine-use-ray',
-                            action='store_true',
-                            help='use Ray to start the LLM engine in a '
-                            'separate process as the server process.')
-        parser.add_argument('--disable-log-requests',
-                            action='store_true',
-                            help='disable logging requests')
-        parser.add_argument('--max-log-len',
-                            type=int,
-                            default=None,
-                            help='max number of prompt characters or prompt '
-                            'ID numbers being printed in log. '
-                            'Default: unlimited.')
+        parser.add_argument(
+            "--engine-use-ray",
+            action="store_true",
+            help="use Ray to start the LLM engine in a "
+            "separate process as the server process.",
+        )
+        parser.add_argument(
+            "--disable-log-requests",
+            action="store_true",
+            help="disable logging requests",
+        )
+        parser.add_argument(
+            "--max-log-len",
+            type=int,
+            default=None,
+            help="max number of prompt characters or prompt "
+            "ID numbers being printed in log. "
+            "Default: unlimited.",
+        )
         return parser
