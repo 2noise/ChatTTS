@@ -535,6 +535,16 @@ class Chat:
         )
         start_idx = input_ids.shape[-2]
 
+        if not gpt.is_vllm:
+            emb = gpt(input_ids, text_mask)
+
+            del text_mask
+
+            if params.spk_emb is not None:
+                self.tokenizer.apply_spk_emb(
+                    emb, params.spk_emb, input_ids, self.gpt.device_gpt
+                )
+
         num_code = self.config.gpt.num_audio_tokens - 1
 
         logits_warpers, logits_processors = gen_logits(
@@ -602,6 +612,12 @@ class Chat:
             top_K=params.top_K,
             repetition_penalty=params.repetition_penalty,
         )
+
+        if not gpt.is_vllm:
+
+            emb = gpt(input_ids, text_mask)
+
+            del text_mask
 
         sample_params = SamplingParams(
             temperature=params.temperature,

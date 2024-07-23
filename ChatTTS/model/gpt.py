@@ -44,6 +44,7 @@ class GPT(nn.Module):
 
         self.gpt, self.llama_config = self._build_llama(gpt_config, self.device_gpt)
         self.is_te_llama = False
+        self.is_vllm = False
         self.model_dim = int(self.gpt.config.hidden_size)
         self.emb_code = nn.ModuleList(
             [
