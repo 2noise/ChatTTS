@@ -23,8 +23,6 @@ class GPT(nn.Module):
     def __init__(
         self,
         gpt_config: dict,
-        num_audio_tokens: int = 626,
-        num_text_tokens: int = 21178,
         num_vq=4,
         use_flash_attn=False,
         device=torch.device("cpu"),
@@ -39,7 +37,8 @@ class GPT(nn.Module):
         self.device_gpt = device_gpt
 
         self.num_vq = num_vq
-        self.num_audio_tokens = num_audio_tokens
+        self.num_audio_tokens = int(gpt_config["num_audio_tokens"])
+        self.num_text_tokens = int(gpt_config["num_text_tokens"])
 
         self.use_flash_attn = use_flash_attn
 
@@ -49,7 +48,7 @@ class GPT(nn.Module):
         self.emb_code = nn.ModuleList(
             [
                 nn.Embedding(
-                    num_audio_tokens,
+                    self.num_audio_tokens,
                     self.model_dim,
                     device=self.device_gpt,
                 )
@@ -57,13 +56,13 @@ class GPT(nn.Module):
             ],
         )
         self.emb_text = nn.Embedding(
-            num_text_tokens, self.model_dim, device=self.device_gpt
+            self.num_text_tokens, self.model_dim, device=self.device_gpt
         )
 
         self.head_text = weight_norm(
             nn.Linear(
                 self.model_dim,
-                num_text_tokens,
+                self.num_text_tokens,
                 bias=False,
                 device=device,
             ),
@@ -74,7 +73,7 @@ class GPT(nn.Module):
                 weight_norm(
                     nn.Linear(
                         self.model_dim,
-                        num_audio_tokens,
+                        self.num_audio_tokens,
                         bias=False,
                         device=device,
                     ),

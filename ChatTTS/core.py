@@ -293,65 +293,57 @@ class Chat:
         self.dvae = dvae
         self.logger.log(logging.INFO, "dvae loaded.")
 
-        if gpt_config_path:
-            cfg = OmegaConf.load(gpt_config_path)
-            self.config.gpt.num_vq = 4
-            if not os.path.exists("asset/vllm_model"):
-                gpt = GPT(
-                    **cfg,
-                    use_flash_attn=use_flash_attn,
-                    device=self.device,
-                    device_gpt=self.device_gpt,
-                    logger=self.logger,
-                ).eval()
-                assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
-                gpt.load_state_dict(
-                    torch.load(gpt_ckpt_path, weights_only=True, mmap=True)
-                )
-                gpt.prepare(compile=compile and "cuda" in str(device))
-                self.gpt = gpt
-                pathlib.Path("asset/vllm_model").mkdir(parents=True, exist_ok=True)
-                self.gpt.gpt.save_pretrained("asset/vllm_model/gpt")
-                self.post_model = (
-                    Post_model(
-                        cfg.gpt_config.hidden_size,
-                        cfg.num_audio_tokens,
-                        cfg.num_text_tokens,
-                        device=device,
-                    )
-                    .to(device)
-                    .eval()
-                )
+        if not os.path.exists("asset/vllm_model"):
+            gpt = GPT(
+                gpt_config=asdict(self.config.gpt),
+                use_flash_attn=use_flash_attn,
+                device=device,
+                logger=self.logger,
+            ).eval()
+            assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
+            gpt.from_pretrained(gpt_ckpt_path)
+            gpt.prepare(compile=compile and "cuda" in str(device))
+            self.gpt = gpt
 
-                self.post_model.emb_code = self.gpt.emb_code
-                self.post_model.emb_text = self.gpt.emb_text
-                self.post_model.head_text = self.gpt.head_text
-                self.post_model.head_code = self.gpt.head_code
-                save_file(
-                    self.post_model.state_dict(),
-                    "asset/vllm_model/post_model.safetensors",
+            pathlib.Path("asset/vllm_model").mkdir(parents=True, exist_ok=True)
+            self.gpt.gpt.save_pretrained("asset/vllm_model/gpt")
+            self.post_model = (
+                Post_model(
+                    self.config.gpt.hidden_size,
+                    self.config.gpt.num_audio_tokens,
+                    self.config.gpt.num_text_tokens,
+                    device=device,
                 )
-
-            self.num_audio_tokens = cfg.num_audio_tokens
-            spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
-            assert os.path.exists(
-                spk_stat_path
-            ), f"Missing spk_stat.pt: {spk_stat_path}"
-            spk_stat: torch.Tensor = torch.load(
-                spk_stat_path,
-                weights_only=True,
-                mmap=True,
-                map_location=device,
+                .to(device)
+                .eval()
             )
-            self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
-            self.logger.log(logging.INFO, "gpt loaded.")
 
-            self.gpt = LLM(
-                model="asset/vllm_model/gpt",
-                num_audio_tokens=cfg.num_audio_tokens,
-                num_text_tokens=cfg.num_text_tokens,
-                post_model_path="asset/vllm_model/post_model.safetensors",
+            self.post_model.emb_code = self.gpt.emb_code
+            self.post_model.emb_text = self.gpt.emb_text
+            self.post_model.head_text = self.gpt.head_text
+            self.post_model.head_code = self.gpt.head_code
+            save_file(
+                self.post_model.state_dict(),
+                "asset/vllm_model/post_model.safetensors",
             )
+
+        self.gpt = LLM(
+            model="asset/vllm_model/gpt",
+            num_audio_tokens=self.config.gpt.num_audio_tokens,
+            num_text_tokens=self.config.gpt.num_text_tokens,
+            post_model_path="asset/vllm_model/post_model.safetensors",
+        )
+
+        spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
+        assert os.path.exists(spk_stat_path), f"Missing spk_stat.pt: {spk_stat_path}"
+        spk_stat: torch.Tensor = torch.load(
+            spk_stat_path,
+            weights_only=True,
+            mmap=True,
+            map_location=device,
+        )
+        self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
+        self.logger.log(logging.INFO, "gpt loaded.")
 
         decoder = (
             DVAE(
@@ -543,7 +535,7 @@ class Chat:
         )
         start_idx = input_ids.shape[-2]
 
-        num_code = self.num_audio_tokens - 1
+        num_code = self.config.gpt.num_audio_tokens - 1
 
         logits_warpers, logits_processors = gen_logits(
             num_code=num_code,
