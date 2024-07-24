@@ -516,6 +516,7 @@ class Chat:
 
         if gpt.is_vllm:
             from .model.velocity.sampling_params import SamplingParams
+
             sample_params = SamplingParams(
                 temperature=temperature,
                 max_new_token=params.max_new_token,
@@ -613,6 +614,7 @@ class Chat:
 
         if gpt.is_vllm:
             from .model.velocity.sampling_params import SamplingParams
+
             sample_params = SamplingParams(
                 temperature=params.temperature,
                 max_new_token=params.max_new_token,
