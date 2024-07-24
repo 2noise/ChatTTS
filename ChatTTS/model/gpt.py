@@ -5,7 +5,6 @@ from typing import Union, List, Optional, Tuple, Callable
 import gc
 from pathlib import Path
 
-from safetensors.torch import save_file
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -92,6 +91,8 @@ class GPT(nn.Module):
 
     def from_pretrained(self, file_path: str):
         if self.is_vllm and platform.system().lower() == "linux":
+            from safetensors.torch import save_file
+
             from .velocity.llm import LLM
             from .velocity.post_model import PostModel
 
@@ -104,7 +105,7 @@ class GPT(nn.Module):
                 gpt.gpt.save_pretrained(vllm_folder / "gpt")
                 post_model = (
                     PostModel(
-                        int(self.gpt.config.hidden_size),
+                        int(gpt.gpt.config.hidden_size),
                         self.num_audio_tokens,
                         self.num_text_tokens,
                     )

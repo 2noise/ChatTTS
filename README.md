@@ -101,7 +101,12 @@ conda activate chattts
 pip install -r requirements.txt
 ```
 
-#### Optional: Install TransformerEngine if using NVIDIA GPU (Linux only)
+#### Optional: Install vLLM (Linux only)
+```bash
+pip install safetensors vllm==0.2.7 torchaudio
+```
+
+#### Unrecommended Optional: Install TransformerEngine if using NVIDIA GPU (Linux only)
 > [!Note]
 > The installation process is very slow.
 
@@ -113,7 +118,7 @@ pip install -r requirements.txt
 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 ```
 
-#### Optional: Install FlashAttention-2 (mainly NVIDIA GPU)
+#### Unrecommended Optional: Install FlashAttention-2 (mainly NVIDIA GPU)
 > [!Note]
 > See supported devices at the [Hugging Face Doc](https://huggingface.co/docs/transformers/perf_infer_gpu_one#flashattention-2).
 
