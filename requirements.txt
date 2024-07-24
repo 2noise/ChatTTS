@@ -15,3 +15,4 @@ nemo_text_processing; sys_platform == 'linux'
 av
 pydub
 safetensors
+vllm>=0.2.7; sys_platform == 'linux'

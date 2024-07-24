@@ -12,7 +12,7 @@ from vllm.model_executor.parallel_utils.communication_op import broadcast_object
 from vllm.model_executor.parallel_utils.parallel_state import initialize_model_parallel
 from vllm.sequence import SamplerOutput, SequenceGroupMetadata
 from vllm.worker.cache_engine import CacheEngine
-from ChatTTS.model.velocity.model_runner import ModelRunner
+from .model_runner import ModelRunner
 
 
 class Worker:

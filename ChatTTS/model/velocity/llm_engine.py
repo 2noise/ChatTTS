@@ -5,14 +5,14 @@ import time
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from vllm.config import CacheConfig, ModelConfig, ParallelConfig, SchedulerConfig
-from ChatTTS.model.velocity.scheduler import Scheduler, SchedulerOutputs
-from ChatTTS.model.velocity.configs import EngineArgs
+from .scheduler import Scheduler, SchedulerOutputs
+from .configs import EngineArgs
 from vllm.engine.metrics import record_metrics
 from vllm.engine.ray_utils import RayWorkerVllm, initialize_cluster, ray
 from vllm.logger import init_logger
-from ChatTTS.model.velocity.output import RequestOutput
-from ChatTTS.model.velocity.sampling_params import SamplingParams
-from ChatTTS.model.velocity.sequence import (
+from .output import RequestOutput
+from .sampling_params import SamplingParams
+from .sequence import (
     SamplerOutput,
     Sequence,
     SequenceGroup,
@@ -127,7 +127,7 @@ class LLMEngine:
     def _init_workers(self):
         # Lazy import the Worker to avoid importing torch.cuda/xformers
         # before CUDA_VISIBLE_DEVICES is set in the Worker
-        from ChatTTS.model.velocity.worker import Worker
+        from .worker import Worker
 
         assert (
             self.parallel_config.world_size == 1

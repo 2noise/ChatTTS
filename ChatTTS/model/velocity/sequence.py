@@ -5,7 +5,7 @@ import enum
 from typing import Dict, List, Optional, Union
 import torch
 from vllm.block import LogicalTokenBlock
-from ChatTTS.model.velocity.sampling_params import SamplingParams
+from .sampling_params import SamplingParams
 
 PromptLogprobs = List[Optional[Dict[int, float]]]
 SampleLogprobs = List[Dict[int, float]]

@@ -24,7 +24,7 @@ def _set_default_torch_dtype(dtype: torch.dtype):
 
 def _get_model_architecture(config: PretrainedConfig) -> Type[nn.Module]:
     model_cls = getattr(
-        importlib.import_module("ChatTTS.model.velocity.llama"), "LlamaModel", None
+        importlib.import_module(".llama"), "LlamaModel", None
     )
     return model_cls
 

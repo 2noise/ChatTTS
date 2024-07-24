@@ -1,7 +1,7 @@
 from typing import List, Optional
 import torch
 
-from ChatTTS.model.velocity.sequence import (
+from .sequence import (
     PromptLogprobs,
     SampleLogprobs,
     SequenceGroup,
