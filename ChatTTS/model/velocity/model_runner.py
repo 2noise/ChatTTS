@@ -766,7 +766,9 @@ class CUDAGraphRunner:
 
 def _pad_to_max(x: List[int], max_len: int, pad: int) -> List[int]:
     assert len(x) <= max_len
-    return x + [pad] * (max_len - len(x))
+    if len(x) == max_len:
+        return list(x)
+    return list(x) + [pad] * (max_len - len(x))
 
 
 def _make_tensor_with_pad(

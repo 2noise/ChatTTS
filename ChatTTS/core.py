@@ -548,7 +548,7 @@ class Chat:
             del_all(logits_processors)
 
             return [
-                self.GenerationOutputs(ids=token_ids, hiddens=hidden_states),
+                GPT.GenerationOutputs(ids=token_ids, hiddens=hidden_states),
             ]
 
         emb = gpt(input_ids, text_mask)
@@ -638,7 +638,7 @@ class Chat:
             del_all(logits_warpers)
             del_all(logits_processors)
 
-            return self.GenerationOutputs(ids=token_ids, hiddens=hidden_states)
+            return GPT.GenerationOutputs(ids=token_ids, hiddens=hidden_states)
 
         emb = gpt(input_ids, text_mask)
 
