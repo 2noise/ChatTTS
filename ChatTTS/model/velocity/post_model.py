@@ -1,11 +1,9 @@
-import os, platform
+import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 """
 https://stackoverflow.com/questions/62691279/how-to-disable-tokenizers-parallelism-true-false-warning
 """
-
-import logging
 
 import torch
 import torch.nn as nn
@@ -14,7 +12,7 @@ from torch.nn.utils.parametrizations import weight_norm
 from typing import List, Callable
 
 
-class Post_model(nn.Module):
+class PostModel(nn.Module):
     def __init__(
         self, hidden_size: int, num_audio_tokens: int, num_text_tokens: int, num_vq=4
     ):
@@ -74,7 +72,7 @@ class Post_model(nn.Module):
 
 
 class Sampler:
-    def __init__(self, post_model: Post_model, num_audio_tokens: int, num_vq: int):
+    def __init__(self, post_model: PostModel, num_audio_tokens: int, num_vq: int):
         self.post_model = post_model
         self.device = next(self.post_model.parameters()).device
         self.num_audio_tokens = num_audio_tokens

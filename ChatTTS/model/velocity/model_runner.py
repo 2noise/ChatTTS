@@ -22,7 +22,7 @@ from ChatTTS.model.velocity.sequence import (
     SequenceOutput,
 )
 from vllm.utils import in_wsl
-from ChatTTS.model.velocity.post_model import Post_model, Sampler
+from ChatTTS.model.velocity.post_model import PostModel, Sampler
 from safetensors.torch import safe_open
 
 logger = init_logger(__name__)
@@ -78,7 +78,7 @@ class ModelRunner:
 
     def load_model(self) -> None:
         self.model = get_model(self.model_config)
-        self.post_model = Post_model(
+        self.post_model = PostModel(
             self.model_config.get_hidden_size(),
             self.model_config.num_audio_tokens,
             self.model_config.num_text_tokens,

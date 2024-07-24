@@ -15,7 +15,7 @@ from huggingface_hub import snapshot_download
 
 from .config import Config
 from .model.velocity.llm import LLM
-from .model.velocity.post_model import Post_model
+from .model.velocity.post_model import PostModel
 from .model.velocity.sampling_params import SamplingParams
 from .model import DVAE, GPT, gen_logits, Tokenizer
 from .utils import (
@@ -308,7 +308,7 @@ class Chat:
             pathlib.Path("asset/vllm_model").mkdir(parents=True, exist_ok=True)
             self.gpt.gpt.save_pretrained("asset/vllm_model/gpt")
             self.post_model = (
-                Post_model(
+                PostModel(
                     self.config.gpt.hidden_size,
                     self.config.gpt.num_audio_tokens,
                     self.config.gpt.num_text_tokens,
