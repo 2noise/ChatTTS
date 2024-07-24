@@ -549,7 +549,9 @@ class Chat:
 
             return [
                 GPT.GenerationOutputs(
-                    ids=token_ids, hiddens=hidden_states, attentions=[],
+                    ids=token_ids,
+                    hiddens=hidden_states,
+                    attentions=[],
                 ),
             ]
 
@@ -640,8 +642,11 @@ class Chat:
             del_all(logits_warpers)
             del_all(logits_processors)
 
-            return GPT.GenerationOutputs(ids=token_ids, hiddens=hidden_states, attentions=[],
-                                        )
+            return GPT.GenerationOutputs(
+                ids=token_ids,
+                hiddens=hidden_states,
+                attentions=[],
+            )
 
         emb = gpt(input_ids, text_mask)
 

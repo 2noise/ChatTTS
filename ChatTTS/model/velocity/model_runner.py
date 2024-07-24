@@ -782,14 +782,16 @@ def _make_tensor_with_pad(
     padded_x = []
     for x_i in x:
         pad_i = pad
-        if isinstance(x[0][0],tuple):
+        if isinstance(x[0][0], tuple):
             pad_i = (0,) * len(x[0][0])
         padded_x.append(_pad_to_max(x_i, max_len, pad_i))
-        
-    return torch.tensor(padded_x,
-                        dtype=dtype,
-                        device=device,
-                        pin_memory=pin_memory and str(device) == "cpu")
+
+    return torch.tensor(
+        padded_x,
+        dtype=dtype,
+        device=device,
+        pin_memory=pin_memory and str(device) == "cpu",
+    )
 
 
 def _get_graph_batch_size(batch_size: int) -> int:
