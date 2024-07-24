@@ -604,8 +604,6 @@ class Chat:
             device=self.device_gpt,
         )
 
-        start_idx = input_ids.shape[-2]
-        # print(start_idx)
         logits_warpers, logits_processors = gen_logits(
             num_code=self.tokenizer.len,
             top_P=params.top_P,
@@ -623,7 +621,7 @@ class Chat:
                 logits_processors=(logits_processors, logits_warpers),
                 eos_token=self.tokenizer.eos_token,
                 infer_text=True,
-                start_idx=start_idx,
+                start_idx=input_ids.shape[-2],
             )
             input_ids = [i.tolist() for i in input_ids]
 
