@@ -7,15 +7,12 @@ from json import load
 from pathlib import Path
 
 import numpy as np
-from safetensors.torch import save_file
 import torch
 from vocos import Vocos
 from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
 
 from .config import Config
-from .model.velocity.llm import LLM
-from .model.velocity.post_model import PostModel
 from .model.velocity.sampling_params import SamplingParams
 from .model import DVAE, GPT, gen_logits, Tokenizer
 from .utils import (
@@ -293,46 +290,16 @@ class Chat:
         self.dvae = dvae
         self.logger.log(logging.INFO, "dvae loaded.")
 
-        if not os.path.exists("asset/vllm_model"):
-            gpt = GPT(
-                gpt_config=asdict(self.config.gpt),
-                use_flash_attn=use_flash_attn,
-                device=device,
-                logger=self.logger,
-            ).eval()
-            assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
-            gpt.from_pretrained(gpt_ckpt_path)
-            gpt.prepare(compile=compile and "cuda" in str(device))
-            self.gpt = gpt
-
-            pathlib.Path("asset/vllm_model").mkdir(parents=True, exist_ok=True)
-            self.gpt.gpt.save_pretrained("asset/vllm_model/gpt")
-            self.post_model = (
-                PostModel(
-                    self.config.gpt.hidden_size,
-                    self.config.gpt.num_audio_tokens,
-                    self.config.gpt.num_text_tokens,
-                    device=device,
-                )
-                .to(device)
-                .eval()
-            )
-
-            self.post_model.emb_code = self.gpt.emb_code
-            self.post_model.emb_text = self.gpt.emb_text
-            self.post_model.head_text = self.gpt.head_text
-            self.post_model.head_code = self.gpt.head_code
-            save_file(
-                self.post_model.state_dict(),
-                "asset/vllm_model/post_model.safetensors",
-            )
-
-        self.gpt = LLM(
-            model="asset/vllm_model/gpt",
-            num_audio_tokens=self.config.gpt.num_audio_tokens,
-            num_text_tokens=self.config.gpt.num_text_tokens,
-            post_model_path="asset/vllm_model/post_model.safetensors",
-        )
+        gpt = GPT(
+            gpt_config=asdict(self.config.gpt),
+            use_flash_attn=use_flash_attn,
+            device=device,
+            logger=self.logger,
+        ).eval()
+        assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
+        gpt.from_pretrained(gpt_ckpt_path)
+        gpt.prepare(compile=compile and "cuda" in str(device))
+        self.gpt = gpt
 
         spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
         assert os.path.exists(spk_stat_path), f"Missing spk_stat.pt: {spk_stat_path}"
