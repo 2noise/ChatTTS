@@ -94,6 +94,7 @@ class GPT(nn.Module):
         if self.is_vllm and platform.system().lower() == "linux":
             from .velocity.llm import LLM
             from .velocity.post_model import PostModel
+
             vllm_folder = Path(os.getcwd()) / "asset" / "vllm"
             if not os.path.exists(vllm_folder):
                 self.logger.info("initializing vLLM model to %s", str(vllm_folder))
@@ -405,7 +406,9 @@ class GPT(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         max_new_token=2048,
         min_new_token=0,
-        logits_processors: Tuple[Callable[[torch.LongTensor, torch.FloatTensor], torch.FloatTensor]] = (),
+        logits_processors: Tuple[
+            Callable[[torch.LongTensor, torch.FloatTensor], torch.FloatTensor]
+        ] = (),
         infer_text=False,
         return_attn=False,
         return_hidden=False,
