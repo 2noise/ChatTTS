@@ -13,7 +13,6 @@ from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
 
 from .config import Config
-from .model.velocity.sampling_params import SamplingParams
 from .model import DVAE, GPT, gen_logits, Tokenizer
 from .utils import (
     check_all_assets,
@@ -129,6 +128,7 @@ class Chat:
         device: Optional[torch.device] = None,
         coef: Optional[torch.Tensor] = None,
         use_flash_attn=False,
+        use_vllm=False,
     ) -> bool:
         download_path = self.download_models(source, force_redownload, custom_path)
         if download_path is None:
@@ -138,6 +138,7 @@ class Chat:
             compile=compile,
             coef=coef,
             use_flash_attn=use_flash_attn,
+            use_vllm=use_vllm,
             **{
                 k: os.path.join(download_path, v)
                 for k, v in asdict(self.config.path).items()
@@ -245,6 +246,7 @@ class Chat:
         compile: bool = True,
         coef: Optional[str] = None,
         use_flash_attn=False,
+        use_vllm=False,
     ):
         if device is None:
             device = select_device()
@@ -293,6 +295,7 @@ class Chat:
         gpt = GPT(
             gpt_config=asdict(self.config.gpt),
             use_flash_attn=use_flash_attn,
+            use_vllm=use_vllm,
             device=device,
             logger=self.logger,
         ).eval()
@@ -502,16 +505,6 @@ class Chat:
         )
         start_idx = input_ids.shape[-2]
 
-        if not gpt.is_vllm:
-            emb = gpt(input_ids, text_mask)
-
-            del text_mask
-
-            if params.spk_emb is not None:
-                self.tokenizer.apply_spk_emb(
-                    emb, params.spk_emb, input_ids, self.gpt.device_gpt
-                )
-
         num_code = self.config.gpt.num_audio_tokens - 1
 
         logits_warpers, logits_processors = gen_logits(
@@ -521,34 +514,74 @@ class Chat:
             repetition_penalty=params.repetition_penalty,
         )
 
-        sample_params = SamplingParams(
-            temperature=temperature,
-            max_new_token=params.max_new_token,
-            max_tokens=8192,
-            min_new_token=params.min_new_token,
-            logits_processors=(logits_warpers, logits_processors),
-            eos_token=num_code,
-            infer_text=False,
-            start_idx=start_idx,
-        )
-        input_ids = [i.tolist() for i in input_ids]
+        if gpt.is_vllm:
+            from .model.velocity.sampling_params import SamplingParams
+            sample_params = SamplingParams(
+                temperature=temperature,
+                max_new_token=params.max_new_token,
+                max_tokens=8192,
+                min_new_token=params.min_new_token,
+                logits_processors=(logits_processors, logits_warpers),
+                eos_token=num_code,
+                infer_text=False,
+                start_idx=start_idx,
+            )
+            input_ids = [i.tolist() for i in input_ids]
+
+            result = gpt.llm.generate(
+                None,
+                sample_params,
+                input_ids,
+            )
+
+            token_ids = []
+            hidden_states = []
+            for i in result:
+                token_ids.append(torch.tensor(i.outputs[0].token_ids))
+                hidden_states.append(
+                    i.outputs[0].hidden_states.to(torch.float32).to(self.device)
+                )
+
+            del text_mask, input_ids
+            del_all(logits_warpers)
+            del_all(logits_processors)
+
+            return [
+                self.GenerationOutputs(ids=token_ids, hiddens=hidden_states),
+            ]
+
+        emb = gpt(input_ids, text_mask)
+
+        del text_mask
+
+        if params.spk_emb is not None:
+            self.tokenizer.apply_spk_emb(
+                emb, params.spk_emb, input_ids, self.gpt.device_gpt
+            )
 
         result = gpt.generate(
-            None,
-            sample_params,
+            emb,
             input_ids,
+            temperature=torch.tensor(temperature, device=device),
+            eos_token=num_code,
+            attention_mask=attention_mask,
+            max_new_token=params.max_new_token,
+            min_new_token=params.min_new_token,
+            logits_processors=(*logits_processors, *logits_warpers),
+            infer_text=False,
+            return_hidden=return_hidden,
+            stream=stream,
+            show_tqdm=params.show_tqdm,
+            ensure_non_empty=params.ensure_non_empty,
+            stream_batch=params.stream_batch,
+            context=self.context,
         )
 
-        token_ids = []
-        hidden_states = []
-        for i in result:
-            token_ids.append(torch.tensor(i.outputs[0].token_ids))
-            hidden_states.append(
-                i.outputs[0].hidden_states.to(torch.float32).to(self.device)
-            )
-        return [
-            self.GenerationOutputs(ids=token_ids, hiddens=hidden_states),
-        ]
+        del emb, input_ids
+        del_all(logits_warpers)
+        del_all(logits_processors)
+
+        return result
 
     @torch.no_grad()
     def _refine_text(
@@ -580,28 +613,57 @@ class Chat:
             repetition_penalty=params.repetition_penalty,
         )
 
-        if not gpt.is_vllm:
+        if gpt.is_vllm:
+            from .model.velocity.sampling_params import SamplingParams
+            sample_params = SamplingParams(
+                temperature=params.temperature,
+                max_new_token=params.max_new_token,
+                max_tokens=8192,
+                min_new_token=params.min_new_token,
+                logits_processors=(logits_processors, logits_warpers),
+                eos_token=self.tokenizer.eos_token,
+                infer_text=True,
+                start_idx=start_idx,
+            )
+            input_ids = [i.tolist() for i in input_ids]
 
-            emb = gpt(input_ids, text_mask)
+            result = gpt.llm.generate(None, sample_params, input_ids)
+            token_ids = []
+            hidden_states = []
+            for i in result:
+                token_ids.append(torch.tensor(i.outputs[0].token_ids))
+                hidden_states.append(i.outputs[0].hidden_states)
 
-            del text_mask
+            del text_mask, input_ids
+            del_all(logits_warpers)
+            del_all(logits_processors)
 
-        sample_params = SamplingParams(
-            temperature=params.temperature,
-            max_new_token=params.max_new_token,
-            max_tokens=8192,
-            min_new_token=params.min_new_token,
-            logits_processors=(logits_warpers, logits_processors),
-            eos_token=self.tokenizer.eos_token,
-            infer_text=True,
-            start_idx=start_idx,
+            return self.GenerationOutputs(ids=token_ids, hiddens=hidden_states)
+
+        emb = gpt(input_ids, text_mask)
+
+        del text_mask
+
+        result = next(
+            gpt.generate(
+                emb,
+                input_ids,
+                temperature=torch.tensor([params.temperature], device=device),
+                eos_token=self.tokenizer.eos_token,
+                attention_mask=attention_mask,
+                max_new_token=params.max_new_token,
+                min_new_token=params.min_new_token,
+                logits_processors=(*logits_processors, *logits_warpers),
+                infer_text=True,
+                stream=False,
+                show_tqdm=params.show_tqdm,
+                ensure_non_empty=params.ensure_non_empty,
+                context=self.context,
+            )
         )
-        input_ids = [i.tolist() for i in input_ids]
 
-        result = gpt.generate(None, sample_params, input_ids)
-        token_ids = []
-        hidden_states = []
-        for i in result:
-            token_ids.append(torch.tensor(i.outputs[0].token_ids))
-            hidden_states.append(i.outputs[0].hidden_states)
-        return self.GenerationOutputs(ids=token_ids, hiddens=hidden_states)
+        del emb, input_ids
+        del_all(logits_warpers)
+        del_all(logits_processors)
+
+        return result

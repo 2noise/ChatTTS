@@ -1,7 +1,7 @@
 import os, platform
 from dataclasses import dataclass
 import logging
-from typing import Union, List, Optional, Tuple
+from typing import Union, List, Optional, Tuple, Callable
 import gc
 from pathlib import Path
 
@@ -12,15 +12,12 @@ import torch.nn.functional as F
 import torch.nn.utils.parametrize as P
 from torch.nn.utils.parametrizations import weight_norm
 from tqdm import tqdm
-from transformers import LlamaModel, LlamaConfig, LogitsWarper
+from transformers import LlamaModel, LlamaConfig
 from transformers.cache_utils import Cache
 from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.utils import is_flash_attn_2_available
 
-from .processors import CustomRepetitionPenaltyLogitsProcessorRepeat
 from ..utils import del_all
-from .velocity.llm import LLM
-from .velocity.post_model import PostModel
 
 
 class GPT(nn.Module):
@@ -95,6 +92,8 @@ class GPT(nn.Module):
 
     def from_pretrained(self, file_path: str):
         if self.is_vllm and platform.system().lower() == "linux":
+            from .velocity.llm import LLM
+            from .velocity.post_model import PostModel
             vllm_folder = Path(os.getcwd()) / "asset" / "vllm"
             if not os.path.exists(vllm_folder):
                 self.logger.info("initializing vLLM model to %s", str(vllm_folder))
@@ -406,8 +405,7 @@ class GPT(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         max_new_token=2048,
         min_new_token=0,
-        logits_warpers: List[LogitsWarper] = [],
-        logits_processors: List[CustomRepetitionPenaltyLogitsProcessorRepeat] = [],
+        logits_processors: Tuple[Callable[[torch.LongTensor, torch.FloatTensor], torch.FloatTensor]] = (),
         infer_text=False,
         return_attn=False,
         return_hidden=False,
@@ -571,9 +569,6 @@ class GPT(nn.Module):
             for logitsProcessors in logits_processors:
                 logits = logitsProcessors(logits_token, logits)
 
-            for logitsWarpers in logits_warpers:
-                logits = logitsWarpers(logits_token, logits)
-
             del logits_token
 
             if i < min_new_token:
@@ -631,7 +626,6 @@ class GPT(nn.Module):
                         attention_mask,
                         max_new_token,
                         min_new_token,
-                        logits_warpers,
                         logits_processors,
                         infer_text,
                         return_attn,
