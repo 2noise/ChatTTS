@@ -536,6 +536,9 @@ class ModelRunner:
         )
         # print(hidden_states.shape)
         # print(input_tokens)
+        B_NO_PAD = input_tokens_history.shape[0]
+        input_tokens = input_tokens[:B_NO_PAD, :, :]
+        hidden_states = hidden_states[:B_NO_PAD, :, :]
         idx_next, logprob, finish = self.sampler.sample(
             inputs_ids=(
                 input_tokens
@@ -774,13 +777,17 @@ def _make_tensor_with_pad(
     device: Union[str, torch.device] = "cuda",
     pin_memory: bool = False,
 ) -> torch.Tensor:
-    padded_x = [_pad_to_max(x_i, max_len, pad) for x_i in x]
-    return torch.tensor(
-        padded_x,
-        dtype=dtype,
-        device=device,
-        pin_memory=pin_memory and str(device) == "cpu",
-    )
+    padded_x = []
+    for x_i in x:
+        pad_i = pad
+        if isinstance(x[0][0],tuple):
+            pad_i = (0,) * len(x[0][0])
+        padded_x.append(_pad_to_max(x_i, max_len, pad_i))
+        
+    return torch.tensor(padded_x,
+                        dtype=dtype,
+                        device=device,
+                        pin_memory=pin_memory and str(device) == "cpu")
 
 
 def _get_graph_batch_size(batch_size: int) -> int:
