@@ -93,8 +93,7 @@ class GPT(nn.Module):
         if self.is_vllm and platform.system().lower() == "linux":
             from safetensors.torch import save_file
 
-            from .velocity.llm import LLM
-            from .velocity.post_model import PostModel
+            from .velocity import LLM, PostModel
 
             vllm_folder = Path(os.getcwd()) / "asset" / "vllm"
             if not os.path.exists(vllm_folder):

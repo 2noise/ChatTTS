@@ -515,7 +515,7 @@ class Chat:
         )
 
         if gpt.is_vllm:
-            from .model.velocity.sampling_params import SamplingParams
+            from .model.velocity import SamplingParams
 
             sample_params = SamplingParams(
                 temperature=temperature,
@@ -617,10 +617,13 @@ class Chat:
         )
 
         if gpt.is_vllm:
-            from .model.velocity.sampling_params import SamplingParams
+            from .model.velocity import SamplingParams
 
             sample_params = SamplingParams(
+                repetition_penalty=params.repetition_penalty,
                 temperature=params.temperature,
+                top_p=params.top_P,
+                top_k=params.top_K,
                 max_new_token=params.max_new_token,
                 max_tokens=8192,
                 min_new_token=params.min_new_token,
@@ -629,16 +632,17 @@ class Chat:
                 infer_text=True,
                 start_idx=input_ids.shape[-2],
             )
-            input_ids = [i.tolist() for i in input_ids]
+            input_ids_list = [i.tolist() for i in input_ids]
+            del input_ids
 
-            result = gpt.llm.generate(None, sample_params, input_ids)
+            result = gpt.llm.generate(None, sample_params, input_ids_list)
             token_ids = []
             hidden_states = []
             for i in result:
                 token_ids.append(torch.tensor(i.outputs[0].token_ids))
                 hidden_states.append(i.outputs[0].hidden_states)
 
-            del text_mask, input_ids
+            del text_mask, input_ids_list, result
             del_all(logits_warpers)
             del_all(logits_processors)
 
