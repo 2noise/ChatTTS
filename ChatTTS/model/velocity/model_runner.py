@@ -569,13 +569,16 @@ class ModelRunner:
         for i in range(idx_next.shape[0]):
             idx_next_i = idx_next[i, 0, :].cpu().tolist()
             logprob_i = logprob[i].cpu().tolist()
+            tmp_hidden_states = hidden_states[i].cpu()
+            if input_tokens[i].shape[-2] != 1:
+                tmp_hidden_states = tmp_hidden_states[-1:,:]
             result = SequenceGroupOutput(
                 samples=[
                     SequenceOutput(
                         parent_seq_id=seq_groups[i],
                         logprobs={tuple(idx_next_i): logprob_i},
                         output_token=tuple(idx_next_i),
-                        hidden_states=hidden_states[i].cpu(),
+                        hidden_states=tmp_hidden_states,
                         finished=finish[i].item(),
                     ),
                 ],
