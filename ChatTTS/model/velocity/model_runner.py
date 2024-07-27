@@ -571,7 +571,7 @@ class ModelRunner:
             logprob_i = logprob[i].cpu().tolist()
             tmp_hidden_states = hidden_states[i].cpu()
             if input_tokens[i].shape[-2] != 1:
-                tmp_hidden_states = tmp_hidden_states[-1:,:]
+                tmp_hidden_states = tmp_hidden_states[-1:, :]
             result = SequenceGroupOutput(
                 samples=[
                     SequenceOutput(

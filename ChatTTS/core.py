@@ -635,7 +635,9 @@ class Chat:
             input_ids_list = [i.tolist() for i in input_ids]
             del input_ids
 
-            result = gpt.llm.generate(None, sample_params, input_ids_list, params.show_tqdm)
+            result = gpt.llm.generate(
+                None, sample_params, input_ids_list, params.show_tqdm
+            )
             token_ids = []
             hidden_states = []
             for i in result:
