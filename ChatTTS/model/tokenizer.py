@@ -162,7 +162,7 @@ class Tokenizer:
             .unsqueeze_(1)
             .expand(emb.shape)
         )
-        cond = input_ids.narrow(-1, 0, 1).eq(self.spk_emb_ids).expand(emb.shape)
+        cond = input_ids.narrow(-1, 0, 1).eq(self.spk_emb_ids).expand(emb.shape).to(device)
         torch.where(cond, n, emb, out=emb)
         del cond, n
 
@@ -180,12 +180,13 @@ class Tokenizer:
             dtype="<u2",
         ).copy()
         del dec
-        return torch.from_numpy(p).view(*shp)
+        return torch.from_numpy(p.astype(np.int32)).view(*shp)
 
     @staticmethod
     @torch.no_grad()
     def _encode_prompt(prompt: torch.Tensor) -> str:
-        arr: np.ndarray = prompt.to(dtype=torch.uint16, device="cpu").numpy()
+        # arr: np.ndarray = prompt.to(dtype=torch.uint16, device="cpu").numpy()
+        arr: np.ndarray = prompt.to(device="cpu").numpy().astype(np.uint16)
         shp = arr.shape
         assert len(shp) == 2, "prompt must be a 2D tensor"
         s = b14.encode_to_string(
