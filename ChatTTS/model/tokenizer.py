@@ -185,7 +185,6 @@ class Tokenizer:
     @staticmethod
     @torch.no_grad()
     def _encode_prompt(prompt: torch.Tensor) -> str:
-        # arr: np.ndarray = prompt.to(dtype=torch.uint16, device="cpu").numpy()
         arr: np.ndarray = prompt.to(device="cpu").numpy().astype(np.uint16)
         shp = arr.shape
         assert len(shp) == 2, "prompt must be a 2D tensor"
