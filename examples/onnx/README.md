@@ -4,11 +4,11 @@
 
 ## Export GPT
 
-3. Run `python tools/model_converter/exporter.py --gpt`
+3. Run `python examples/onnx/exporter.py --gpt`
 
 
 ## Export other models
-Run `python tools/model_converter/exporter.py --decoder --vocos`
+Run `python examples/onnx/exporter.py --decoder --vocos`
 
 ## Reference
 [Run LLMs on Sophon TPU](https://github.com/sophgo/LLM-TPU)

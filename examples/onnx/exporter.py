@@ -8,7 +8,7 @@ from ChatTTS.config import Config
 from vocos import Vocos
 from vocos.pretrained import instantiate_class
 import torch.jit as jit
-from tools.model_converter.gpt import GPT
+from examples.onnx.gpt import GPT
 
 # disable cuda
 torch.cuda.is_available = lambda : False
