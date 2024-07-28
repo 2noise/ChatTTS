@@ -1,8 +1,9 @@
-import platform
+import os, platform
 from dataclasses import dataclass
 import logging
-from typing import Union, List, Optional, Tuple
+from typing import Union, List, Optional, Tuple, Callable
 import gc
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -10,12 +11,11 @@ import torch.nn.functional as F
 import torch.nn.utils.parametrize as P
 from torch.nn.utils.parametrizations import weight_norm
 from tqdm import tqdm
-from transformers import LlamaModel, LlamaConfig, LogitsWarper
+from transformers import LlamaModel, LlamaConfig
 from transformers.cache_utils import Cache
 from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.utils import is_flash_attn_2_available
 
-from .processors import CustomRepetitionPenaltyLogitsProcessorRepeat
 from ..utils import del_all
 
 
@@ -23,11 +23,10 @@ class GPT(nn.Module):
     def __init__(
         self,
         gpt_config: dict,
-        num_audio_tokens: int = 626,
-        num_text_tokens: int = 21178,
-        num_vq=4,
         use_flash_attn=False,
+        use_vllm=False,
         device=torch.device("cpu"),
+        device_gpt=torch.device("cpu"),
         logger=logging.getLogger(__name__),
     ):
         super().__init__()
@@ -35,34 +34,41 @@ class GPT(nn.Module):
         self.logger = logger
 
         self.device = device
-        self.device_gpt = device if "mps" not in str(device) else torch.device("cpu")
+        self.device_gpt = device_gpt
 
-        self.num_vq = num_vq
-        self.num_audio_tokens = num_audio_tokens
+        self.config = gpt_config
+        self.num_vq = int(gpt_config["num_vq"])
+        self.num_audio_tokens = int(gpt_config["num_audio_tokens"])
+        self.num_text_tokens = int(gpt_config["num_text_tokens"])
 
         self.use_flash_attn = use_flash_attn
+        self.is_te_llama = False
+        self.is_vllm = use_vllm
+
+        if self.is_vllm:
+            return
 
         self.gpt, self.llama_config = self._build_llama(gpt_config, self.device_gpt)
-        self.is_te_llama = False
+
         self.model_dim = int(self.gpt.config.hidden_size)
         self.emb_code = nn.ModuleList(
             [
                 nn.Embedding(
-                    num_audio_tokens,
+                    self.num_audio_tokens,
                     self.model_dim,
                     device=self.device_gpt,
                 )
-                for _ in range(num_vq)
+                for _ in range(self.num_vq)
             ],
         )
         self.emb_text = nn.Embedding(
-            num_text_tokens, self.model_dim, device=self.device_gpt
+            self.num_text_tokens, self.model_dim, device=self.device_gpt
         )
 
         self.head_text = weight_norm(
             nn.Linear(
                 self.model_dim,
-                num_text_tokens,
+                self.num_text_tokens,
                 bias=False,
                 device=device,
             ),
@@ -73,7 +79,7 @@ class GPT(nn.Module):
                 weight_norm(
                     nn.Linear(
                         self.model_dim,
-                        num_audio_tokens,
+                        self.num_audio_tokens,
                         bias=False,
                         device=device,
                     ),
@@ -84,6 +90,44 @@ class GPT(nn.Module):
         )
 
     def from_pretrained(self, file_path: str):
+        if self.is_vllm and platform.system().lower() == "linux":
+            from safetensors.torch import save_file
+
+            from .velocity import LLM, PostModel
+
+            vllm_folder = Path(os.getcwd()) / "asset" / "vllm"
+            if not os.path.exists(vllm_folder):
+                self.logger.info("initializing vLLM model to %s", str(vllm_folder))
+                vllm_folder.mkdir(mode=0o755, parents=True, exist_ok=True)
+                gpt = GPT(gpt_config=self.config)
+                gpt.from_pretrained(file_path)
+                gpt.gpt.save_pretrained(vllm_folder / "gpt")
+                post_model = (
+                    PostModel(
+                        int(gpt.gpt.config.hidden_size),
+                        self.num_audio_tokens,
+                        self.num_text_tokens,
+                    )
+                    .to(self.device)
+                    .eval()
+                )
+                post_model.emb_code = gpt.emb_code
+                post_model.emb_text = gpt.emb_text
+                post_model.head_text = gpt.head_text
+                post_model.head_code = gpt.head_code
+                save_file(
+                    post_model.state_dict(),
+                    vllm_folder / "post_model.safetensors",
+                )
+                del post_model, gpt
+            self.llm = LLM(
+                model=str(vllm_folder / "gpt"),
+                num_audio_tokens=self.num_audio_tokens,
+                num_text_tokens=self.num_text_tokens,
+                post_model_path=vllm_folder / "post_model.safetensors",
+            )
+            self.logger.info("vLLM model loaded")
+            return
 
         self.load_state_dict(torch.load(file_path, weights_only=True, mmap=True))
 
@@ -141,7 +185,7 @@ class GPT(nn.Module):
     def prepare(self, compile=False):
         if self.use_flash_attn and is_flash_attn_2_available():
             self.gpt = self.gpt.to(dtype=torch.float16)
-        if compile and not self.is_te_llama:
+        if compile and not self.is_te_llama and not self.is_vllm:
             try:
                 self.compile(backend="inductor", dynamic=True)
                 self.gpt.compile(backend="inductor", dynamic=True)
@@ -362,8 +406,9 @@ class GPT(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         max_new_token=2048,
         min_new_token=0,
-        logits_warpers: List[LogitsWarper] = [],
-        logits_processors: List[CustomRepetitionPenaltyLogitsProcessorRepeat] = [],
+        logits_processors: Tuple[
+            Callable[[torch.LongTensor, torch.FloatTensor], torch.FloatTensor]
+        ] = (),
         infer_text=False,
         return_attn=False,
         return_hidden=False,
@@ -527,9 +572,6 @@ class GPT(nn.Module):
             for logitsProcessors in logits_processors:
                 logits = logitsProcessors(logits_token, logits)
 
-            for logitsWarpers in logits_warpers:
-                logits = logitsWarpers(logits_token, logits)
-
             del logits_token
 
             if i < min_new_token:
@@ -587,7 +629,6 @@ class GPT(nn.Module):
                         attention_mask,
                         max_new_token,
                         min_new_token,
-                        logits_warpers,
                         logits_processors,
                         infer_text,
                         return_attn,
