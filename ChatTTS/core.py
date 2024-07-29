@@ -545,8 +545,6 @@ class Chat:
                 )
 
             del text_mask, input_ids
-            del_all(logits_warpers)
-            del_all(logits_processors)
 
             return [
                 GPT.GenerationOutputs(
@@ -584,8 +582,6 @@ class Chat:
         )
 
         del emb, input_ids
-        del_all(logits_warpers)
-        del_all(logits_processors)
 
         return result
 
@@ -646,8 +642,6 @@ class Chat:
                 hidden_states.append(i.outputs[0].hidden_states)
 
             del text_mask, input_ids_list, result
-            del_all(logits_warpers)
-            del_all(logits_processors)
 
             return GPT.GenerationOutputs(
                 ids=token_ids,
