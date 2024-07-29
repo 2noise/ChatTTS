@@ -297,6 +297,7 @@ class Chat:
             use_flash_attn=use_flash_attn,
             use_vllm=use_vllm,
             device=device,
+            device_gpt=self.device_gpt,
             logger=self.logger,
         ).eval()
         assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
