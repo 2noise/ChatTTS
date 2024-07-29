@@ -678,7 +678,5 @@ class Chat:
         )
 
         del emb, input_ids
-        del_all(logits_warpers)
-        del_all(logits_processors)
 
         return result
