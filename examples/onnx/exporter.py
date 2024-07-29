@@ -11,25 +11,27 @@ import torch.jit as jit
 from examples.onnx.gpt import GPT
 
 # disable cuda
-torch.cuda.is_available = lambda : False
+torch.cuda.is_available = lambda: False
 
 # add args to control which modules to export
 parser = argparse.ArgumentParser()
 parser.add_argument("--gpt", action="store_true", help="trace gpt")
 parser.add_argument("--decoder", action="store_true", help="trace decoder")
 parser.add_argument("--vocos", action="store_true", help="trace vocos")
-parser.add_argument("--pth_dir", default="./assets", type=str, help="path to the pth model directory")
-parser.add_argument("--out_dir", default="./tmp", type=str, help="path to output directory")
+parser.add_argument(
+    "--pth_dir", default="./assets", type=str, help="path to the pth model directory"
+)
+parser.add_argument(
+    "--out_dir", default="./tmp", type=str, help="path to output directory"
+)
 
 args = parser.parse_args()
 chattts_config = Config()
 
+
 def export_gpt():
-    gpt_model = GPT(
-        gpt_config=asdict(chattts_config.gpt),
-        use_flash_attn=False
-    ).eval()
-    gpt_model.from_pretrained(asdict(chattts_config.path)['gpt_ckpt_path'])
+    gpt_model = GPT(gpt_config=asdict(chattts_config.gpt), use_flash_attn=False).eval()
+    gpt_model.from_pretrained(asdict(chattts_config.path)["gpt_ckpt_path"])
     gpt_model = gpt_model.eval()
     for param in gpt_model.parameters():
         param.requires_grad = False
@@ -49,13 +51,13 @@ def export_gpt():
 
     folder = os.path.join(args.out_dir, "gpt")
     os.makedirs(folder, exist_ok=True)
-    
+
     for param in gpt_model.emb_text.parameters():
         param.requires_grad = False
 
     for param in gpt_model.emb_code.parameters():
         param.requires_grad = False
-    
+
     for param in gpt_model.head_code.parameters():
         param.requires_grad = False
 
@@ -68,7 +70,7 @@ def export_gpt():
 
         def forward(self, input_ids):
             return gpt_model.emb_text(input_ids)
-    
+
     def convert_embedding_text():
         model = EmbeddingText()
         input_ids = torch.tensor([range(SEQ_LENGTH)])
@@ -84,7 +86,6 @@ def export_gpt():
             opset_version=15,
         )
 
-
     class EmbeddingCode(torch.nn.Module):
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
@@ -94,10 +95,10 @@ def export_gpt():
                 -1, -1, gpt_model.num_vq
             )  # for forward_first_code
             code_emb = [
-                gpt_model.emb_code[i](input_ids[:, :, i]) for i in range(gpt_model.num_vq)
+                gpt_model.emb_code[i](input_ids[:, :, i])
+                for i in range(gpt_model.num_vq)
             ]
             return torch.stack(code_emb, 2).sum(2)
-
 
     def convert_embedding_code():
         model = EmbeddingCode()
@@ -114,17 +115,16 @@ def export_gpt():
             opset_version=15,
         )
 
-
     class EmbeddingCodeCache(torch.nn.Module):  # for forward_next_code
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
 
         def forward(self, input_ids):
             code_emb = [
-                gpt_model.emb_code[i](input_ids[:, :, i]) for i in range(gpt_model.num_vq)
+                gpt_model.emb_code[i](input_ids[:, :, i])
+                for i in range(gpt_model.num_vq)
             ]
             return torch.stack(code_emb, 2).sum(2)
-
 
     def convert_embedding_code_cache():
         model = EmbeddingCodeCache()
@@ -141,7 +141,6 @@ def export_gpt():
             do_constant_folding=True,
             opset_version=15,
         )
-
 
     class Block(torch.nn.Module):
         def __init__(self, layer_id):
@@ -162,7 +161,6 @@ def export_gpt():
                 hidden_states = self.norm(hidden_states)
             return hidden_states, present_k, present_v
 
-
     def convert_block(layer_id):
         model = Block(layer_id)
         hidden_states = torch.randn((1, SEQ_LENGTH, HIDDEN_SIZE))
@@ -181,7 +179,6 @@ def export_gpt():
             do_constant_folding=True,
             opset_version=15,
         )
-
 
     class BlockCache(torch.nn.Module):
 
@@ -203,7 +200,6 @@ def export_gpt():
             if self.layer_id == NUM_OF_LAYERS - 1:
                 hidden_states = self.norm(hidden_states)
             return hidden_states, present_k, present_v
-
 
     def convert_block_cache(layer_id):
         model = BlockCache(layer_id)
@@ -232,7 +228,6 @@ def export_gpt():
             opset_version=15,
         )
 
-
     class GreedyHead(torch.nn.Module):
 
         def __init__(self):
@@ -241,7 +236,6 @@ def export_gpt():
         def forward(self, m_logits):
             _, token = torch.topk(m_logits.float(), 1)
             return token
-
 
     def convert_greedy_head_text():
         model = GreedyHead()
@@ -257,7 +251,6 @@ def export_gpt():
             do_constant_folding=True,
             opset_version=15,
         )
-
 
     def convert_greedy_head_code():
         model = GreedyHead()
@@ -282,17 +275,19 @@ def export_gpt():
             m_logits = gpt_model.head_text(hidden_states)
             return m_logits
 
-
     class LmHead_infer_code(torch.nn.Module):
         def __init__(self):
             super().__init__()
 
         def forward(self, hidden_states):
             m_logits = torch.stack(
-                [gpt_model.head_code[i](hidden_states) for i in range(gpt_model.num_vq)], 2
+                [
+                    gpt_model.head_code[i](hidden_states)
+                    for i in range(gpt_model.num_vq)
+                ],
+                2,
             )
             return m_logits
-
 
     def convert_lm_head_text():
         model = LmHead_infer_text()
@@ -308,7 +303,6 @@ def export_gpt():
             do_constant_folding=True,
             opset_version=15,
         )
-
 
     def convert_lm_head_code():
         model = LmHead_infer_code()
@@ -343,15 +337,18 @@ def export_gpt():
     convert_greedy_head_text()
     convert_greedy_head_code()
 
+
 def export_decoder():
-    decoder = (
-        DVAE(
-            decoder_config=asdict(chattts_config.decoder),
-            dim=chattts_config.decoder.idim,
-        ).eval()
-    )
+    decoder = DVAE(
+        decoder_config=asdict(chattts_config.decoder),
+        dim=chattts_config.decoder.idim,
+    ).eval()
     decoder.load_state_dict(
-        torch.load(asdict(chattts_config.path)['decoder_ckpt_path'], weights_only=True, mmap=True)
+        torch.load(
+            asdict(chattts_config.path)["decoder_ckpt_path"],
+            weights_only=True,
+            mmap=True,
+        )
     )
 
     for param in decoder.parameters():
@@ -359,7 +356,7 @@ def export_decoder():
     rand_input = torch.rand([1, 768, 1024], requires_grad=False)
 
     def mydec(_inp):
-        return decoder(_inp, mode='decode')
+        return decoder(_inp, mode="decode")
 
     jitmodel = jit.trace(mydec, [rand_input])
     jit.save(jitmodel, f"{args.out_dir}/decoder_jit.pt")
@@ -371,11 +368,15 @@ def export_vocos():
     )
     backbone = instantiate_class(args=(), init=asdict(chattts_config.vocos.backbone))
     head = instantiate_class(args=(), init=asdict(chattts_config.vocos.head))
-    vocos = (
-        Vocos(feature_extractor=feature_extractor, backbone=backbone, head=head).eval()
+    vocos = Vocos(
+        feature_extractor=feature_extractor, backbone=backbone, head=head
+    ).eval()
+    vocos.load_state_dict(
+        torch.load(
+            asdict(chattts_config.path)["vocos_ckpt_path"], weights_only=True, mmap=True
+        )
     )
-    vocos.load_state_dict(torch.load(asdict(chattts_config.path)['vocos_ckpt_path'], weights_only=True, mmap=True))
-    
+
     for param in vocos.parameters():
         param.requires_grad = False
     rand_input = torch.rand([1, 100, 2048], requires_grad=False)

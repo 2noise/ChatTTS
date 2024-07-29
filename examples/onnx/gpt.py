@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.nn.utils.parametrizations import weight_norm
 from .modeling_llama import LlamaModel, LlamaConfig
 
+
 class GPT(nn.Module):
     def __init__(
         self,
@@ -71,7 +72,9 @@ class GPT(nn.Module):
         )
 
     def from_pretrained(self, file_path: str):
-        self.load_state_dict(torch.load(file_path, weights_only=True, mmap=True), strict=False)
+        self.load_state_dict(
+            torch.load(file_path, weights_only=True, mmap=True), strict=False
+        )
 
     def _build_llama(
         self,
