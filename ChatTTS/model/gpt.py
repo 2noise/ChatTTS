@@ -588,7 +588,8 @@ class GPT(nn.Module):
                 idx_next = torch.multinomial(scores, num_samples=1).to(finish.device)
             else:
                 idx_next = torch.multinomial(
-                    scores, num_samples=1,
+                    scores,
+                    num_samples=1,
                     generator=self.generator.manual_seed(manual_seed),
                 ).to(finish.device)
 
