@@ -36,6 +36,8 @@ class GPT(nn.Module):
         self.device = device
         self.device_gpt = device_gpt
 
+        self.generator = torch.Generator(device=device)
+
         self.config = gpt_config
         self.num_vq = int(gpt_config["num_vq"])
         self.num_audio_tokens = int(gpt_config["num_audio_tokens"])
@@ -416,6 +418,7 @@ class GPT(nn.Module):
         show_tqdm=True,
         ensure_non_empty=True,
         stream_batch=24,
+        manual_seed: Optional[int] = None,
         context=Context(),
     ):
 
@@ -581,7 +584,13 @@ class GPT(nn.Module):
 
             del logits
 
-            idx_next = torch.multinomial(scores, num_samples=1).to(finish.device)
+            if manual_seed is None:
+                idx_next = torch.multinomial(scores, num_samples=1).to(finish.device)
+            else:
+                idx_next = torch.multinomial(
+                    scores, num_samples=1,
+                    generator=self.generator.manual_seed(manual_seed),
+                ).to(finish.device)
 
             del scores
 

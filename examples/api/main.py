@@ -52,8 +52,6 @@ class ChatTTSParams(BaseModel):
     use_decoder: bool = True
     do_text_normalization: bool = True
     do_homophone_replacement: bool = False
-    audio_seed: int
-    text_seed: int
     params_refine_text: ChatTTS.Chat.RefineTextParams
     params_infer_code: ChatTTS.Chat.InferCodeParams
 
@@ -63,13 +61,12 @@ async def generate_voice(params: ChatTTSParams):
     logger.info("Text input: %s", str(params.text))
 
     # audio seed
-    if params.audio_seed:
-        torch.manual_seed(params.audio_seed)
+    if params.params_infer_code.manual_seed is not None:
+        torch.manual_seed(params.params_infer_code.manual_seed)
         params.params_infer_code.spk_emb = chat.sample_random_speaker()
 
     # text seed for text refining
     if params.params_refine_text:
-        torch.manual_seed(params.text_seed)
         text = chat.infer(
             text=params.text, skip_refine_text=False, refine_text_only=True
         )

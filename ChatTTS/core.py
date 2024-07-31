@@ -58,9 +58,6 @@ class Chat:
                 self.logger.warning(f"{module} not initialized.")
                 not_finish = True
 
-        if not not_finish:
-            self.logger.info("all models has been initialized.")
-
         return not not_finish
 
     def download_models(
@@ -186,6 +183,7 @@ class Chat:
         min_new_token: int = 0
         show_tqdm: bool = True
         ensure_non_empty: bool = True
+        manual_seed: Optional[int] = None
 
     @dataclass(repr=False, eq=False)
     class InferCodeParams(RefineTextParams):
@@ -578,6 +576,7 @@ class Chat:
             show_tqdm=params.show_tqdm,
             ensure_non_empty=params.ensure_non_empty,
             stream_batch=params.stream_batch,
+            manual_seed=params.manual_seed,
             context=self.context,
         )
 
@@ -667,6 +666,7 @@ class Chat:
                 stream=False,
                 show_tqdm=params.show_tqdm,
                 ensure_non_empty=params.ensure_non_empty,
+                manual_seed=params.manual_seed,
                 context=self.context,
             )
         )

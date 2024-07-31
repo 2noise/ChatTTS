@@ -205,6 +205,9 @@ def main():
                     text_input,
                     text_seed_input,
                     refine_text_checkbox,
+                    temperature_slider,
+                    top_p_slider,
+                    top_k_slider,
                 ],
                 outputs=text_output,
             ).then(

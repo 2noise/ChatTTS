@@ -133,6 +133,9 @@ def refine_text(
     text,
     text_seed_input,
     refine_text_flag,
+    temperature,
+    top_P,
+    top_K,
 ):
     global chat
 
@@ -140,12 +143,17 @@ def refine_text(
         sleep(1)  # to skip fast answer of loading mark
         return text
 
-    with TorchSeedContext(text_seed_input):
-        text = chat.infer(
-            text,
-            skip_refine_text=False,
-            refine_text_only=True,
-        )
+    text = chat.infer(
+        text,
+        skip_refine_text=False,
+        refine_text_only=True,
+        params_refine_text=ChatTTS.Chat.RefineTextParams(
+            temperature=temperature,
+            top_P=top_P,
+            top_K=top_K,
+            manual_seed=text_seed_input,
+        ),
+    )
 
     return text[0] if isinstance(text, list) else text
 
@@ -171,6 +179,7 @@ def generate_audio(
         temperature=temperature,
         top_P=top_P,
         top_K=top_K,
+        manual_seed=audio_seed_input,
     )
 
     if sample_text_input and sample_audio_code_input:
@@ -178,21 +187,20 @@ def generate_audio(
         params_infer_code.spk_smp = sample_audio_code_input
         params_infer_code.spk_emb = None
 
-    with TorchSeedContext(audio_seed_input):
-        wav = chat.infer(
-            text,
-            skip_refine_text=True,
-            params_infer_code=params_infer_code,
-            stream=stream,
-        )
-        if stream:
-            for gen in wav:
-                audio = gen[0]
-                if audio is not None and len(audio) > 0:
-                    yield 24000, float_to_int16(audio).T
-                del audio
-        else:
-            yield 24000, float_to_int16(wav[0]).T
+    wav = chat.infer(
+        text,
+        skip_refine_text=True,
+        params_infer_code=params_infer_code,
+        stream=stream,
+    )
+    if stream:
+        for gen in wav:
+            audio = gen[0]
+            if audio is not None and len(audio) > 0:
+                yield 24000, float_to_int16(audio).T
+            del audio
+    else:
+        yield 24000, float_to_int16(wav[0]).T
 
 
 def interrupt_generate():
