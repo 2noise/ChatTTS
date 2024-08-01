@@ -173,3 +173,4 @@ cython_debug/
 # inferred result
 *.wav
 *.mp3
+.idea
