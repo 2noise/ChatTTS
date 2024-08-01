@@ -567,9 +567,9 @@ class ModelRunner:
         # )
         results = []
         for i in range(idx_next.shape[0]):
-            idx_next_i = idx_next[i, 0, :].cpu().tolist()
-            logprob_i = logprob[i].cpu().tolist()
-            tmp_hidden_states = hidden_states[i].cpu()
+            idx_next_i = idx_next[i, 0, :].tolist()
+            logprob_i = logprob[i].tolist()
+            tmp_hidden_states = hidden_states[i]
             if input_tokens[i].shape[-2] != 1:
                 tmp_hidden_states = tmp_hidden_states[-1:, :]
             result = SequenceGroupOutput(
