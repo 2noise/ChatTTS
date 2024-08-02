@@ -168,11 +168,11 @@ class Normalizer:
             _lang = self._detect_language(text) if lang is None else lang
             if _lang in self.normalizers:
                 texts, tags = _split_tags(text)
-                logging.debug("split texts %s, tags %s", str(texts), str(tags))
+                self.logger.debug("split texts %s, tags %s", str(texts), str(tags))
                 texts = [self.normalizers[_lang](t) for t in text]
-                logging.debug("normed texts %s", str(texts))
+                self.logger.debug("normed texts %s", str(texts))
                 text = _combine_tags(texts, tags)
-                logging.debug("combined text %s", text)
+                self.logger.debug("combined text %s", text)
             if _lang == "zh":
                 text = self._apply_half2full_map(text)
         invalid_characters = self._count_invalid_characters(text)
