@@ -14,6 +14,7 @@ import ChatTTS
 
 from tools.logger import get_logger
 from tools.normalizer import normalizer_en_nemo_text
+from tools.seeder import TorchSeedContext
 
 logger = get_logger("Test", lv=logging.WARN)
 
@@ -23,17 +24,28 @@ chat.normalizer.register("en", normalizer_en_nemo_text())
 
 rand_spk = chat.sample_random_speaker()
 
+
+text = ['What is [uv_break]your favorite english food?[laugh][lbreak]']
+
+fail = False
+
+with TorchSeedContext(1231231):
+    refined_text = chat.infer(
+        text, refine_text_only=True,
+        params_refine_text=ChatTTS.Chat.RefineTextParams(
+            prompt='[oral_2][laugh_0][break_6]',
+        ),
+    )
+if refined_text[0] != "What is [uv_break]your favorite english food?[laugh][lbreak]":
+    fail = True
+    logger.warning("refined text is '%s'", refined_text[0])
+
 params = ChatTTS.Chat.InferCodeParams(
     spk_emb = rand_spk, # add sampled speaker 
     temperature = .3,   # using custom temperature
     top_P = 0.7,        # top P decode
     top_K = 20,         # top K decode
 )
-
-text = ['What is [uv_break]your favorite english food?[laugh][lbreak]']
-
-fail = False
-
 input_ids, attention_mask, text_mask = chat.tokenizer.encode(
     chat.tokenizer.decorate_code_prompts(
         text, params.prompt, params.txt_smp, params.spk_emb,
@@ -48,15 +60,14 @@ with torch.inference_mode():
     ).fill_(input_ids.shape[1])
 
     recoded_text = chat.tokenizer.decode(chat.gpt._prepare_generation_outputs(
-        input_ids, start_idx, end_idx, [], [], True,
+        input_ids, start_idx, end_idx, [], [], False,
     ).ids)
 
-fail = recoded_text[0] != '[Stts] [spk_emb] [speed_5] what is [uv_break] your favorite english food? [laugh] [lbreak] [Ptts]'
+if recoded_text[0] != '[Stts] [spk_emb] [speed_5] what is [uv_break] your favorite english food? [laugh] [lbreak] [Ptts]':
+    fail = True
+    logger.warning("recoded text is '%s'", refined_text)
 
 if fail:
-
-    logging.warning("got recoded_text '%s'", recoded_text[0])
-
     import sys
 
     sys.exit(1)
