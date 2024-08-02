@@ -169,7 +169,7 @@ class Normalizer:
             if _lang in self.normalizers:
                 texts, tags = _split_tags(text)
                 self.logger.debug("split texts %s, tags %s", str(texts), str(tags))
-                texts = [self.normalizers[_lang](t) for t in text]
+                texts = [self.normalizers[_lang](t) for t in texts]
                 self.logger.debug("normed texts %s", str(texts))
                 text = _combine_tags(texts, tags)
                 self.logger.debug("combined text %s", text)
