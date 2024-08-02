@@ -42,7 +42,7 @@ with TorchSeedContext(12345):
     )
 if (
     refined_text[0]
-    != "like [uv_break] what is [uv_break] your favorite english food [laugh] [lbreak]"
+    != "what is [uv_break] your favorite [uv_break] english food [laugh] like [laugh]"
 ):
     fail = True
     logger.warning("refined text is '%s'", refined_text[0])
