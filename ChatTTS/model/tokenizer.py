@@ -128,12 +128,15 @@ class Tokenizer:
 
     @torch.inference_mode
     def decode(
-        self, sequences: Union[List[int], List[List[int]]],
+        self,
+        sequences: Union[List[int], List[List[int]]],
         skip_special_tokens: bool = False,
         clean_up_tokenization_spaces: bool = None,
         **kwargs,
     ):
-        return self._tokenizer.batch_decode(sequences, skip_special_tokens, clean_up_tokenization_spaces, **kwargs)
+        return self._tokenizer.batch_decode(
+            sequences, skip_special_tokens, clean_up_tokenization_spaces, **kwargs
+        )
 
     @staticmethod
     def _decode_spk_emb(spk_emb: str) -> np.ndarray:
@@ -219,11 +222,14 @@ class Tokenizer:
         )
         del arr
         return s
-    
+
     @staticmethod
     @torch.no_grad()
     def decorate_code_prompts(
-        text: List[str], prompt: str, txt_smp: Optional[str], spk_emb: Optional[str],
+        text: List[str],
+        prompt: str,
+        txt_smp: Optional[str],
+        spk_emb: Optional[str],
     ) -> List[str]:
         for i, t in enumerate(text):
             text[i] = (
@@ -244,7 +250,7 @@ class Tokenizer:
             text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
         else:
             text = [f"[Stts][empty_spk]{txt_smp}{i}[Ptts]" for i in text]
-        
+
         return text
 
     @staticmethod

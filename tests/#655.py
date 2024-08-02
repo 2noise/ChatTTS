@@ -28,30 +28,37 @@ except:
 rand_spk = chat.sample_random_speaker()
 
 
-text = ['What is [uv_break]your favorite english food?[laugh][lbreak]']
+text = ["What is [uv_break]your favorite english food?[laugh][lbreak]"]
 
 fail = False
 
 with TorchSeedContext(12345):
     refined_text = chat.infer(
-        text, refine_text_only=True,
+        text,
+        refine_text_only=True,
         params_refine_text=ChatTTS.Chat.RefineTextParams(
-            prompt='[oral_2][laugh_0][break_6]',
+            prompt="[oral_2][laugh_0][break_6]",
         ),
     )
-if refined_text[0] != "like [uv_break] what is [uv_break] your favorite english food [laugh] [lbreak]":
+if (
+    refined_text[0]
+    != "like [uv_break] what is [uv_break] your favorite english food [laugh] [lbreak]"
+):
     fail = True
     logger.warning("refined text is '%s'", refined_text[0])
 
 params = ChatTTS.Chat.InferCodeParams(
-    spk_emb = rand_spk, # add sampled speaker 
-    temperature = .3,   # using custom temperature
-    top_P = 0.7,        # top P decode
-    top_K = 20,         # top K decode
+    spk_emb=rand_spk,  # add sampled speaker
+    temperature=0.3,  # using custom temperature
+    top_P=0.7,  # top P decode
+    top_K=20,  # top K decode
 )
 input_ids, attention_mask, text_mask = chat.tokenizer.encode(
     chat.tokenizer.decorate_code_prompts(
-        text, params.prompt, params.txt_smp, params.spk_emb,
+        text,
+        params.prompt,
+        params.txt_smp,
+        params.spk_emb,
     ),
     chat.config.gpt.num_vq,
     prompt_str=params.spk_smp,
@@ -62,11 +69,21 @@ with torch.inference_mode():
         input_ids.shape[0], device=input_ids.device, dtype=torch.long
     ).fill_(input_ids.shape[1])
 
-    recoded_text = chat.tokenizer.decode(chat.gpt._prepare_generation_outputs(
-        input_ids, start_idx, end_idx, [], [], True,
-    ).ids)
+    recoded_text = chat.tokenizer.decode(
+        chat.gpt._prepare_generation_outputs(
+            input_ids,
+            start_idx,
+            end_idx,
+            [],
+            [],
+            True,
+        ).ids
+    )
 
-if recoded_text[0] != '[Stts] [spk_emb] [speed_5] what is [uv_break] your favorite english food? [laugh] [lbreak] [Ptts]':
+if (
+    recoded_text[0]
+    != "[Stts] [spk_emb] [speed_5] what is [uv_break] your favorite english food? [laugh] [lbreak] [Ptts]"
+):
     fail = True
     logger.warning("recoded text is '%s'", refined_text)
 
