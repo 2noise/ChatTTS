@@ -33,6 +33,7 @@ def _fast_replace(
             replaced_words.append((chr(ch), chr(repl_char)))
     return result, replaced_words
 
+
 @jit
 def _split_tags(text: str) -> Tuple[List[str], List[str]]:
     texts: List[str] = []
@@ -40,7 +41,7 @@ def _split_tags(text: str) -> Tuple[List[str], List[str]]:
     current_text = ""
     current_tag = ""
     for c in text:
-        if c == '[':
+        if c == "[":
             texts.append(current_text)
             current_text = ""
             current_tag = c
@@ -48,12 +49,13 @@ def _split_tags(text: str) -> Tuple[List[str], List[str]]:
             current_tag += c
         else:
             current_text += c
-        if c == ']':
+        if c == "]":
             tags.append(current_tag)
             current_tag = ""
     if current_text != "":
         texts.append(current_text)
     return texts, tags
+
 
 @jit
 def _combine_tags(texts: List[str], tags: List[str]) -> str:
@@ -64,6 +66,7 @@ def _combine_tags(texts: List[str], tags: List[str]) -> str:
             tg = tags.pop(0)
         text += t + tg
     return text
+
 
 class Normalizer:
     def __init__(self, map_file_path: str, logger=logging.getLogger(__name__)):

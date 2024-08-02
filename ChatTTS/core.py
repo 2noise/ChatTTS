@@ -480,7 +480,10 @@ class Chat:
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
             self.tokenizer.decorate_code_prompts(
-                text, params.prompt, params.txt_smp, params.spk_emb,
+                text,
+                params.prompt,
+                params.txt_smp,
+                params.spk_emb,
             ),
             self.config.gpt.num_vq,
             prompt_str=params.spk_smp,
