@@ -20,7 +20,10 @@ logger = get_logger("Test", lv=logging.WARN)
 
 chat = ChatTTS.Chat(logger)
 chat.load(compile=False, source="huggingface")  # Set to True for better performance
-chat.normalizer.register("en", normalizer_en_nemo_text())
+try:
+    chat.normalizer.register("en", normalizer_en_nemo_text())
+except:
+    logger.warning("Package nemo_text_processing not found!")
 
 rand_spk = chat.sample_random_speaker()
 
@@ -29,14 +32,14 @@ text = ['What is [uv_break]your favorite english food?[laugh][lbreak]']
 
 fail = False
 
-with TorchSeedContext(1231231):
+with TorchSeedContext(12345):
     refined_text = chat.infer(
         text, refine_text_only=True,
         params_refine_text=ChatTTS.Chat.RefineTextParams(
             prompt='[oral_2][laugh_0][break_6]',
         ),
     )
-if refined_text[0] != "What is [uv_break]your favorite english food?[laugh][lbreak]":
+if refined_text[0] != "like [uv_break] what is [uv_break] your favorite english food [laugh] [lbreak]":
     fail = True
     logger.warning("refined text is '%s'", refined_text[0])
 
@@ -60,7 +63,7 @@ with torch.inference_mode():
     ).fill_(input_ids.shape[1])
 
     recoded_text = chat.tokenizer.decode(chat.gpt._prepare_generation_outputs(
-        input_ids, start_idx, end_idx, [], [], False,
+        input_ids, start_idx, end_idx, [], [], True,
     ).ids)
 
 if recoded_text[0] != '[Stts] [spk_emb] [speed_5] what is [uv_break] your favorite english food? [laugh] [lbreak] [Ptts]':

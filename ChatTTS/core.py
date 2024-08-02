@@ -368,6 +368,8 @@ class Chat:
             for t in text
         ]
 
+        self.logger.debug("normed texts %s", str(text))
+
         if not skip_refine_text:
             refined = self._refine_text(
                 text,

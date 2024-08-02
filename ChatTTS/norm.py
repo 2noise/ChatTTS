@@ -89,7 +89,7 @@ class Normalizer:
         """
         self.coding = "utf-16-le" if sys.byteorder == "little" else "utf-16-be"
         self.reject_pattern = re.compile(r"[^\u4e00-\u9fffA-Za-z，。、,\. ]")
-        self.sub_pattern = re.compile(r"\[uv_break\]|\[laugh\]|\[lbreak\]")
+        self.sub_pattern = re.compile(r"\[[\w_]+\]")
         self.chinese_char_pattern = re.compile(r"[\u4e00-\u9fff]")
         self.english_word_pattern = re.compile(r"\b[A-Za-z]+\b")
         self.character_simplifier = str.maketrans(
@@ -113,8 +113,8 @@ class Normalizer:
                 "!": ".",
                 "(": ",",
                 ")": ",",
-                "[": ",",
-                "]": ",",
+                # "[": ",",
+                # "]": ",",
                 ">": ",",
                 "<": ",",
                 "-": ",",
@@ -189,7 +189,12 @@ class Normalizer:
                 repl_res = ", ".join([f"{_[0]}->{_[1]}" for _ in replaced_words])
                 self.logger.info(f"replace homophones: {repl_res}")
         if len(invalid_characters):
-            text = self.reject_pattern.sub("", text)
+            texts, tags = _split_tags(text)
+            self.logger.debug("split texts %s, tags %s", str(texts), str(tags))
+            texts = [self.reject_pattern.sub("", t) for t in texts]
+            self.logger.debug("normed texts %s", str(texts))
+            text = _combine_tags(texts, tags)
+            self.logger.debug("combined text %s", text)
         return text
 
     def register(self, name: str, normalizer: Callable[[str], str]) -> bool:
