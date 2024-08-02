@@ -33,6 +33,37 @@ def _fast_replace(
             replaced_words.append((chr(ch), chr(repl_char)))
     return result, replaced_words
 
+@jit
+def _split_tags(text: str) -> Tuple[List[str], List[str]]:
+    texts: List[str] = []
+    tags: List[str] = []
+    current_text = ""
+    current_tag = ""
+    for c in text:
+        if c == '[':
+            texts.append(current_text)
+            current_text = ""
+            current_tag = c
+        elif current_tag != "":
+            current_tag += c
+        else:
+            current_text += c
+        if c == ']':
+            tags.append(current_tag)
+            current_tag = ""
+    if current_text != "":
+        texts.append(current_text)
+    return texts, tags
+
+@jit
+def _combine_tags(texts: List[str], tags: List[str]) -> str:
+    text = ""
+    for t in texts:
+        tg = ""
+        if len(tags) > 0:
+            tg = tags.pop(0)
+        text += t + tg
+    return text
 
 class Normalizer:
     def __init__(self, map_file_path: str, logger=logging.getLogger(__name__)):
@@ -136,7 +167,9 @@ class Normalizer:
         if do_text_normalization:
             _lang = self._detect_language(text) if lang is None else lang
             if _lang in self.normalizers:
-                text = self.normalizers[_lang](text)
+                texts, tags = _split_tags(text)
+                texts = [self.normalizers[_lang](t) for t in text]
+                text = _combine_tags(texts, tags)
             if _lang == "zh":
                 text = self._apply_half2full_map(text)
         invalid_characters = self._count_invalid_characters(text)

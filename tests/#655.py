@@ -13,11 +13,13 @@ import torch
 import ChatTTS
 
 from tools.logger import get_logger
+from tools.normalizer import normalizer_en_nemo_text
 
-logger = get_logger("Test #655", lv=logging.WARN)
+logger = get_logger("Test", lv=logging.WARN)
 
 chat = ChatTTS.Chat(logger)
 chat.load(compile=False, source="huggingface")  # Set to True for better performance
+chat.normalizer.register("en", normalizer_en_nemo_text())
 
 rand_spk = chat.sample_random_speaker()
 

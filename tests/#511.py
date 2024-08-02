@@ -12,7 +12,7 @@ import ChatTTS
 
 from tools.logger import get_logger
 
-logger = get_logger("Test #511", lv=logging.WARN)
+logger = get_logger("Test", lv=logging.WARN)
 
 chat = ChatTTS.Chat(logger)
 chat.load(compile=False, source="huggingface")  # Set to True for better performance
