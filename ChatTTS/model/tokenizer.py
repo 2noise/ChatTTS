@@ -5,7 +5,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 https://stackoverflow.com/questions/62691279/how-to-disable-tokenizers-parallelism-true-false-warning
 """
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 import lzma
 
 import numpy as np
@@ -30,8 +30,6 @@ class Tokenizer:
         self.spk_emb_ids = tokenizer.convert_tokens_to_ids("[spk_emb]")
         self.break_0_ids = tokenizer.convert_tokens_to_ids("[break_0]")
         self.eos_token = tokenizer.convert_tokens_to_ids("[Ebreak]")
-
-        self.decode = self._tokenizer.batch_decode
 
     @torch.inference_mode()
     def encode(
@@ -128,6 +126,15 @@ class Tokenizer:
 
         return new_input_ids, attention_mask, text_mask
 
+    @torch.inference_mode
+    def decode(
+        self, sequences: Union[List[int], List[List[int]]],
+        skip_special_tokens: bool = False,
+        clean_up_tokenization_spaces: bool = None,
+        **kwargs,
+    ):
+        return self._tokenizer.batch_decode(sequences, skip_special_tokens, clean_up_tokenization_spaces, **kwargs)
+
     @staticmethod
     def _decode_spk_emb(spk_emb: str) -> np.ndarray:
         return np.frombuffer(
@@ -212,3 +219,35 @@ class Tokenizer:
         )
         del arr
         return s
+    
+    @staticmethod
+    @torch.no_grad()
+    def decorate_code_prompts(
+        text: List[str], prompt: str, txt_smp: Optional[str], spk_emb: Optional[str],
+    ) -> List[str]:
+        for i, t in enumerate(text):
+            text[i] = (
+                t.replace("[Stts]", "")
+                .replace("[spk_emb]", "")
+                .replace("[empty_spk]", "")
+                .strip()
+            )
+            """
+            see https://github.com/2noise/ChatTTS/issues/459
+            """
+
+        if prompt:
+            text = [prompt + i for i in text]
+
+        txt_smp = "" if txt_smp is None else txt_smp
+        if spk_emb is not None:
+            text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
+        else:
+            text = [f"[Stts][empty_spk]{txt_smp}{i}[Ptts]" for i in text]
+        
+        return text
+
+    @staticmethod
+    @torch.no_grad()
+    def decorate_text_prompts(text: List[str], prompt: str) -> List[str]:
+        return [f"[Sbreak]{i}[Pbreak]{prompt}" for i in text]

@@ -251,6 +251,7 @@ class GPT(nn.Module):
             if self.cache_position is not None:
                 self.cache_position = self.cache_position.to(device, dtype=dtype)
 
+    @torch.no_grad()
     def _prepare_generation_inputs(
         self,
         input_ids: torch.Tensor,
@@ -371,6 +372,7 @@ class GPT(nn.Module):
             del_all(self.attentions)
             del_all(self.hiddens)
 
+    @torch.no_grad()
     def _prepare_generation_outputs(
         self,
         inputs_ids: torch.Tensor,

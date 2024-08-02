@@ -476,28 +476,10 @@ class Chat:
         else:
             temperature = params.temperature
 
-        for i, t in enumerate(text):
-            text[i] = (
-                t.replace("[Stts]", "")
-                .replace("[spk_emb]", "")
-                .replace("[empty_spk]", "")
-                .strip()
-            )
-            """
-            see https://github.com/2noise/ChatTTS/issues/459
-            """
-
-        if params.prompt:
-            text = [params.prompt + i for i in text]
-
-        txt_smp = "" if params.txt_smp is None else params.txt_smp
-        if params.spk_emb is not None:
-            text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
-        else:
-            text = [f"[Stts][empty_spk]{txt_smp}{i}[Ptts]" for i in text]
-
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            text,
+            self.tokenizer.decorate_code_prompts(
+                text, params.prompt, params.txt_smp, params.spk_emb,
+            ),
             self.config.gpt.num_vq,
             prompt_str=params.spk_smp,
             device=self.device_gpt,
@@ -597,10 +579,8 @@ class Chat:
         if not isinstance(text, list):
             text = [text]
 
-        text = [f"[Sbreak]{i}[Pbreak]{params.prompt}" for i in text]
-
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            text,
+            self.tokenizer.decorate_text_prompts(text, params.prompt),
             self.config.gpt.num_vq,
             device=self.device_gpt,
         )
