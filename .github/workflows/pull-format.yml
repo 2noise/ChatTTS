@@ -1,0 +1,82 @@
+name: Check Pull Request Format
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  # This workflow closes invalid PR
+  change-or-close-pr:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    permissions: write-all
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Change Base Branch
+        if: github.event.pull_request.base.ref != 'dev'
+        uses: actions/github-script@v4
+        id: change-base
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo, number } = context.issue;
+            const newBase = 'dev';
+            try {
+              const result = await github.pulls.update({
+                owner,
+                repo,
+                pull_number: number,
+                base: newBase
+              });
+              console.log(result);
+              return 'success';
+            } catch (error) {
+              console.log(error);
+              return 'failed';
+            }
+
+      - name: Close PR if it is not pointed to dev Branch
+        if: "github.event.pull_request.base.ref != 'dev' && steps.change-base.outputs.result == 'failed'"
+        uses: superbrothers/close-pull-request@v3
+        with:
+          # Optional. Post a issue comment just before closing a pull request.
+          comment: "Invalid PR to `non-dev` branch `${{ github.event.pull_request.base.ref }}`."
+
+  pull-format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    continue-on-error: true
+
+    steps:
+      - name: Checkout Repo
+        continue-on-error: true
+        uses: actions/checkout@v4
+
+      - name: Checkout PR # see https://github.com/orgs/community/discussions/24945
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr checkout ${{ github.event.pull_request.number }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+
+      - name: Install Black
+        run: pip install "black[jupyter]"
+
+      - name: Run Black
+        # run: black $(git ls-files '*.py')
+        run: black .
+
+      - name: Commit back
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+        run: |
+          git config --local user.name 'github-actions[bot]'
+          git config --local user.email 'github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m "chore(format): run black on ${{github.ref_name}}"
+          git push

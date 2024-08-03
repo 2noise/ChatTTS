@@ -1,11 +1,16 @@
-omegaconf~=2.3.0
-torch~=2.1.0
+numpy<2.0.0
+numba
+torch>=2.1.0
+torchaudio
 tqdm
-einops
 vector_quantize_pytorch
-transformers~=4.41.1
+transformers>=4.41.1
 vocos
 IPython
-pynini
-WeTextProcessing
-nemo_text_processing
+gradio
+pybase16384
+pynini==2.1.5; sys_platform == 'linux'
+WeTextProcessing; sys_platform == 'linux'
+nemo_text_processing; sys_platform == 'linux'
+av
+pydub

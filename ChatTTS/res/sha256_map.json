@@ -1,0 +1,8 @@
+{
+	"sha256_asset_Decoder_pt"   : "9964e36e840f0e3a748c5f716fe6de6490d2135a5f5155f4a642d51860e2ec38",
+	"sha256_asset_DVAE_full_pt"      : "553eb75763511e23f3e5f86303e2163c5ca775489d637fb635d979c8ae58bbe5",
+	"sha256_asset_GPT_pt"       : "d7d4ee6461ea097a2be23eb40d73fb94ad3b3d39cb64fbb50cb3357fd466cadb",
+	"sha256_asset_spk_stat_pt"  : "3228d8a4cbbf349d107a1b76d2f47820865bd3c9928c4bdfe1cefd5c7071105f",
+	"sha256_asset_tokenizer_pt" : "e911ae7c6a7c27953433f35c44227a67838fe229a1f428503bdb6cd3d1bcc69c",
+	"sha256_asset_Vocos_pt"     : "09a670eda1c08b740013679c7a90ebb7f1a97646ea7673069a6838e6b51d6c58"
+}

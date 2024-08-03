@@ -1,0 +1,38 @@
+name: Upload to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{github.ref_name}}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade setuptools
+          python -m pip install --upgrade wheel
+          pip install twine
+
+      - name: Build Package
+        env:
+          CHTTS_VER: ${{ github.ref_name }}
+        run: |
+          echo "Release Tag: ${{ github.ref_name }}"
+          sed -i 's/v0.0.0/${{ github.ref_name }}/g' setup.py
+          python setup.py sdist
+
+      - name: Upload Package
+        run: |
+          twine upload dist/* -u "__token__" -p ${{ secrets.PYPI_TOKEN }}
