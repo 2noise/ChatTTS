@@ -617,7 +617,7 @@ class GPT(nn.Module):
                     "unexpected end at index %s",
                     str([unexpected_idx.item() for unexpected_idx in finish.nonzero()]),
                 )
-                if ensure_non_empty:
+                if ensure_non_empty and manual_seed is None:
                     if show_tqdm:
                         pbar.close()
                     self.logger.warning("regenerate in order to ensure non-empty")
