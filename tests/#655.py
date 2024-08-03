@@ -14,7 +14,6 @@ import ChatTTS
 
 from tools.logger import get_logger
 from tools.normalizer import normalizer_en_nemo_text
-from tools.seeder import TorchSeedContext
 
 logger = get_logger("Test", lv=logging.WARN)
 
@@ -32,14 +31,14 @@ text = ["What is [uv_break]your favorite english food?[laugh][lbreak]"]
 
 fail = False
 
-with TorchSeedContext(12345):
-    refined_text = chat.infer(
-        text,
-        refine_text_only=True,
-        params_refine_text=ChatTTS.Chat.RefineTextParams(
-            prompt="[oral_2][laugh_0][break_6]",
-        ),
-    )
+refined_text = chat.infer(
+    text,
+    refine_text_only=True,
+    params_refine_text=ChatTTS.Chat.RefineTextParams(
+        prompt="[oral_2][laugh_0][break_6]",
+        manual_seed=12345,
+    ),
+)
 if (
     refined_text[0]
     != "what is [uv_break] your favorite [uv_break] english food [laugh] like [laugh]"
