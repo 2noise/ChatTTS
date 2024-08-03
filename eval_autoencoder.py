@@ -110,6 +110,7 @@ def main():
         encoder = dvae_encoder
         decoder = dvae_decoder
     vq_layer = decoder.vq_layer
+    decoder.vq_layer = None
 
     encoder.to(dataset.device)
     decoder.to(dataset.device)

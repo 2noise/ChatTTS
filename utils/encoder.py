@@ -40,7 +40,8 @@ class DVAEEncoder(nn.Module):
             dilation_cycle=4,
         )
         self.conv_in_transpose = nn.ConvTranspose1d(idim, hidden, kernel_size=1, bias=False)
-        # nn.Sequential(
+        # self.wavenet = nn.Identity()
+        # self.conv_in_transpose = nn.Sequential(
         #     nn.ConvTranspose1d(100, idim, 3, 1, 1, bias=False),
         #     nn.ConvTranspose1d(idim, hidden, kernel_size=1, bias=False)
         # )
@@ -48,9 +49,9 @@ class DVAEEncoder(nn.Module):
             ConvNeXtBlock(hidden, hidden * 4, kernel, dilation,)
             for _ in range(n_layer)])
         self.conv_out_transpose = nn.Sequential(
-            nn.Conv1d(hidden, bn_dim, 3, 1, 1),
+            nn.ConvTranspose1d(hidden, bn_dim, 3, 1, 1),
             nn.GELU(),
-            nn.Conv1d(bn_dim, odim, 3, 1, 1),
+            nn.ConvTranspose1d(bn_dim, odim, 3, 1, 1),
         )
 
     def forward(
