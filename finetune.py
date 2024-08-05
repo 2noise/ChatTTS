@@ -1,7 +1,6 @@
 """
 CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 32 --epochs 10 --train_module dvae
-CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 32 --epochs 10 --train_module decoder
-CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 16 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_path ./saved_models/decoder.pth --dvae_path ./saved_models/dvae.pth
+CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 16 --epochs 10 --train_module gpt_all --gpt_lora
 """  # noqa: E501
 
 import argparse
@@ -232,7 +231,7 @@ def train_gpt(
                 ],
                 dim=1,
             )  # (batch_size, mel_len+1, num_vq)
-            indices = waveform_attention_mask.int().sum(dim=1)  # (batch_size,)
+            indices = mel_attention_mask[:, ::2].int().sum(dim=1)  # (batch_size,)
             for i in range(batch_size):
                 extended_audio_attention_mask[i, indices[i]] = 1
                 extended_audio_input_ids[i, indices[i]] = AUDIO_EOS_TOKEN_ID
@@ -316,7 +315,7 @@ def main():
     parser.add_argument('--process_ahead', action='store_true', help='process all data ahead during dataset initialization')
     parser.add_argument(
         '--train_module', type=str, default='gpt',
-        choices=['gpt_speaker', 'gpt', 'speaker', 'dvae', 'dvae_encoder', 'dvae_decoder', 'decoder'],
+        choices=['gpt_all', 'gpt_speaker', 'gpt', 'speaker', 'dvae', 'dvae_encoder', 'dvae_decoder', 'decoder'],
     )
     parser.add_argument('--train_text', action='store_true', help='train text loss')
     parser.add_argument('--gpt_lora', action='store_true', help='train gpt with lora')
@@ -385,10 +384,10 @@ def main():
             chat.gpt.gpt = peft.get_peft_model(chat.gpt.gpt, lora_config)
 
     match train_module:
-        case TrainModule.GPT_SPEAKER | TrainModule.GPT | TrainModule.SPEAKER:
+        case TrainModule.GPT_ALL | TrainModule.GPT_SPEAKER | TrainModule.GPT | TrainModule.SPEAKER | TrainModule.DECODER:
             train = train_gpt
             kwargs = {'train_text': train_text, 'speaker_embeds': speaker_embeds}
-        case TrainModule.DVAE | TrainModule.DVAE_ENCODER | TrainModule.DVAE_DECODER | TrainModule.DECODER:
+        case TrainModule.DVAE | TrainModule.DVAE_ENCODER | TrainModule.DVAE_DECODER:
             train = train_autoencoder
             kwargs = {}
         case _:
@@ -416,17 +415,21 @@ def main():
     if speaker_embeds is not None:
         np_speaker_embeds = {speaker: speaker_embed.detach().cpu().numpy() for speaker, speaker_embed in speaker_embeds.items()}
     match train_module:
+        case TrainModule.GPT_ALL:
+            torch.save(chat.gpt.state_dict(), gpt_save_path)
+            torch.save(chat.decoder.state_dict(), decoder_save_path)
+            np.savez(speaker_embeds_save_path, **np_speaker_embeds)
         case TrainModule.GPT_SPEAKER:
             torch.save(chat.gpt.state_dict(), gpt_save_path)
             np.savez(speaker_embeds_save_path, **np_speaker_embeds)
         case TrainModule.GPT:
             torch.save(chat.gpt.state_dict(), gpt_save_path)
+        case TrainModule.DECODER:
+            torch.save(chat.decoder.state_dict(), decoder_save_path)
         case TrainModule.SPEAKER:
             np.savez(speaker_embeds_save_path, **np_speaker_embeds)
         case TrainModule.DVAE | TrainModule.DVAE_ENCODER | TrainModule.DVAE_DECODER:
             torch.save(chat.dvae.state_dict(), dvae_save_path)
-        case TrainModule.DECODER:
-            torch.save(chat.decoder.state_dict(), decoder_save_path)
     print('save models to:', save_folder)
 
 

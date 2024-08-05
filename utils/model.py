@@ -7,16 +7,16 @@ from ChatTTS.model.dvae import DVAE
 
 
 def get_mel_attention_mask(
-    audio_attention_mask: torch.Tensor,  # (batch_size, time)
+    waveform_attention_mask: torch.Tensor,  # (batch_size, time)
     mel_len: int,
 ):
-    batch_size = audio_attention_mask.size(0)
+    batch_size = waveform_attention_mask.size(0)
     mel_attention_mask = torch.ones(
         (batch_size, mel_len),
-        device=audio_attention_mask.device,
+        device=waveform_attention_mask.device,
     )
-    indices = audio_attention_mask.int().sum(dim=1)  # (batch_size,)
-    indices = indices * mel_len // audio_attention_mask.size(1)
+    indices = waveform_attention_mask.int().sum(dim=1)  # (batch_size,)
+    indices = indices * mel_len // waveform_attention_mask.size(1)
     for i in range(batch_size):
         mel_attention_mask[i, indices[i]:] = 0
     return mel_attention_mask
