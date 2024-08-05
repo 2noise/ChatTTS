@@ -174,7 +174,7 @@ class Normalizer:
                 self.logger.debug("split texts %s, tags %s", str(texts), str(tags))
                 texts = [self.normalizers[_lang](t) for t in texts]
                 self.logger.debug("normed texts %s", str(texts))
-                text = _combine_tags(texts, tags)
+                text = _combine_tags(texts, tags) if len(tags) > 0 else texts[0]
                 self.logger.debug("combined text %s", text)
             if _lang == "zh":
                 text = self._apply_half2full_map(text)
@@ -196,7 +196,7 @@ class Normalizer:
             self.logger.debug("split texts %s, tags %s", str(texts), str(tags))
             texts = [self.reject_pattern.sub("", t) for t in texts]
             self.logger.debug("normed texts %s", str(texts))
-            text = _combine_tags(texts, tags)
+            text = _combine_tags(texts, tags) if len(tags) > 0 else texts[0]
             self.logger.debug("combined text %s", text)
         return text
 
