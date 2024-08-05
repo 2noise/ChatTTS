@@ -6,7 +6,7 @@
 A generative speech model for daily dialogue.
 
 [![Licence](https://img.shields.io/github/license/2noise/ChatTTS?style=for-the-badge)](https://github.com/2noise/ChatTTS/blob/main/LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/ChatTTS.svg?style=for-the-badge)](https://pypi.org/project/ChatTTS)
+[![PyPI](https://img.shields.io/pypi/v/ChatTTS.svg?style=for-the-badge&color=green)](https://pypi.org/project/ChatTTS)
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
@@ -101,7 +101,12 @@ conda activate chattts
 pip install -r requirements.txt
 ```
 
-#### Optional: Install TransformerEngine if using NVIDIA GPU (Linux only)
+#### Optional: Install vLLM (Linux only)
+```bash
+pip install safetensors vllm==0.2.7 torchaudio
+```
+
+#### Unrecommended Optional: Install TransformerEngine if using NVIDIA GPU (Linux only)
 > [!Note]
 > The installation process is very slow.
 
@@ -113,7 +118,7 @@ pip install -r requirements.txt
 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 ```
 
-#### Optional: Install FlashAttention-2 (mainly NVIDIA GPU)
+#### Unrecommended Optional: Install FlashAttention-2 (mainly NVIDIA GPU)
 > [!Note]
 > See supported devices at the [Hugging Face Doc](https://huggingface.co/docs/transformers/perf_infer_gpu_one#flashattention-2).
 

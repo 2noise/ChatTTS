@@ -58,6 +58,7 @@ class GPT:
     spk_emb_dim: int = 192
     spk_KL: bool = False
     num_audio_tokens: int = 626
+    num_text_tokens: int = 21178
     num_vq: int = 4
 
 
