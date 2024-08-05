@@ -169,7 +169,7 @@ class Chat:
     def _sample_random_speaker(self) -> torch.Tensor:
         dim: int = (
             self.gpt.gpt.layers[0].layernorm_mlp.fc1_weight.size(1)
-            # dim: int = self.gpt.gpt.layers[0].layernorm_mlp.hidden_size
+            # self.gpt.gpt.layers[0].layernorm_mlp.hidden_size
             # requires transformer-engine>=1.9
             if self.gpt.is_te_llama
             else self.gpt.gpt.layers[0].mlp.gate_proj.in_features
