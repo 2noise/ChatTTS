@@ -1,7 +1,7 @@
 """
-CUDA_VISIBLE_DEVICES=1 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 32 --epochs 10 --train_module dvae
-CUDA_VISIBLE_DEVICES=2 python finetune.py --color --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 32 --epochs 10 --train_module decoder
-CUDA_VISIBLE_DEVICES=3 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 16 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_path ./saved_models/decoder.pth --dvae_path ./saved_models/dvae.pth
+CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 32 --epochs 10 --train_module dvae
+CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/all.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 32 --epochs 10 --train_module decoder
+CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 16 --epochs 10 --train_module gpt_speaker --gpt_lora --decoder_path ./saved_models/decoder.pth --dvae_path ./saved_models/dvae.pth
 """  # noqa: E501
 
 import argparse
@@ -126,10 +126,8 @@ def train_gpt(
     speaker_embeds: dict[str, torch.Tensor] = {},
 ) -> dict[str, torch.Tensor]:
     speaker_embeds = {
-        speaker: torch.randn(
-            768,
-            device=chat.device,
-            requires_grad=train_module in [TrainModule.GPT_ALL, TrainModule.GPT_SPEAKER, TrainModule.SPEAKER],
+        speaker: chat._sample_random_speaker().requires_grad_(
+            train_module in [TrainModule.GPT_ALL, TrainModule.GPT_SPEAKER, TrainModule.SPEAKER],
         ) for speaker in dataset.speakers
     } | speaker_embeds
     for speaker_embed in speaker_embeds.values():
@@ -351,29 +349,13 @@ def main():
 
     chat = ChatTTS.Chat()
     chat.load()
-
-    dataset = XzListTar(
-        root=data_path,
-        tokenizer=chat.tokenizer._tokenizer,
-        normalizer=chat.normalizer,
-        tar_path=tar_path,
-        tar_in_memory=tar_in_memory,
-        process_ahead=process_ahead,
-        # device=None,
-        # speakers=None,  # set(['speaker_A', 'speaker_B'])
-    )
-
-    decoder = chat.decoder
-    dvae = chat.dvae
-    gpt = chat.gpt
-
     # load pretrained models
     if decoder_path is not None:
-        decoder.load_state_dict(torch.load(decoder_path, map_location=chat.device))
+        chat.decoder.load_state_dict(torch.load(decoder_path, map_location=chat.device))
     if dvae_path is not None:
-        dvae.load_state_dict(torch.load(dvae_path, map_location=chat.device))
+        chat.dvae.load_state_dict(torch.load(dvae_path, map_location=chat.device))
     if gpt_path is not None:
-        gpt.load_state_dict(torch.load(gpt_path, map_location=chat.device))
+        chat.gpt.load_state_dict(torch.load(gpt_path, map_location=chat.device))
     speaker_embeds: dict[str, torch.Tensor] = {}
     if speaker_embeds_path is not None:
         np_speaker_embeds: dict[str, np.ndarray] = np.load(speaker_embeds_path)
@@ -383,7 +365,6 @@ def main():
         }
 
     if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT]:
-        gpt = chat.gpt
         if gpt_lora:
             import peft
             # match gpt_kbit:
@@ -398,10 +379,10 @@ def main():
             #         quantization_config = transformers.BitsAndBytesConfig(
             #             load_in_8bit=True,
             #     )
-            # gpt.gpt = transformers.LlamaModel.from_pretrained()
-            # peft.prepare_model_for_gpt_kbit_training(gpt.gpt)
+            # chat.gpt.gpt = transformers.LlamaModel.from_pretrained()
+            # peft.prepare_model_for_gpt_kbit_training(chat.gpt.gpt)
             lora_config = peft.LoraConfig(r=8, lora_alpha=16)
-            gpt.gpt = peft.get_peft_model(gpt.gpt, lora_config)
+            chat.gpt.gpt = peft.get_peft_model(chat.gpt.gpt, lora_config)
 
     match train_module:
         case TrainModule.GPT_SPEAKER | TrainModule.GPT | TrainModule.SPEAKER:
@@ -412,6 +393,16 @@ def main():
             kwargs = {}
         case _:
             raise ValueError(f'invalid train_module: {train_module}')
+
+    dataset = XzListTar(
+        root=data_path,
+        tokenizer=chat.tokenizer._tokenizer,
+        normalizer=chat.normalizer,
+        tar_path=tar_path,
+        tar_in_memory=tar_in_memory,
+        process_ahead=process_ahead,
+        # speakers=None,  # set(['speaker_A', 'speaker_B'])
+    )
     speaker_embeds = train(chat=chat, dataset=dataset, train_module=train_module, batch_size=batch_size, epochs=epochs, **kwargs)
 
     if not os.path.isdir(save_folder):
@@ -421,21 +412,21 @@ def main():
     decoder_save_path = os.path.join(save_folder, 'decoder.pth')
     dvae_save_path = os.path.join(save_folder, 'dvae.pth')
     if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT] and gpt_lora:
-        gpt.gpt = gpt.gpt.merge_and_unload()
+        chat.gpt.gpt = chat.gpt.gpt.merge_and_unload()
     if speaker_embeds is not None:
         np_speaker_embeds = {speaker: speaker_embed.detach().cpu().numpy() for speaker, speaker_embed in speaker_embeds.items()}
     match train_module:
         case TrainModule.GPT_SPEAKER:
-            torch.save(gpt.state_dict(), gpt_save_path)
+            torch.save(chat.gpt.state_dict(), gpt_save_path)
             np.savez(speaker_embeds_save_path, **np_speaker_embeds)
         case TrainModule.GPT:
-            torch.save(gpt.state_dict(), gpt_save_path)
+            torch.save(chat.gpt.state_dict(), gpt_save_path)
         case TrainModule.SPEAKER:
             np.savez(speaker_embeds_save_path, **np_speaker_embeds)
         case TrainModule.DVAE | TrainModule.DVAE_ENCODER | TrainModule.DVAE_DECODER:
-            torch.save(dvae.state_dict(), dvae_save_path)
+            torch.save(chat.dvae.state_dict(), dvae_save_path)
         case TrainModule.DECODER:
-            torch.save(decoder.state_dict(), decoder_save_path)
+            torch.save(chat.decoder.state_dict(), decoder_save_path)
     print('save models to:', save_folder)
 
 

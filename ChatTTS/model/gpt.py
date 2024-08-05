@@ -87,24 +87,24 @@ class GPT(nn.Module):
 
         self.load_state_dict(torch.load(file_path, weights_only=True, mmap=True))
 
-        if (
-            "cuda" in str(self.device_gpt) and platform.system().lower() == "linux"
-        ):  # is TELlamaModel
-            try:
-                from .cuda import TELlamaModel
+        # if (
+        #     "cuda" in str(self.device_gpt) and platform.system().lower() == "linux"
+        # ):  # is TELlamaModel
+        #     try:
+        #         from .cuda import TELlamaModel
 
-                self.logger.info("Linux with CUDA, try NVIDIA accelerated TELlamaModel")
-                state_dict = self.gpt.state_dict()
-                vanilla = TELlamaModel.from_state_dict(state_dict, self.llama_config)
-                # Force mem release. Taken from huggingface code
-                del state_dict, self.gpt
-                gc.collect()
-                self.gpt = vanilla
-                self.is_te_llama = True
-            except Exception as e:
-                self.logger.warning(
-                    f"use default LlamaModel for importing TELlamaModel error: {e}"
-                )
+        #         self.logger.info("Linux with CUDA, try NVIDIA accelerated TELlamaModel")
+        #         state_dict = self.gpt.state_dict()
+        #         vanilla = TELlamaModel.from_state_dict(state_dict, self.llama_config)
+        #         # Force mem release. Taken from huggingface code
+        #         del state_dict, self.gpt
+        #         gc.collect()
+        #         self.gpt = vanilla
+        #         self.is_te_llama = True
+        #     except Exception as e:
+        #         self.logger.warning(
+        #             f"use default LlamaModel for importing TELlamaModel error: {e}"
+        #         )
 
     class Context:
         def __init__(self):

@@ -167,6 +167,7 @@ class Chat:
 
     @torch.no_grad()
     def _sample_random_speaker(self) -> torch.Tensor:
+        # if not self.gpt.is_te_llama:
         dim: int = self.gpt.gpt.layers[0].mlp.gate_proj.in_features
         spk = (
             torch.randn(dim, device=self.std.device, dtype=self.std.dtype)

@@ -32,7 +32,6 @@ class DataType(LazyDataType):
 class XzListTarKwargsType(typing.TypedDict):
     tokenizer: typing.NotRequired[transformers.PreTrainedTokenizer | None]
     normalizer: typing.NotRequired[Normalizer | None]
-    device: typing.NotRequired[str | torch.device | None]
     speakers: typing.NotRequired[typing.Iterable[str] | None]
     sample_rate: typing.NotRequired[int]
     default_speaker: typing.NotRequired[str | None]
