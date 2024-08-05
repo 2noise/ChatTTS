@@ -1,6 +1,9 @@
 """
-CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 32 --epochs 10 --train_module dvae
-CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --tar_in_memory --process_ahead --batch_size 16 --epochs 10 --train_module gpt_all --gpt_lora
+CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 32 --epochs 10 --train_module dvae
+CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 16 --epochs 10 --train_module gpt_all
+
+--gpt_lora --tar_in_memory --process_ahead
+
 """  # noqa: E501
 
 import argparse
@@ -347,7 +350,7 @@ def main():
     speaker_embeds_path: str = args.speaker_embeds_path
 
     chat = ChatTTS.Chat()
-    chat.load()
+    chat.load(compile=False)
     # load pretrained models
     if decoder_path is not None:
         chat.decoder.load_state_dict(torch.load(decoder_path, map_location=chat.device))

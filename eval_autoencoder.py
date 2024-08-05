@@ -29,7 +29,7 @@ def main():
     dvae_path: str = args.dvae_path
 
     chat = ChatTTS.Chat()
-    chat.load()
+    chat.load(compile=False)
     if dvae_path is not None:
         chat.dvae.load_state_dict(torch.load(dvae_path, map_location=chat.device))
 
