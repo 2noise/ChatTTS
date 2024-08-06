@@ -6,9 +6,12 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+
 class Speaker:
     def __init__(self, dim: int, spk_cfg: str, device=torch.device("cpu")) -> None:
-        spk_stat = torch.from_numpy(np.frombuffer(b14.decode_from_string(spk_cfg), dtype=np.float16).copy()).to(device=device)
+        spk_stat = torch.from_numpy(
+            np.frombuffer(b14.decode_from_string(spk_cfg), dtype=np.float16).copy()
+        ).to(device=device)
         self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
         self.dim = dim
 

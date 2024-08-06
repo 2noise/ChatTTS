@@ -60,7 +60,11 @@ input_ids, attention_mask, text_mask = chat.tokenizer.encode(
         params.spk_emb,
     ),
     chat.config.gpt.num_vq,
-    prompt=chat.speaker.decode_prompt(params.spk_smp) if params.spk_smp is not None else None,
+    prompt=(
+        chat.speaker.decode_prompt(params.spk_smp)
+        if params.spk_smp is not None
+        else None
+    ),
     device=chat.device_gpt,
 )
 with torch.inference_mode():
