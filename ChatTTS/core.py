@@ -13,7 +13,7 @@ from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
 
 from .config import Config
-from .model import DVAE, GPT, gen_logits, Tokenizer
+from .model import DVAE, GPT, gen_logits, Tokenizer, Speaker
 from .utils import (
     check_all_assets,
     download_all_assets,
@@ -152,25 +152,12 @@ class Chat:
             if hasattr(self, module):
                 delattr(self, module)
         self.__init__(logger)
-
+    
     def sample_random_speaker(self) -> str:
-        return self.tokenizer._encode_spk_emb(self._sample_random_speaker())
+        return self.speaker.sample_random()
 
-    @torch.inference_mode()
     def sample_audio_speaker(self, wav: Union[np.ndarray, torch.Tensor]) -> str:
-        if isinstance(wav, np.ndarray):
-            wav = torch.from_numpy(wav).to(self.device)
-        return self.tokenizer._encode_prompt(self.dvae(wav, "encode").squeeze_(0))
-
-    @torch.no_grad()
-    def _sample_random_speaker(self) -> torch.Tensor:
-        dim: int = self.config.gpt.hidden_size
-        spk = (
-            torch.randn(dim, device=self.std.device, dtype=self.std.dtype)
-            .mul_(self.std)
-            .add_(self.mean)
-        )
-        return spk
+        return self.speaker.encode_prompt(self.dvae.sample_audio(wav))
 
     @dataclass(repr=False, eq=False)
     class RefineTextParams:
@@ -303,15 +290,7 @@ class Chat:
         gpt.prepare(compile=compile and "cuda" in str(device))
         self.gpt = gpt
 
-        spk_stat_path = os.path.join(os.path.dirname(gpt_ckpt_path), "spk_stat.pt")
-        assert os.path.exists(spk_stat_path), f"Missing spk_stat.pt: {spk_stat_path}"
-        spk_stat: torch.Tensor = torch.load(
-            spk_stat_path,
-            weights_only=True,
-            mmap=True,
-            map_location=device,
-        )
-        self.std, self.mean = spk_stat.requires_grad_(False).chunk(2)
+        self.speaker = Speaker(self.config.gpt.hidden_size, self.config.spk_stat, device)
         self.logger.log(logging.INFO, "gpt loaded.")
 
         decoder = (
@@ -479,14 +458,14 @@ class Chat:
             temperature = params.temperature
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            self.tokenizer.decorate_code_prompts(
+            self.speaker.decorate_code_prompts(
                 text,
                 params.prompt,
                 params.txt_smp,
                 params.spk_emb,
             ),
             self.config.gpt.num_vq,
-            prompt_str=params.spk_smp,
+            prompt=self.speaker.decode_prompt(params.spk_smp) if params.spk_smp is not None else None,
             device=self.device_gpt,
         )
         start_idx = input_ids.shape[-2]
@@ -544,8 +523,8 @@ class Chat:
         del text_mask
 
         if params.spk_emb is not None:
-            self.tokenizer.apply_spk_emb(
-                emb, params.spk_emb, input_ids, self.gpt.device_gpt
+            self.speaker.apply(
+                emb, params.spk_emb, input_ids, self.tokenizer.spk_emb_ids, self.gpt.device_gpt,
             )
 
         result = gpt.generate(
@@ -585,7 +564,7 @@ class Chat:
             text = [text]
 
         input_ids, attention_mask, text_mask = self.tokenizer.encode(
-            self.tokenizer.decorate_text_prompts(text, params.prompt),
+            self.speaker.decorate_text_prompts(text, params.prompt),
             self.config.gpt.num_vq,
             device=self.device_gpt,
         )
