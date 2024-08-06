@@ -152,7 +152,7 @@ class Chat:
             if hasattr(self, module):
                 delattr(self, module)
         self.__init__(logger)
-    
+
     def sample_random_speaker(self) -> str:
         return self.speaker.sample_random()
 
@@ -290,7 +290,9 @@ class Chat:
         gpt.prepare(compile=compile and "cuda" in str(device))
         self.gpt = gpt
 
-        self.speaker = Speaker(self.config.gpt.hidden_size, self.config.spk_stat, device)
+        self.speaker = Speaker(
+            self.config.gpt.hidden_size, self.config.spk_stat, device
+        )
         self.logger.log(logging.INFO, "gpt loaded.")
 
         decoder = (
@@ -465,7 +467,11 @@ class Chat:
                 params.spk_emb,
             ),
             self.config.gpt.num_vq,
-            prompt=self.speaker.decode_prompt(params.spk_smp) if params.spk_smp is not None else None,
+            prompt=(
+                self.speaker.decode_prompt(params.spk_smp)
+                if params.spk_smp is not None
+                else None
+            ),
             device=self.device_gpt,
         )
         start_idx = input_ids.shape[-2]
@@ -524,7 +530,11 @@ class Chat:
 
         if params.spk_emb is not None:
             self.speaker.apply(
-                emb, params.spk_emb, input_ids, self.tokenizer.spk_emb_ids, self.gpt.device_gpt,
+                emb,
+                params.spk_emb,
+                input_ids,
+                self.tokenizer.spk_emb_ids,
+                self.gpt.device_gpt,
             )
 
         result = gpt.generate(
