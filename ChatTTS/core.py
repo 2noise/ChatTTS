@@ -332,7 +332,7 @@ class Chat:
         self.logger.log(logging.INFO, "decoder loaded.")
 
         if tokenizer_path:
-            self.tokenizer = Tokenizer(tokenizer_path, device)
+            self.tokenizer = Tokenizer(tokenizer_path)
             self.logger.log(logging.INFO, "tokenizer loaded.")
 
         self.coef = coef

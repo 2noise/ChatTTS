@@ -284,7 +284,7 @@ This is a problem that typically occurs with autoregressive models (for bark and
 In the current released model, the only token-level control units are `[laugh]`, `[uv_break]`, and `[lbreak]`. In future versions, we may open-source models with additional emotional control capabilities.
 
 ## Acknowledgements
-- [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demostrate a remarkable TTS result by an autoregressive-style system.
+- [bark](https://github.com/suno-ai/bark), [XTTSv2](https://github.com/coqui-ai/TTS) and [valle](https://arxiv.org/abs/2301.02111) demonstrate a remarkable TTS result by an autoregressive-style system.
 - [fish-speech](https://github.com/fishaudio/fish-speech) reveals capability of GVQ as audio tokenizer for LLM modeling.
 - [vocos](https://github.com/gemelo-ai/vocos) which is used as a pretrained vocoder.
 

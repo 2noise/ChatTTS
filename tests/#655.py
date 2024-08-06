@@ -41,7 +41,7 @@ refined_text = chat.infer(
 )
 if (
     refined_text[0]
-    != "what is [uv_break] your favorite [uv_break] english food [laugh] like [laugh]"
+    != "what is [uv_break] your favorite english [uv_break] food [laugh] like [lbreak]"
 ):
     fail = True
     logger.warning("refined text is '%s'", refined_text[0])

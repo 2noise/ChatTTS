@@ -19,11 +19,16 @@ from ..utils import del_all
 
 class Tokenizer:
     def __init__(
-        self, tokenizer_path: torch.serialization.FILE_LIKE, device: torch.device
+        self,
+        tokenizer_path: torch.serialization.FILE_LIKE,
     ):
+        """
         tokenizer: BertTokenizerFast = torch.load(
             tokenizer_path, map_location=device, mmap=True
         )
+        # tokenizer.save_pretrained("asset/tokenizer", legacy_format=False)
+        """
+        tokenizer: BertTokenizerFast = BertTokenizerFast.from_pretrained(tokenizer_path)
         self._tokenizer = tokenizer
 
         self.len = len(tokenizer)
