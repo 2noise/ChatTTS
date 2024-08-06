@@ -33,9 +33,12 @@ refined = chat.infer(
 )
 
 trimre = re.compile("\\[[\w_]+\\]")
+
+
 def trim_tags(txt: str) -> str:
     global trimre
     return trimre.sub("", txt)
+
 
 for i, t in enumerate(refined):
     if len(t) > 4 * len(trim_tags(texts[i])):
