@@ -29,17 +29,6 @@ def save_mp3_file(wav, index):
     logger.info(f"Audio saved to {mp3_filename}")
 
 
-def ndarray_to_tensor(audio: np.ndarray) -> torch.Tensor:
-    # Assuming 'wavs' is a NumPy array of shape (num_samples,) or (num_channels, num_samples)
-    wav_tensor = torch.from_numpy(audio.astype(np.float32))  # Ensure data is float32
-
-    # If 'wavs' is 1D, add a channel dimension
-    if wav_tensor.dim() == 1:
-        wav_tensor = wav_tensor.unsqueeze(0)
-
-    return wav_tensor
-
-
 def load_normalizer(chat: ChatTTS.Chat):
     # try to load normalizer
     try:
