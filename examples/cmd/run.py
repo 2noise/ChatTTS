@@ -51,12 +51,13 @@ def load_normalizer(chat: ChatTTS.Chat):
         )
 
 
-def main(texts: List[str],
-         spk: Optional[str] = None,
-         stream: bool = False,
-         source: str = "local",
-         custom_path: str = "",
-         ):
+def main(
+    texts: List[str],
+    spk: Optional[str] = None,
+    stream: bool = False,
+    source: str = "local",
+    custom_path: str = "",
+):
     logger.info("Text input: %s", str(texts))
 
     chat = ChatTTS.Chat(get_logger("ChatTTS"))
@@ -65,9 +66,7 @@ def main(texts: List[str],
 
     is_load = False
     if os.path.isdir(custom_path) and source == "custom":
-        is_load = chat.load(compile=True,
-                            source="custom",
-                            custom_path=custom_path)
+        is_load = chat.load(compile=True, source="custom", custom_path=custom_path)
     else:
         is_load = chat.load(compile=True, source=source)
 
