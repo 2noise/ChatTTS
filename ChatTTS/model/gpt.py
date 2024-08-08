@@ -649,6 +649,7 @@ class GPT(nn.Module):
                         show_tqdm,
                         ensure_non_empty,
                         stream_batch,
+                        manual_seed,
                         context,
                     )
                     for result in new_gen:
