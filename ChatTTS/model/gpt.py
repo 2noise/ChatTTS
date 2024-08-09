@@ -134,12 +134,16 @@ class GPT(nn.Module):
         self.load_state_dict(torch.load(file_path, weights_only=True, mmap=True))
 
         if (
-            experimental and "cuda" in str(self.device_gpt) and platform.system().lower() == "linux"
+            experimental
+            and "cuda" in str(self.device_gpt)
+            and platform.system().lower() == "linux"
         ):  # is TELlamaModel
             try:
                 from .cuda import TELlamaModel
 
-                self.logger.warning("Linux with CUDA, try NVIDIA accelerated TELlamaModel because experimental is enabled")
+                self.logger.warning(
+                    "Linux with CUDA, try NVIDIA accelerated TELlamaModel because experimental is enabled"
+                )
                 state_dict = self.gpt.state_dict()
                 vanilla = TELlamaModel.from_state_dict(state_dict, self.llama_config)
                 # Force mem release. Taken from huggingface code
