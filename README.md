@@ -177,7 +177,13 @@ texts = ["PUT YOUR 1st TEXT HERE", "PUT YOUR 2nd TEXT HERE"]
 wavs = chat.infer(texts)
 
 for i in range(len(wavs)):
-    torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]).unsqueeze(0), 24000)
+    """
+    In some versions of torchaudio, the first line works but in other versions, so does the second line.
+    """
+    try:
+        torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]).unsqueeze(0), 24000)
+    except:
+        torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]), 24000)
 ```
 
 ### Advanced Usage
@@ -216,7 +222,13 @@ wavs = chat.infer(
 
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
 wavs = chat.infer(text, skip_refine_text=True, params_refine_text=params_refine_text,  params_infer_code=params_infer_code)
-torchaudio.save("word_level_output.wav", torch.from_numpy(wavs[0]).unsqueeze(0), 24000)
+"""
+In some versions of torchaudio, the first line works but in other versions, so does the second line.
+"""
+try:
+    torchaudio.save("word_level_output.wav", torch.from_numpy(wavs[0]).unsqueeze(0), 24000)
+except:
+    torchaudio.save("word_level_output.wav", torch.from_numpy(wavs[0]), 24000)
 ```
 
 <details open>
