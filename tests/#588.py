@@ -41,7 +41,7 @@ def trim_tags(txt: str) -> str:
 
 
 for i, t in enumerate(refined):
-    if len(t) > 4 * len(trim_tags(texts[i])):
+    if len(trim_tags(t)) > 4 * len(texts[i]):
         fail = True
         logger.warning("in: %s, out: %s", texts[i], t)
 
