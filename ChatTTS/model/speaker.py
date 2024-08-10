@@ -16,22 +16,24 @@ class Speaker:
         self.dim = dim
 
     def sample_random(self) -> str:
-        return self._encode(self._sample_random())
+        return self._encode(self.sample_random_tensor())
 
     @torch.no_grad()
     def apply(
         self,
         emb: torch.Tensor,
-        spk_emb: str,
+        spk_emb: Union[str, torch.Tensor],
         input_ids: torch.Tensor,
         spk_emb_ids: int,
         device: torch.device,
     ):
+        if isinstance(spk_emb, str):
+            spk_emb_tensor = torch.from_numpy(self._decode(spk_emb))
+        else:
+            spk_emb_tensor = spk_emb
         n = (
             F.normalize(
-                torch.from_numpy(
-                    self._decode(spk_emb),
-                ),
+                spk_emb_tensor,
                 p=2.0,
                 dim=0,
                 eps=1e-12,
@@ -115,7 +117,7 @@ class Speaker:
         return torch.from_numpy(p.astype(np.int32)).view(*shp)
 
     @torch.no_grad()
-    def _sample_random(self) -> torch.Tensor:
+    def sample_random_tensor(self) -> torch.Tensor:
         spk = (
             torch.randn(self.dim, device=self.std.device, dtype=self.std.dtype)
             .mul_(self.std)
