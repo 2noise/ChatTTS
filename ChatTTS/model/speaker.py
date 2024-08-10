@@ -27,7 +27,7 @@ class Speaker:
         spk_emb_ids: int,
         device: torch.device,
         inplace: bool = True,
-    ):
+    ) -> torch.Tensor:
         if isinstance(spk_emb, str):
             spk_emb_tensor = torch.from_numpy(self._decode(spk_emb))
         else:
