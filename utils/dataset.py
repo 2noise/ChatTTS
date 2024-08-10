@@ -173,15 +173,12 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         do_homophone_replacement: bool = True,
     ) -> torch.Tensor:
 
-        text = [
-            self.normalizer(
-                t,
-                do_text_normalization,
-                do_homophone_replacement,
-                lang,
-            )
-            for t in text
-        ]
+        text = self.normalizer(
+            text,
+            do_text_normalization,
+            do_homophone_replacement,
+            lang,
+        )
 
         text = f'[Stts][spk_emb]{text}[Ptts]'
         # text = f'[Stts][empty_spk]{text}[Ptts]'
