@@ -41,7 +41,7 @@ refined_text = chat.infer(
 )
 if (
     refined_text[0]
-    != "what is [uv_break] your favorite [uv_break] english food [laugh] like [laugh]"
+    != "what is [uv_break] your favorite english [uv_break] food [laugh] like [lbreak]"
 ):
     fail = True
     logger.warning("refined text is '%s'", refined_text[0])
@@ -53,14 +53,18 @@ params = ChatTTS.Chat.InferCodeParams(
     top_K=20,  # top K decode
 )
 input_ids, attention_mask, text_mask = chat.tokenizer.encode(
-    chat.tokenizer.decorate_code_prompts(
+    chat.speaker.decorate_code_prompts(
         text,
         params.prompt,
         params.txt_smp,
         params.spk_emb,
     ),
     chat.config.gpt.num_vq,
-    prompt_str=params.spk_smp,
+    prompt=(
+        chat.speaker.decode_prompt(params.spk_smp)
+        if params.spk_smp is not None
+        else None
+    ),
     device=chat.device_gpt,
 )
 with torch.inference_mode():

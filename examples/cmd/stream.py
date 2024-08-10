@@ -1,4 +1,3 @@
-import time
 import random
 
 import numpy as np
@@ -148,7 +147,6 @@ class ChatStreamer:
     # 流式播放接口
     def play(self, streamchat, wait=5):
         import pyaudio  # please install it manually
-        import time
 
         p = pyaudio.PyAudio()
         print(p.get_device_count())
