@@ -1,5 +1,5 @@
 import math
-from typing import List, Optional, Literal, Tuple
+from typing import List, Optional, Literal, Union
 
 import numpy as np
 import pybase16384 as b14
@@ -216,7 +216,7 @@ class DVAE(nn.Module):
             coef = torch.rand(100)
         else:
             coef = torch.from_numpy(
-                np.copy(np.frombuffer(b14.decode_from_string(coef), dtype=np.float32))
+                np.frombuffer(b14.decode_from_string(coef), dtype=np.float32).copy()
             )
         self.register_buffer("coef", coef.unsqueeze(0).unsqueeze_(2))
 
@@ -284,3 +284,9 @@ class DVAE(nn.Module):
         del vq_feats
 
         return torch.mul(dec_out, self.coef, out=dec_out)
+
+    @torch.inference_mode()
+    def sample_audio(self, wav: Union[np.ndarray, torch.Tensor]) -> torch.Tensor:
+        if isinstance(wav, np.ndarray):
+            wav = torch.from_numpy(wav)
+        return self(wav, "encode").squeeze_(0)

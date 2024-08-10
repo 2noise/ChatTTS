@@ -107,24 +107,27 @@ pip install safetensors vllm==0.2.7 torchaudio
 ```
 
 #### Unrecommended Optional: Install TransformerEngine if using NVIDIA GPU (Linux only)
+> [!Warning]
+> DO NOT INSTALL! 
+> The adaptation of TransformerEngine is currently under development and CANNOT run properly now. 
+> Only install it on developing purpose. See more details on at #672 #676
+
 > [!Note]
 > The installation process is very slow.
-
-> [!Warning]
-> The adaptation of TransformerEngine is currently under development and CANNOT run properly now. 
-> Only install it on developing purpose.
 
 ```bash
 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
 ```
 
 #### Unrecommended Optional: Install FlashAttention-2 (mainly NVIDIA GPU)
+> [!Warning]
+> DO NOT INSTALL! 
+> Currently the FlashAttention-2 will slow down the generating speed according to [this issue](https://github.com/huggingface/transformers/issues/26990). 
+> Only install it on developing purpose.
+
 > [!Note]
 > See supported devices at the [Hugging Face Doc](https://huggingface.co/docs/transformers/perf_infer_gpu_one#flashattention-2).
 
-> [!Warning]
-> Currently the FlashAttention-2 will slow down the generating speed according to [this issue](https://github.com/huggingface/transformers/issues/26990). 
-> Only install it on developing purpose.
 
 ```bash
 pip install flash-attn --no-build-isolation
@@ -177,7 +180,13 @@ texts = ["PUT YOUR 1st TEXT HERE", "PUT YOUR 2nd TEXT HERE"]
 wavs = chat.infer(texts)
 
 for i in range(len(wavs)):
-    torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]).unsqueeze(0), 24000)
+    """
+    In some versions of torchaudio, the first line works but in other versions, so does the second line.
+    """
+    try:
+        torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]).unsqueeze(0), 24000)
+    except:
+        torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]), 24000)
 ```
 
 ### Advanced Usage
@@ -216,7 +225,13 @@ wavs = chat.infer(
 
 text = 'What is [uv_break]your favorite english food?[laugh][lbreak]'
 wavs = chat.infer(text, skip_refine_text=True, params_refine_text=params_refine_text,  params_infer_code=params_infer_code)
-torchaudio.save("word_level_output.wav", torch.from_numpy(wavs[0]).unsqueeze(0), 24000)
+"""
+In some versions of torchaudio, the first line works but in other versions, so does the second line.
+"""
+try:
+    torchaudio.save("word_level_output.wav", torch.from_numpy(wavs[0]).unsqueeze(0), 24000)
+except:
+    torchaudio.save("word_level_output.wav", torch.from_numpy(wavs[0]), 24000)
 ```
 
 <details open>

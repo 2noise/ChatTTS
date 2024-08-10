@@ -6,12 +6,8 @@ https://stackoverflow.com/questions/62691279/how-to-disable-tokenizers-paralleli
 """
 
 from typing import List, Tuple, Optional, Union
-import lzma
 
-import numpy as np
-import pybase16384 as b14
 import torch
-import torch.nn.functional as F
 from transformers import BertTokenizerFast
 
 from ..utils import del_all
@@ -41,7 +37,7 @@ class Tokenizer:
         self,
         text: List[str],
         num_vq: int,
-        prompt_str: Optional[str] = None,
+        prompt: Optional[torch.Tensor] = None,
         device="cpu",
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
@@ -50,8 +46,6 @@ class Tokenizer:
         max_input_ids_len = -1
         max_attention_mask_len = -1
         prompt_size = 0
-
-        prompt = self._decode_prompt(prompt_str) if prompt_str is not None else None
 
         if prompt is not None:
             assert prompt.size(0) == num_vq, "prompt dim 0 must equal to num_vq"
@@ -142,123 +136,3 @@ class Tokenizer:
         return self._tokenizer.batch_decode(
             sequences, skip_special_tokens, clean_up_tokenization_spaces, **kwargs
         )
-
-    @staticmethod
-    def _decode_spk_emb(spk_emb: str) -> np.ndarray:
-        return np.frombuffer(
-            lzma.decompress(
-                b14.decode_from_string(spk_emb),
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-            dtype=np.float16,
-        ).copy()
-
-    @torch.no_grad()
-    def apply_spk_emb(
-        self,
-        emb: torch.Tensor,
-        spk_emb: str,
-        input_ids: torch.Tensor,
-        device: torch.device,
-    ):
-        n = (
-            F.normalize(
-                torch.from_numpy(
-                    self._decode_spk_emb(spk_emb),
-                ),
-                p=2.0,
-                dim=0,
-                eps=1e-12,
-            )
-            .to(device)
-            .unsqueeze_(0)
-            .expand(emb.size(0), -1)
-            .unsqueeze_(1)
-            .expand(emb.shape)
-        )
-        cond = input_ids.narrow(-1, 0, 1).eq(self.spk_emb_ids).expand(emb.shape)
-        torch.where(cond, n, emb, out=emb)
-        del cond, n
-
-    @staticmethod
-    @torch.no_grad()
-    def _decode_prompt(prompt: str) -> torch.Tensor:
-        dec = b14.decode_from_string(prompt)
-        shp = np.frombuffer(dec[:4], dtype="<u2")
-        p = np.frombuffer(
-            lzma.decompress(
-                dec[4:],
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-            dtype="<u2",
-        ).copy()
-        del dec
-        return torch.from_numpy(p.astype(np.int32)).view(*shp)
-
-    @staticmethod
-    @torch.no_grad()
-    def _encode_prompt(prompt: torch.Tensor) -> str:
-        arr: np.ndarray = prompt.cpu().numpy().astype(np.uint16)
-        shp = arr.shape
-        assert len(shp) == 2, "prompt must be a 2D tensor"
-        s = b14.encode_to_string(
-            np.array(shp, dtype="<u2").tobytes()
-            + lzma.compress(
-                arr.astype("<u2").tobytes(),
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-        )
-        del arr
-        return s
-
-    @staticmethod
-    @torch.no_grad()
-    def _encode_spk_emb(spk_emb: torch.Tensor) -> str:
-        arr: np.ndarray = spk_emb.to(dtype=torch.float16, device="cpu").numpy()
-        s = b14.encode_to_string(
-            lzma.compress(
-                arr.tobytes(),
-                format=lzma.FORMAT_RAW,
-                filters=[{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}],
-            ),
-        )
-        del arr
-        return s
-
-    @staticmethod
-    @torch.no_grad()
-    def decorate_code_prompts(
-        text: List[str],
-        prompt: str,
-        txt_smp: Optional[str],
-        spk_emb: Optional[str],
-    ) -> List[str]:
-        for i, t in enumerate(text):
-            text[i] = (
-                t.replace("[Stts]", "")
-                .replace("[spk_emb]", "")
-                .replace("[empty_spk]", "")
-                .strip()
-            )
-            """
-            see https://github.com/2noise/ChatTTS/issues/459
-            """
-
-        if prompt:
-            text = [prompt + i for i in text]
-
-        txt_smp = "" if txt_smp is None else txt_smp
-        if spk_emb is not None:
-            text = [f"[Stts][spk_emb]{txt_smp}{i}[Ptts]" for i in text]
-        else:
-            text = [f"[Stts][empty_spk]{txt_smp}{i}[Ptts]" for i in text]
-
-        return text
-
-    @staticmethod
-    @torch.no_grad()
-    def decorate_text_prompts(text: List[str], prompt: str) -> List[str]:
-        return [f"[Sbreak]{i}[Pbreak]{prompt}" for i in text]
