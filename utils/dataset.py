@@ -23,9 +23,9 @@ class LazyDataType(typing.TypedDict):
 
 
 class DataType(LazyDataType):
-    text_input_ids: torch.Tensor    # (batch_size, text_len)
+    text_input_id: torch.Tensor    # (batch_size, text_len)
     text_attention_mask: torch.Tensor   # (batch_size, text_len)
-    waveforms: torch.Tensor    # (batch_size, time)
+    waveform: torch.Tensor    # (batch_size, time)
     waveform_attention_mask: torch.Tensor  # (batch_size, time)
 
 
@@ -124,9 +124,9 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
             'speaker': lazy_data['speaker'],
             'lang': lazy_data['lang'],
             'text': lazy_data['text'],
-            'text_input_ids': text_input_ids,
+            'text_input_id': text_input_ids,
             'text_attention_mask': text_attention_mask,
-            'waveforms': waveforms,
+            'waveform': waveforms,
             'waveform_attention_mask': waveform_attention_mask,
         }
 
