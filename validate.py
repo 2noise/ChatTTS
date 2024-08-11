@@ -26,17 +26,28 @@ logging.basicConfig(level=logging.ERROR)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='ChatTTS demo Launch')
-    parser.add_argument('--data_path', type=str, default='dummy_data/xz_list_style/speaker_A.list', help='the data_path to json/list file')
-    parser.add_argument('--tar_path', type=str, help='the tarball path with wavs')
-    parser.add_argument('--tar_in_memory', action='store_true', help='load tarball in memory')
-    parser.add_argument('--process_ahead', action='store_true', help='process all data ahead during dataset initialization')
+    parser = argparse.ArgumentParser(description="ChatTTS demo Launch")
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        default="dummy_data/xz_list_style/speaker_A.list",
+        help="the data_path to json/list file",
+    )
+    parser.add_argument("--tar_path", type=str, help="the tarball path with wavs")
+    parser.add_argument(
+        "--tar_in_memory", action="store_true", help="load tarball in memory"
+    )
+    parser.add_argument(
+        "--process_ahead",
+        action="store_true",
+        help="process all data ahead during dataset initialization",
+    )
     # parser.add_argument('--gpt_kbit', type=int, default=16, help='train gpt with kbit')
-    parser.add_argument('--dvae_path', type=str)
-    parser.add_argument('--decoder_path', type=str)
-    parser.add_argument('--gpt_path', type=str)
-    parser.add_argument('--speaker_embeds_path', type=str)
-    parser.add_argument('--color', action='store_true', help='colorful output')
+    parser.add_argument("--dvae_path", type=str)
+    parser.add_argument("--decoder_path", type=str)
+    parser.add_argument("--gpt_path", type=str)
+    parser.add_argument("--speaker_embeds_path", type=str)
+    parser.add_argument("--color", action="store_true", help="colorful output")
     args = parser.parse_args()
     data_path: str = args.data_path
     tar_path: str | None = args.tar_path
@@ -76,8 +87,14 @@ def main():
         # speakers=None,  # set(['speaker_A', 'speaker_B'])
     )
     train_autoencoder(chat=chat, dataset=dataset, validate=True)
-    train_gpt(chat=chat, dataset=dataset, speaker_embeds=speaker_embeds, train_text=True, validate=True)
+    train_gpt(
+        chat=chat,
+        dataset=dataset,
+        speaker_embeds=speaker_embeds,
+        train_text=True,
+        validate=True,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

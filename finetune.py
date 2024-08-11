@@ -23,26 +23,48 @@ logging.basicConfig(level=logging.ERROR)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='ChatTTS demo Launch')
-    parser.add_argument('--data_path', type=str, default='dummy_data/xz_list_style/speaker_A.list', help='the data_path to json/list file')
-    parser.add_argument('--tar_path', type=str, help='the tarball path with wavs')
-    parser.add_argument('--tar_in_memory', action='store_true', help='load tarball in memory')
-    parser.add_argument('--process_ahead', action='store_true', help='process all data ahead during dataset initialization')
+    parser = argparse.ArgumentParser(description="ChatTTS demo Launch")
     parser.add_argument(
-        '--train_module', type=str, default='gpt',
-        choices=['gpt_all', 'gpt_speaker', 'gpt', 'speaker', 'dvae', 'dvae_encoder', 'dvae_decoder', 'decoder'],
+        "--data_path",
+        type=str,
+        default="dummy_data/xz_list_style/speaker_A.list",
+        help="the data_path to json/list file",
     )
-    parser.add_argument('--train_text', action='store_true', help='train text loss')
-    parser.add_argument('--gpt_lora', action='store_true', help='train gpt with lora')
+    parser.add_argument("--tar_path", type=str, help="the tarball path with wavs")
+    parser.add_argument(
+        "--tar_in_memory", action="store_true", help="load tarball in memory"
+    )
+    parser.add_argument(
+        "--process_ahead",
+        action="store_true",
+        help="process all data ahead during dataset initialization",
+    )
+    parser.add_argument(
+        "--train_module",
+        type=str,
+        default="gpt",
+        choices=[
+            "gpt_all",
+            "gpt_speaker",
+            "gpt",
+            "speaker",
+            "dvae",
+            "dvae_encoder",
+            "dvae_decoder",
+            "decoder",
+        ],
+    )
+    parser.add_argument("--train_text", action="store_true", help="train text loss")
+    parser.add_argument("--gpt_lora", action="store_true", help="train gpt with lora")
     # parser.add_argument('--gpt_kbit', type=int, default=16, help='train gpt with kbit')
-    parser.add_argument('--dvae_path', type=str)
-    parser.add_argument('--decoder_path', type=str)
-    parser.add_argument('--gpt_path', type=str)
-    parser.add_argument('--speaker_embeds_path', type=str)
-    parser.add_argument('--save_folder', type=str, default='./')
-    parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--color', action='store_true', help='colorful output')
+    parser.add_argument("--dvae_path", type=str)
+    parser.add_argument("--decoder_path", type=str)
+    parser.add_argument("--gpt_path", type=str)
+    parser.add_argument("--speaker_embeds_path", type=str)
+    parser.add_argument("--save_folder", type=str, default="./")
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--color", action="store_true", help="colorful output")
     args = parser.parse_args()
     data_path: str = args.data_path
     tar_path: str | None = args.tar_path
@@ -81,6 +103,7 @@ def main():
     if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT]:
         if gpt_lora:
             import peft
+
             # match gpt_kbit:
             #     case 4:
             #         quantization_config = transformers.BitsAndBytesConfig(
@@ -99,14 +122,20 @@ def main():
             chat.gpt.gpt = peft.get_peft_model(chat.gpt.gpt, lora_config)
 
     match train_module:
-        case TrainModule.GPT_ALL | TrainModule.GPT_SPEAKER | TrainModule.GPT | TrainModule.SPEAKER | TrainModule.DECODER:
+        case (
+            TrainModule.GPT_ALL
+            | TrainModule.GPT_SPEAKER
+            | TrainModule.GPT
+            | TrainModule.SPEAKER
+            | TrainModule.DECODER
+        ):
             train = train_gpt
-            kwargs = {'train_text': train_text, 'speaker_embeds': speaker_embeds}
+            kwargs = {"train_text": train_text, "speaker_embeds": speaker_embeds}
         case TrainModule.DVAE | TrainModule.DVAE_ENCODER | TrainModule.DVAE_DECODER:
             train = train_autoencoder
             kwargs = {}
         case _:
-            raise ValueError(f'invalid train_module: {train_module}')
+            raise ValueError(f"invalid train_module: {train_module}")
 
     dataset = XzListTar(
         root=data_path,
@@ -117,18 +146,28 @@ def main():
         process_ahead=process_ahead,
         # speakers=None,  # set(['speaker_A', 'speaker_B'])
     )
-    speaker_embeds = train(chat=chat, dataset=dataset, train_module=train_module, batch_size=batch_size, epochs=epochs, **kwargs)
+    speaker_embeds = train(
+        chat=chat,
+        dataset=dataset,
+        train_module=train_module,
+        batch_size=batch_size,
+        epochs=epochs,
+        **kwargs,
+    )
 
     if not os.path.isdir(save_folder):
         os.makedirs(save_folder)
-    gpt_save_path = os.path.join(save_folder, 'gpt.pth')
-    speaker_embeds_save_path = os.path.join(save_folder, 'speaker_embeds.npz')
-    decoder_save_path = os.path.join(save_folder, 'decoder.pth')
-    dvae_save_path = os.path.join(save_folder, 'dvae.pth')
+    gpt_save_path = os.path.join(save_folder, "gpt.pth")
+    speaker_embeds_save_path = os.path.join(save_folder, "speaker_embeds.npz")
+    decoder_save_path = os.path.join(save_folder, "decoder.pth")
+    dvae_save_path = os.path.join(save_folder, "dvae.pth")
     if train_module in [TrainModule.GPT_SPEAKER, TrainModule.GPT] and gpt_lora:
         chat.gpt.gpt = chat.gpt.gpt.merge_and_unload()
     if speaker_embeds is not None:
-        np_speaker_embeds = {speaker: speaker_embed.detach().cpu().numpy() for speaker, speaker_embed in speaker_embeds.items()}
+        np_speaker_embeds = {
+            speaker: speaker_embed.detach().cpu().numpy()
+            for speaker, speaker_embed in speaker_embeds.items()
+        }
     match train_module:
         case TrainModule.GPT_ALL:
             torch.save(chat.gpt.state_dict(), gpt_save_path)
@@ -145,8 +184,8 @@ def main():
             np.savez(speaker_embeds_save_path, **np_speaker_embeds)
         case TrainModule.DVAE | TrainModule.DVAE_ENCODER | TrainModule.DVAE_DECODER:
             torch.save(chat.dvae.state_dict(), dvae_save_path)
-    print('save models to:', save_folder)
+    print("save models to:", save_folder)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

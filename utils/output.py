@@ -7,37 +7,36 @@ from contextlib import contextmanager
 
 class ANSI:
     ansi_color = {
-        'black': '\033[30m',
-        'red': '\033[31m',
-        'green': '\033[32m',
-        'yellow': '\033[33m',
-        'blue': '\033[34m',
-        'purple': '\033[35m',
-        'blue_light': '\033[36m',
-        'white': '\033[37m',
-
-        'reset': '\033[0m',
-        'upline': '\033[1A',
-        'clear_line': '\033[2K',
-        'clear': '\033[2J', }
+        "black": "\033[30m",
+        "red": "\033[31m",
+        "green": "\033[32m",
+        "yellow": "\033[33m",
+        "blue": "\033[34m",
+        "purple": "\033[35m",
+        "blue_light": "\033[36m",
+        "white": "\033[37m",
+        "reset": "\033[0m",
+        "upline": "\033[1A",
+        "clear_line": "\033[2K",
+        "clear": "\033[2J",
+    }
     ansi_nocolor = {
-        'black': '',
-        'red': '',
-        'green': '',
-        'yellow': '',
-        'blue': '',
-        'purple': '',
-        'blue_light': '',
-        'white': '',
-
-        'reset': '',
-        'upline': '\033[1A\033[',
-        'clear_line': '\033[K',
-        'clear': '\033[2J', }
+        "black": "",
+        "red": "",
+        "green": "",
+        "yellow": "",
+        "blue": "",
+        "purple": "",
+        "blue_light": "",
+        "white": "",
+        "reset": "",
+        "upline": "\033[1A\033[",
+        "clear_line": "\033[K",
+        "clear": "\033[2J",
+    }
 
     def __init__(self):
-        self._dict = ANSI.ansi_color if (
-            '--color' in sys.argv) else ANSI.ansi_nocolor
+        self._dict = ANSI.ansi_color if ("--color" in sys.argv) else ANSI.ansi_nocolor
 
     def switch(self, color: bool):
         self._dict = ANSI.ansi_color if color else ANSI.ansi_nocolor
@@ -62,15 +61,15 @@ ansi = ANSI()
 
 
 def remove_ansi(s: str) -> str:
-    ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
-    return ansi_escape.sub('', s)
+    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
+    return ansi_escape.sub("", s)
 
 
 def get_ansi_len(s: str) -> int:
     return len(s) - len(remove_ansi(s))
 
 
-def prints(*args: str, indent: int = 0, prefix: str = '', **kwargs):
+def prints(*args: str, indent: int = 0, prefix: str = "", **kwargs):
     assert indent >= 0
     new_args = []
     for arg in args:
@@ -82,21 +81,21 @@ def prints(*args: str, indent: int = 0, prefix: str = '', **kwargs):
 
 def output_iter(_iter: int, iteration: int = None, iter_len: int = 4) -> str:
     if iteration is None:
-        pattern = '{blue_light}[ {red}{0}{blue_light} ]{reset}'
+        pattern = "{blue_light}[ {red}{0}{blue_light} ]{reset}"
         return pattern.format(str(_iter).rjust(iter_len), **ansi)
     else:
         iter_str = str(iteration)
         length = len(iter_str)
-        pattern = ('{blue_light}[ {red}{0}{blue_light} '
-                   '/ {red}{1}{blue_light} ]{reset}')
-        return pattern.format(str(_iter).rjust(length),
-                              iter_str, **ansi)
+        pattern = (
+            "{blue_light}[ {red}{0}{blue_light} " "/ {red}{1}{blue_light} ]{reset}"
+        )
+        return pattern.format(str(_iter).rjust(length), iter_str, **ansi)
 
 
 def indent_str(s_: str, indent: int = 0) -> str:
     # modified from torch.nn.modules._addindent
     if indent > 0 and s_:
-        s_ = indent * ' ' + str(s_[:-1]).replace('\n', '\n' + indent * ' ') + s_[-1]
+        s_ = indent * " " + str(s_[:-1]).replace("\n", "\n" + indent * " ") + s_[-1]
     return s_
 
 
@@ -106,7 +105,7 @@ class IndentRedirect:  # TODO: inherit TextIOWrapper?
         self.indent = indent
         self.__buffer: str = None
         if buffer:
-            self.__buffer = ''
+            self.__buffer = ""
 
     def write(self, text: str, indent: int = None):
         indent = indent if indent is not None else self.indent
@@ -119,7 +118,7 @@ class IndentRedirect:  # TODO: inherit TextIOWrapper?
     def flush(self):
         if self.__buffer is not None:
             self.__console__.write(self.__buffer)
-            self.__buffer = ''
+            self.__buffer = ""
         self.__console__.flush()
 
     @contextmanager
@@ -129,14 +128,14 @@ class IndentRedirect:  # TODO: inherit TextIOWrapper?
             yield
         finally:
             sys.stdout = self.__console__
-            self.__buffer = ''
+            self.__buffer = ""
 
     def enable(self):
         sys.stdout = self
 
     def disable(self):
         if self.__buffer is not None:
-            self.__buffer = ''
+            self.__buffer = ""
         sys.stdout = self.__console__
 
     @property
