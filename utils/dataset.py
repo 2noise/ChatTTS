@@ -369,16 +369,16 @@ class AudioCollator:
     def __call__(self, batch: list[DataType]):
         batch = [x for x in batch if x is not None]
 
-        audio_maxlen = max(len(item['waveforms']) for item in batch)
-        text_maxlen = max(len(item['text_input_ids']) for item in batch)
+        audio_maxlen = max(len(item['waveform']) for item in batch)
+        text_maxlen = max(len(item['text_input_id']) for item in batch)
 
         filepath = []
         speaker = []
         lang = []
         text = []
-        text_input_ids = []
+        text_input_id = []
         text_attention_mask = []
-        waveforms = []
+        waveform = []
         waveform_attention_mask = []
 
         for x in batch:
@@ -386,9 +386,9 @@ class AudioCollator:
             speaker.append(x['speaker'])
             lang.append(x['lang'])
             text.append(x['text'])
-            text_input_ids.append(
+            text_input_id.append(
                 torch.nn.functional.pad(
-                    x['text_input_ids'],
+                    x['text_input_id'],
                     (text_maxlen - len(x['text_attention_mask']), 0),
                     value=self.text_pad,
                 )
@@ -400,9 +400,9 @@ class AudioCollator:
                     value=0,
                 )
             )
-            waveforms.append(
+            waveform.append(
                 torch.nn.functional.pad(
-                    x['waveforms'],
+                    x['waveform'],
                     (0, audio_maxlen - len(x['waveform_attention_mask'])),
                     value=self.audio_pad,
                 )
@@ -419,9 +419,9 @@ class AudioCollator:
             'speaker': speaker,
             'lang': lang,
             'text': text,
-            'text_input_ids': torch.stack(text_input_ids),
+            'text_input_id': torch.stack(text_input_id),
             'text_attention_mask': torch.stack(text_attention_mask),
-            'waveforms': torch.stack(waveforms),
+            'waveform': torch.stack(waveform),
             'waveform_attention_mask': torch.stack(waveform_attention_mask),
         }
 

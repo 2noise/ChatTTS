@@ -213,7 +213,7 @@ def train_gpt(
 
             text_len = text_input_ids.size(1)
             audio_hidden_states = hidden_states[:, text_len-1:-1]  # (batch_size, mel_len+1, 768)
-            audio_labels = labels[:, text_len:, 0]  # (batch_size, mel_len+1)
+            audio_labels = labels[:, text_len:]  # (batch_size, mel_len+1)
 
             audio_logits = torch.stack(
                 [chat.gpt.head_code[i](audio_hidden_states) for i in range(chat.gpt.num_vq)],
