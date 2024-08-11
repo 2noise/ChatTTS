@@ -1,9 +1,10 @@
 """
-CUDA_VISIBLE_DEVICES=0 python eval_autoencoder.py --data_path data/Xz/Bekki.list --tar_path data/Xz.tar
+CUDA_VISIBLE_DEVICES=0 python infer_autoencoder.py --data_path data/Xz/Bekki.list --tar_path data/Xz.tar
 --dvae_path saved_models/dvae.pth
 """
 
 import argparse
+import os
 
 import torch.utils.data
 import torch.nn
@@ -13,12 +14,12 @@ import ChatTTS
 import ChatTTS.model.gpt
 import ChatTTS.model.dvae
 from utils.dataset import XzListTar, AudioCollator
-from utils.model import get_mel_attention_mask, dvae_encode, dvae_quantize, dvae_decode
+from utils.model import get_mel_specs, get_mel_attention_mask, get_dvae_mel_specs
 
 
 def main():
     parser = argparse.ArgumentParser(description='ChatTTS demo Launch')
-    parser.add_argument('--save_path', type=str, default='output')
+    parser.add_argument('--save_path', type=str, default='./')
     parser.add_argument('--data_path', type=str, default='dummy_data/xz_list_style/speaker_A.list', help='the data_path to json/list file')
     parser.add_argument('--tar_path', type=str, help='the tarball path with wavs')
     parser.add_argument('--dvae_path', type=str)
@@ -54,25 +55,20 @@ def main():
     waveforms = waveforms.to(chat.device, non_blocking=True)
     waveform_attention_mask = waveform_attention_mask.to(chat.device, non_blocking=True)
 
-    mel_specs = chat.dvae.preprocessor_mel(waveforms)
-    mel_specs = mel_specs[:, :, :mel_specs.size(2) // 2 * 2]  # (batch_size, 100, mel_len)
+    mel_specs = get_mel_specs(chat, waveforms)  # (batch_size, 100, mel_len)
     mel_attention_mask = get_mel_attention_mask(waveform_attention_mask, mel_len=mel_specs.size(2))  # (batch_size, mel_len)
-    mel_specs = mel_specs * mel_attention_mask.unsqueeze(1)
+    mel_specs = mel_specs * mel_attention_mask.unsqueeze(1)  # clip
 
-    audio_latents = dvae_encode(chat.dvae, mel_specs)    # (batch_size, audio_dim, mel_len // 2)
-    audio_latents = audio_latents * mel_attention_mask[:, ::2].unsqueeze(1)
-    audio_quantized_latents, _ = dvae_quantize(chat.dvae.vq_layer.quantizer, audio_latents)  # (batch_size, audio_dim, mel_len // 2)
-    audio_quantized_latents = audio_quantized_latents * mel_attention_mask[:, ::2].unsqueeze(1)
-    gen_mel_specs = dvae_decode(chat.dvae, audio_quantized_latents)    # (batch_size, 100, mel_len)
-    gen_mel_specs = gen_mel_specs * mel_attention_mask.unsqueeze(1)
+    dvae_mel_specs = get_dvae_mel_specs(chat, mel_specs, mel_attention_mask)  # (batch_size, 100, mel_len)
+    dvae_mel_specs = dvae_mel_specs * mel_attention_mask.unsqueeze(1)  # clip
 
-    wav = chat.vocos.decode(gen_mel_specs).cpu()
+    wav = chat.vocos.decode(dvae_mel_specs).cpu()
     org_wav = chat.vocos.decode(mel_specs).cpu()
 
-    print(mel_attention_mask)
-    print(org_wav.shape, wav.shape)
-    torchaudio.save(save_path+'_org.wav', org_wav[0].view(1, -1), sample_rate=24_000)
-    torchaudio.save(save_path+'.wav', wav[0].view(1, -1), sample_rate=24_000)
+    print('Original Waveform shape:', org_wav.shape)
+    print(wav.shape)
+    torchaudio.save(os.path.join(save_path, 'infer_autoencoder_org.wav'), org_wav[0].view(1, -1), sample_rate=24_000)
+    torchaudio.save(os.path.join(save_path, 'infer_autoencoder.wav'), wav[0].view(1, -1), sample_rate=24_000)
 
 
 if __name__ == '__main__':

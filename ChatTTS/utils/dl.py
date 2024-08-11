@@ -45,19 +45,31 @@ def check_model(
 
 def check_all_assets(base_dir: Path, sha256_map: Dict[str, str], update=False) -> bool:
     logger.get_logger().info("checking assets...")
+
     current_dir = base_dir / "asset"
     names = [
         "Decoder.pt",
         "DVAE_full.pt",
         "GPT.pt",
-        "spk_stat.pt",
-        "tokenizer.pt",
         "Vocos.pt",
     ]
     for model in names:
         menv = model.replace(".", "_")
         if not check_model(
             current_dir, model, sha256_map[f"sha256_asset_{menv}"], update
+        ):
+            return False
+
+    current_dir = base_dir / "asset" / "tokenizer"
+    names = [
+        "special_tokens_map.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+    ]
+    for model in names:
+        menv = model.replace(".", "_")
+        if not check_model(
+            current_dir, model, sha256_map[f"sha256_asset_tokenizer_{menv}"], update
         ):
             return False
 
@@ -101,7 +113,7 @@ def download_dns_yaml(url: str, folder: str):
         logger.get_logger().info(f"downloaded into {folder}")
 
 
-def download_all_assets(tmpdir: str, version="0.2.6"):
+def download_all_assets(tmpdir: str, version="0.2.7"):
     import subprocess
     import platform
 

@@ -23,9 +23,9 @@ class LazyDataType(typing.TypedDict):
 
 
 class DataType(LazyDataType):
-    text_input_ids: torch.Tensor    # (batch_size, text_len)
+    text_input_id: torch.Tensor    # (batch_size, text_len)
     text_attention_mask: torch.Tensor   # (batch_size, text_len)
-    waveforms: torch.Tensor    # (batch_size, time)
+    waveform: torch.Tensor    # (batch_size, time)
     waveform_attention_mask: torch.Tensor  # (batch_size, time)
 
 
@@ -124,9 +124,9 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
             'speaker': lazy_data['speaker'],
             'lang': lazy_data['lang'],
             'text': lazy_data['text'],
-            'text_input_ids': text_input_ids,
+            'text_input_id': text_input_ids,
             'text_attention_mask': text_attention_mask,
-            'waveforms': waveforms,
+            'waveform': waveforms,
             'waveform_attention_mask': waveform_attention_mask,
         }
 
@@ -173,15 +173,12 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         do_homophone_replacement: bool = True,
     ) -> torch.Tensor:
 
-        text = [
-            self.normalizer(
-                t,
-                do_text_normalization,
-                do_homophone_replacement,
-                lang,
-            )
-            for t in text
-        ]
+        text = self.normalizer(
+            text,
+            do_text_normalization,
+            do_homophone_replacement,
+            lang,
+        )
 
         text = f'[Stts][spk_emb]{text}[Ptts]'
         # text = f'[Stts][empty_spk]{text}[Ptts]'
@@ -372,16 +369,16 @@ class AudioCollator:
     def __call__(self, batch: list[DataType]):
         batch = [x for x in batch if x is not None]
 
-        audio_maxlen = max(len(item['waveforms']) for item in batch)
-        text_maxlen = max(len(item['text_input_ids']) for item in batch)
+        audio_maxlen = max(len(item['waveform']) for item in batch)
+        text_maxlen = max(len(item['text_input_id']) for item in batch)
 
         filepath = []
         speaker = []
         lang = []
         text = []
-        text_input_ids = []
+        text_input_id = []
         text_attention_mask = []
-        waveforms = []
+        waveform = []
         waveform_attention_mask = []
 
         for x in batch:
@@ -389,9 +386,9 @@ class AudioCollator:
             speaker.append(x['speaker'])
             lang.append(x['lang'])
             text.append(x['text'])
-            text_input_ids.append(
+            text_input_id.append(
                 torch.nn.functional.pad(
-                    x['text_input_ids'],
+                    x['text_input_id'],
                     (text_maxlen - len(x['text_attention_mask']), 0),
                     value=self.text_pad,
                 )
@@ -403,9 +400,9 @@ class AudioCollator:
                     value=0,
                 )
             )
-            waveforms.append(
+            waveform.append(
                 torch.nn.functional.pad(
-                    x['waveforms'],
+                    x['waveform'],
                     (0, audio_maxlen - len(x['waveform_attention_mask'])),
                     value=self.audio_pad,
                 )
@@ -422,9 +419,9 @@ class AudioCollator:
             'speaker': speaker,
             'lang': lang,
             'text': text,
-            'text_input_ids': torch.stack(text_input_ids),
+            'text_input_id': torch.stack(text_input_id),
             'text_attention_mask': torch.stack(text_attention_mask),
-            'waveforms': torch.stack(waveforms),
+            'waveform': torch.stack(waveform),
             'waveform_attention_mask': torch.stack(waveform_attention_mask),
         }
 
