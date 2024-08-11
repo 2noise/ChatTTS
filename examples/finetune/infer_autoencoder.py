@@ -1,5 +1,5 @@
 """
-CUDA_VISIBLE_DEVICES=0 python infer_autoencoder.py --data_path data/Xz/Bekki.list --tar_path data/Xz.tar
+CUDA_VISIBLE_DEVICES=0 python examples/finetune/infer_autoencoder.py --data_path data/Xz/Bekki.list --tar_path data/Xz.tar
 --dvae_path saved_models/dvae.pth
 """
 

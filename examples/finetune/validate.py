@@ -1,5 +1,5 @@
 """
-CUDA_VISIBLE_DEVICES=0 python validate.py --color --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 16
+CUDA_VISIBLE_DEVICES=0 python examples/finetune/validate.py --color --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 16
 --gpt_path ./saved_models/gpt.pth --decoder_path ./saved_models/decoder.pth --speaker_embeds_path ./saved_models/speaker_embeds.npz
 --dvae_path ./saved_models/dvae.pth
 

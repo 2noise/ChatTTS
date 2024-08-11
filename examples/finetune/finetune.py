@@ -1,6 +1,6 @@
 """
-CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 32 --epochs 10 --train_module dvae
-CUDA_VISIBLE_DEVICES=0 python finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 16 --epochs 10 --train_module gpt_speaker
+CUDA_VISIBLE_DEVICES=0 python examples/finetune/finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 32 --epochs 10 --train_module dvae
+CUDA_VISIBLE_DEVICES=0 python examples/finetune/finetune.py --color --save_folder ./saved_models --data_path data/Xz/Bekki.list --tar_path data/Xz.tar --batch_size 16 --epochs 10 --train_module gpt_speaker
 
 --gpt_lora --tar_in_memory --process_ahead
 
