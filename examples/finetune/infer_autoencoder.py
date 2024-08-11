@@ -14,7 +14,11 @@ import ChatTTS
 import ChatTTS.model.gpt
 import ChatTTS.model.dvae
 from ChatTTS.utils.finetune.dataset import XzListTar, AudioCollator
-from ChatTTS.utils.finetune.model import get_mel_specs, get_mel_attention_mask, get_dvae_mel_specs
+from ChatTTS.utils.finetune.model import (
+    get_mel_specs,
+    get_mel_attention_mask,
+    get_dvae_mel_specs,
+)
 
 
 def main():
