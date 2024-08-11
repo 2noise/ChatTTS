@@ -12,10 +12,10 @@ import torch.distributed as dist
 
 from .output import ansi, prints, get_ansi_len
 
-__all__ = ['SmoothedValue', 'MetricLogger']
+__all__ = ["SmoothedValue", "MetricLogger"]
 
 MB = 1 << 20
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class SmoothedValue:
@@ -45,7 +45,9 @@ class SmoothedValue:
         last_value (float): The last value of :attr:`deque`.
     """
 
-    def __init__(self, name: str = '', window_size: int = None, fmt: str = '{global_avg:.3f}'):
+    def __init__(
+        self, name: str = "", window_size: int = None, fmt: str = "{global_avg:.3f}"
+    ):
         self.name = name
         self.deque: deque[float] = deque(maxlen=window_size)
         self.count: int = 0
@@ -113,8 +115,7 @@ class SmoothedValue:
         """
         if not (dist.is_available() and dist.is_initialized()):
             return
-        t = torch.tensor([self.count, self.total],
-                         dtype=torch.float64, device='cuda')
+        t = torch.tensor([self.count, self.total], dtype=torch.float64, device="cuda")
         dist.barrier()
         dist.all_reduce(t)
         t = t.tolist()
@@ -173,7 +174,8 @@ class SmoothedValue:
             global_avg=self.global_avg,
             min=self.min,
             max=self.max,
-            last_value=self.last_value)
+            last_value=self.last_value,
+        )
 
     def __format__(self, format_spec: str) -> str:
         return self.__str__()
@@ -203,7 +205,7 @@ class MetricLogger:
 
     def __init__(
         self,
-        delimiter: str = '',
+        delimiter: str = "",
         meter_length: int = 20,
         tqdm: bool = True,
         indent: int = 0,
@@ -218,7 +220,7 @@ class MetricLogger:
 
         self.iter_time = SmoothedValue()
         self.data_time = SmoothedValue()
-        self.memory = SmoothedValue(fmt='{max:.0f}')
+        self.memory = SmoothedValue(fmt="{max:.0f}")
 
     def create_meters(self, **kwargs: str) -> Self:
         r"""Create meters with specific ``fmt`` in :attr:`self.meters`.
@@ -232,7 +234,7 @@ class MetricLogger:
             MetricLogger: return ``self`` for stream usage.
         """
         for k, v in kwargs.items():
-            self.meters[k] = SmoothedValue(fmt='{global_avg:.3f}' if v is None else v)
+            self.meters[k] = SmoothedValue(fmt="{global_avg:.3f}" if v is None else v)
         return self
 
     def update(self, n: int = 1, **kwargs: float) -> Self:
@@ -293,7 +295,7 @@ class MetricLogger:
         str_list: list[str] = []
         for k, v in kwargs.items():
             v_str = str(v)
-            _str: str = '{green}{k}{reset}: {v}'.format(k=k, v=v_str, **ansi)
+            _str: str = "{green}{k}{reset}: {v}".format(k=k, v=v_str, **ansi)
             max_length = self.meter_length + get_ansi_len(_str)
             if cut_too_long:
                 _str = _str[:max_length]
@@ -306,10 +308,11 @@ class MetricLogger:
     def __getattr__(self, attr: str) -> float:
         if attr in self.meters:
             return self.meters[attr]
-        if attr in vars(self):   # TODO: use hasattr
+        if attr in vars(self):  # TODO: use hasattr
             return vars(self)[attr]
-        raise AttributeError("'{}' object has no attribute '{}'".format(
-            type(self).__name__, attr))
+        raise AttributeError(
+            "'{}' object has no attribute '{}'".format(type(self).__name__, attr)
+        )
 
     def __str__(self) -> str:
         return self.get_str(**self.meters)
@@ -318,10 +321,15 @@ class MetricLogger:
         for meter in self.meters.values():
             meter.synchronize_between_processes()
 
-    def log_every(self, iterable: Iterable[T], header: str = '',
-                  tqdm: bool = None, tqdm_header: str = 'Iter',
-                  indent: int = None, verbose: int = 1,
-                  ) -> Generator[T, None, None]:
+    def log_every(
+        self,
+        iterable: Iterable[T],
+        header: str = "",
+        tqdm: bool = None,
+        tqdm_header: str = "Iter",
+        indent: int = None,
+        verbose: int = 1,
+    ) -> Generator[T, None, None]:
         r"""Wrap an :class:`collections.abc.Iterable` with formatted outputs.
 
         * Middle Output:
@@ -349,14 +357,15 @@ class MetricLogger:
             header = header.ljust(30 + get_ansi_len(header))
         if tqdm:
             length = len(str(len(iterable)))
-            pattern: str = ('{tqdm_header}: {blue_light}'
-                            '[ {red}{{n_fmt:>{length}}}{blue_light} '
-                            '/ {red}{{total_fmt}}{blue_light} ]{reset}'
-                            ).format(tqdm_header=tqdm_header, length=length, **ansi)
-            offset = len(f'{{n_fmt:>{length}}}{{total_fmt}}') - 2 * length
+            pattern: str = (
+                "{tqdm_header}: {blue_light}"
+                "[ {red}{{n_fmt:>{length}}}{blue_light} "
+                "/ {red}{{total_fmt}}{blue_light} ]{reset}"
+            ).format(tqdm_header=tqdm_header, length=length, **ansi)
+            offset = len(f"{{n_fmt:>{length}}}{{total_fmt}}") - 2 * length
             pattern = pattern.ljust(30 + offset + get_ansi_len(pattern))
-            time_str = self.get_str(time='{elapsed}<{remaining}', cut_too_long=False)
-            bar_format = f'{pattern}{{desc}}{time_str}'
+            time_str = self.get_str(time="{elapsed}<{remaining}", cut_too_long=False)
+            bar_format = f"{pattern}{{desc}}{time_str}"
             iterator = tqdm_class(iterable, leave=False, bar_format=bar_format)
 
         self.iter_time.reset()
@@ -377,10 +386,11 @@ class MetricLogger:
             if tqdm:
                 _dict = {k: v for k, v in self.meters.items()}
                 if verbose > 2 and torch.cuda.is_available():
-                    _dict.update(memory=f'{cur_memory:.0f} MB')
+                    _dict.update(memory=f"{cur_memory:.0f} MB")
                 if verbose > 1:
-                    _dict.update(iter=f'{cur_iter_time:.3f} s',
-                                 data=f'{cur_data_time:.3f} s')
+                    _dict.update(
+                        iter=f"{cur_iter_time:.3f} s", data=f"{cur_data_time:.3f} s"
+                    )
                 iterator.set_description_str(self.get_str(**_dict, strip=False))
             end = time.time()
         self.synchronize_between_processes()
@@ -389,10 +399,10 @@ class MetricLogger:
 
         _dict = {k: v for k, v in self.meters.items()}
         if verbose > 2 and torch.cuda.is_available():
-            _dict.update(memory=f'{str(self.memory)} MB')
+            _dict.update(memory=f"{str(self.memory)} MB")
         if verbose > 1:
-            _dict.update(iter=f'{str(self.iter_time)} s',
-                         data=f'{str(self.data_time)} s')
+            _dict.update(
+                iter=f"{str(self.iter_time)} s", data=f"{str(self.data_time)} s"
+            )
         _dict.update(time=total_time_str)
-        prints(self.delimiter.join([header, self.get_str(**_dict)]),
-               indent=indent)
+        prints(self.delimiter.join([header, self.get_str(**_dict)]), indent=indent)

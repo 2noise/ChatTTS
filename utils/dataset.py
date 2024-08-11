@@ -23,9 +23,9 @@ class LazyDataType(typing.TypedDict):
 
 
 class DataType(LazyDataType):
-    text_input_id: torch.Tensor    # (batch_size, text_len)
-    text_attention_mask: torch.Tensor   # (batch_size, text_len)
-    waveform: torch.Tensor    # (batch_size, time)
+    text_input_id: torch.Tensor  # (batch_size, text_len)
+    text_attention_mask: torch.Tensor  # (batch_size, text_len)
+    waveform: torch.Tensor  # (batch_size, time)
     waveform_attention_mask: torch.Tensor  # (batch_size, time)
 
 
@@ -70,7 +70,7 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         self.tar_io = None
         if tar_path is not None:
             if tar_in_memory:
-                with open(tar_path, 'rb') as f:
+                with open(tar_path, "rb") as f:
                     self.tar_io = io.BytesIO(f.read())
                 self.tar_file = tarfile.open(fileobj=self.tar_io)
             else:
@@ -81,23 +81,25 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         self.text_input_ids: dict[int, torch.Tensor] = {}
         self.waveforms: dict[int, torch.Tensor] = {}
         if process_ahead:
-            print('Processing data ...')
+            print("Processing data ...")
             for n, item in enumerate(tqdm.tqdm(self.lazy_data)):
-                self.waveforms[n] = self.preprocess_audio(item['filepath'])
-                self.text_input_ids[n] = self.preprocess_text(item['text'], item['lang'])
+                self.waveforms[n] = self.preprocess_audio(item["filepath"])
+                self.text_input_ids[n] = self.preprocess_text(
+                    item["text"], item["lang"]
+                )
             if self.tar_file is not None:
                 self.tar_file.close()
             if self.tar_io is not None:
                 self.tar_io.close()
 
-    @ abc.abstractmethod
-    def get_raw_data(self, root: str) -> list[dict[str, str]]:
-        ...
+    @abc.abstractmethod
+    def get_raw_data(self, root: str) -> list[dict[str, str]]: ...
 
-    @ staticmethod
-    @ abc.abstractmethod
-    def save_config(save_path: str, lazy_data: list[LazyDataType], rel_path: str = './') -> None:
-        ...
+    @staticmethod
+    @abc.abstractmethod
+    def save_config(
+        save_path: str, lazy_data: list[LazyDataType], rel_path: str = "./"
+    ) -> None: ...
 
     def __len__(self):
         return len(self.lazy_data)
@@ -108,8 +110,8 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
             waveforms = self.waveforms[n]
             text_input_ids = self.text_input_ids[n]
         else:
-            waveforms = self.preprocess_audio(lazy_data['filepath'])
-            text_input_ids = self.preprocess_text(lazy_data['text'], lazy_data['lang'])
+            waveforms = self.preprocess_audio(lazy_data["filepath"])
+            text_input_ids = self.preprocess_text(lazy_data["text"], lazy_data["lang"])
             self.waveforms[n] = waveforms
             self.text_input_ids[n] = text_input_ids
             if len(self.waveforms) == len(self.lazy_data):
@@ -117,17 +119,19 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
                     self.tar_file.close()
                 if self.tar_io is not None:
                     self.tar_io.close()
-        text_attention_mask = torch.ones(len(text_input_ids), device=text_input_ids.device)
+        text_attention_mask = torch.ones(
+            len(text_input_ids), device=text_input_ids.device
+        )
         waveform_attention_mask = torch.ones(len(waveforms), device=waveforms.device)
         return {
-            'filepath': lazy_data['filepath'],
-            'speaker': lazy_data['speaker'],
-            'lang': lazy_data['lang'],
-            'text': lazy_data['text'],
-            'text_input_id': text_input_ids,
-            'text_attention_mask': text_attention_mask,
-            'waveform': waveforms,
-            'waveform_attention_mask': waveform_attention_mask,
+            "filepath": lazy_data["filepath"],
+            "speaker": lazy_data["speaker"],
+            "lang": lazy_data["lang"],
+            "text": lazy_data["text"],
+            "text_input_id": text_input_ids,
+            "text_attention_mask": text_attention_mask,
+            "waveform": waveforms,
+            "waveform_attention_mask": waveform_attention_mask,
         }
 
     def get_lazy_data(
@@ -142,27 +146,29 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
         lazy_data = []
 
         raw_data = self.get_raw_data(root)
-        folder_path = os.path.dirname(root) if isinstance(root, str) else ''
+        folder_path = os.path.dirname(root) if isinstance(root, str) else ""
         for item in raw_data:
-            if 'speaker' not in item:
-                item['speaker'] = self.default_speaker
-            if 'lang' not in item:
-                item['lang'] = self.default_lang
+            if "speaker" not in item:
+                item["speaker"] = self.default_speaker
+            if "lang" not in item:
+                item["lang"] = self.default_lang
 
-            if speakers is not None and item['speaker'] not in speakers:
+            if speakers is not None and item["speaker"] not in speakers:
                 continue
-            if speakers is None and item['speaker'] not in new_speakers:
-                new_speakers.add(item['speaker'])
+            if speakers is None and item["speaker"] not in new_speakers:
+                new_speakers.add(item["speaker"])
             if self.tar_file is None and isinstance(root, str):
-                filepath = os.path.join(folder_path, item['filepath'])
+                filepath = os.path.join(folder_path, item["filepath"])
             else:
-                filepath = item['filepath']
-            lazy_data.append({
-                'filepath': filepath,
-                'speaker': item['speaker'],
-                'lang': item['lang'].lower(),
-                'text': item['text'],
-            })
+                filepath = item["filepath"]
+            lazy_data.append(
+                {
+                    "filepath": filepath,
+                    "speaker": item["speaker"],
+                    "lang": item["lang"].lower(),
+                    "text": item["text"],
+                }
+            )
         return lazy_data, new_speakers
 
     def preprocess_text(
@@ -180,11 +186,11 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
             lang,
         )
 
-        text = f'[Stts][spk_emb]{text}[Ptts]'
+        text = f"[Stts][spk_emb]{text}[Ptts]"
         # text = f'[Stts][empty_spk]{text}[Ptts]'
 
-        text_token = self.tokenizer(text, return_tensors='pt', add_special_tokens=False)
-        return text_token['input_ids'].squeeze(0)
+        text_token = self.tokenizer(text, return_tensors="pt", add_special_tokens=False)
+        return text_token["input_ids"].squeeze(0)
 
     def preprocess_audio(self, filepath: str) -> torch.Tensor:
         if self.tar_file is not None:
@@ -211,16 +217,18 @@ class JsonFolder(AudioFolder):
     """
 
     def get_raw_data(self, root: str) -> list[dict[str, str]]:
-        with open(root, 'r', encoding='utf-8') as f:
+        with open(root, "r", encoding="utf-8") as f:
             raw_data = json.load(f)
         return raw_data
 
     @staticmethod
-    def save_config(save_path: str, lazy_data: list[LazyDataType], rel_path: str = './') -> None:
+    def save_config(
+        save_path: str, lazy_data: list[LazyDataType], rel_path: str = "./"
+    ) -> None:
         save_data = [item.copy() for item in lazy_data]
         for item in save_data:
-            item['filepath'] = os.path.relpath(item['filepath'], rel_path)
-        with open(save_path, 'w', encoding='utf-8') as f:
+            item["filepath"] = os.path.relpath(item["filepath"], rel_path)
+        with open(save_path, "w", encoding="utf-8") as f:
             json.dump(save_data, f, ensure_ascii=False, indent=4)
 
 
@@ -234,33 +242,39 @@ class ListFolder(AudioFolder):
 
     def get_raw_data(self, root: str) -> list[dict[str, str]]:
         raw_data = []
-        with open(root, 'r', encoding='utf-8') as f:
+        with open(root, "r", encoding="utf-8") as f:
             for line in f.readlines():
-                line = line.strip().removesuffix('\n')
+                line = line.strip().removesuffix("\n")
                 if len(line) == 0:
                     continue
-                filepath, speaker, lang, text = line.split(sep='|', maxsplit=3)
-                raw_data.append({
-                    'text': text,
-                    'filepath': filepath,
-                    'speaker': speaker,
-                    'lang': lang,
-                })
+                filepath, speaker, lang, text = line.split(sep="|", maxsplit=3)
+                raw_data.append(
+                    {
+                        "text": text,
+                        "filepath": filepath,
+                        "speaker": speaker,
+                        "lang": lang,
+                    }
+                )
         return raw_data
 
     @staticmethod
-    def save_config(save_path: str, lazy_data: list[LazyDataType], rel_path: str = './') -> None:
+    def save_config(
+        save_path: str, lazy_data: list[LazyDataType], rel_path: str = "./"
+    ) -> None:
         save_data = [item.copy() for item in lazy_data]
         for item in save_data:
-            item['filepath'] = os.path.relpath(item['filepath'], rel_path)
-        with open(save_path, 'w', encoding='utf-8') as f:
+            item["filepath"] = os.path.relpath(item["filepath"], rel_path)
+        with open(save_path, "w", encoding="utf-8") as f:
             for item in save_data:
-                f.write(f"{item['filepath']}|{item['speaker']}|{item['lang']}|{item['text']}\n")
+                f.write(
+                    f"{item['filepath']}|{item['speaker']}|{item['lang']}|{item['text']}\n"
+                )
 
 
 class XzListTar(ListFolder):
-    url = 'https://drive.google.com/file/d/1vv73kAHiKb4KiL_oIH4DOWzUoaTeKzt_'
-    md5 = '47683c253d10250d9c32c964118c2b7c'
+    url = "https://drive.google.com/file/d/1vv73kAHiKb4KiL_oIH4DOWzUoaTeKzt_"
+    md5 = "47683c253d10250d9c32c964118c2b7c"
     # from torchvision.datasets.utils import download_url
     # download_url('https://drive.google.com/file/d/1vv73kAHiKb4KiL_oIH4DOWzUoaTeKzt_', './', 'Xz.tar', md5='47683c253d10250d9c32c964118c2b7c')
 
@@ -275,40 +289,48 @@ class XzListTar(ListFolder):
             assert tar_path is not None
         else:
             # make sure root is a list file
-            if not root.endswith('.list'):   # folder case
+            if not root.endswith(".list"):  # folder case
                 if os.path.isfile(root):
-                    raise FileExistsError(f'{root} is a file!')
+                    raise FileExistsError(f"{root} is a file!")
                 elif not os.path.exists(root):
                     os.makedirs(root)
-                root = os.path.join(root, 'all.list')
+                root = os.path.join(root, "all.list")
             # make sure tar_path is a tar file
             if tar_path is None:
                 dirname = os.path.dirname(root)
-                tar_path = os.path.join(dirname, 'Xz.tar')
-            elif not tar_path.endswith('.tar'):   # folder case
+                tar_path = os.path.join(dirname, "Xz.tar")
+            elif not tar_path.endswith(".tar"):  # folder case
                 if os.path.isfile(tar_path):
-                    raise FileExistsError(f'{tar_path} is a file!')
+                    raise FileExistsError(f"{tar_path} is a file!")
                 elif not os.path.exists(tar_path):
                     os.makedirs(tar_path)
-                tar_path = os.path.join(tar_path, 'Xz.tar')
+                tar_path = os.path.join(tar_path, "Xz.tar")
         # download tar file if not exists
         if not os.path.isfile(tar_path):
             dirname, basename = os.path.split(tar_path)
             if not os.path.isdir(dirname):
                 os.makedirs(dirname)
             download_url(self.url, dirname, basename, md5=self.md5)
-            self.concat_dataset()   # prepare all.list
+            self.concat_dataset()  # prepare all.list
         # if root is all.list, make sure it is prepared
-        if isinstance(root, str) and os.path.samefile(root, os.path.join(os.path.dirname(tar_path), 'all.list')) and not os.path.isfile(root):
-            self.concat_dataset()   # prepare all.list
+        if (
+            isinstance(root, str)
+            and os.path.samefile(
+                root, os.path.join(os.path.dirname(tar_path), "all.list")
+            )
+            and not os.path.isfile(root)
+        ):
+            self.concat_dataset()  # prepare all.list
 
         super().__init__(root, *args, tar_path=tar_path, **kwargs)
 
-    def concat_dataset(self, save_folder: str | None = None, langs: list[str] = ['zh', 'en']) -> None:
+    def concat_dataset(
+        self, save_folder: str | None = None, langs: list[str] = ["zh", "en"]
+    ) -> None:
         if save_folder is None:
             save_folder = os.path.dirname(self.tar_path)
         if os.path.isfile(save_folder):
-            raise FileExistsError(f'{save_folder} already exists as a file!')
+            raise FileExistsError(f"{save_folder} already exists as a file!")
         elif not os.path.exists(save_folder):
             os.makedirs(save_folder)
         lazy_data = []
@@ -316,19 +338,19 @@ class XzListTar(ListFolder):
         for member in self.tar_file.getmembers():
             if not member.isfile():
                 continue
-            if member.name.endswith('.list'):
+            if member.name.endswith(".list"):
                 print(member.name)
                 root_io = self.tar_file.extractfile(member)
                 lazy_data += ListFolder(root_io).lazy_data
-            if member.name.endswith('.json'):
+            if member.name.endswith(".json"):
                 print(member.name)
                 root_io = self.tar_file.extractfile(member)
                 lazy_data += JsonFolder(root_io).lazy_data
         if langs is not None:
-            lazy_data = [item for item in lazy_data if item['lang'] in langs]
-        ListFolder.save_config(os.path.join(save_folder, 'all.list'), lazy_data)
-        JsonFolder.save_config(os.path.join(save_folder, 'all.json'), lazy_data)
-        print(f'all.list and all.json are saved to {save_folder}')
+            lazy_data = [item for item in lazy_data if item["lang"] in langs]
+        ListFolder.save_config(os.path.join(save_folder, "all.list"), lazy_data)
+        JsonFolder.save_config(os.path.join(save_folder, "all.json"), lazy_data)
+        print(f"all.list and all.json are saved to {save_folder}")
 
 
 class XzListFolder(ListFolder):
@@ -354,9 +376,9 @@ class XzListFolder(ListFolder):
     def get_raw_data(self, root: str) -> list[dict[str, str]]:
         raw_data = super().get_raw_data(root)
         for item in raw_data:
-            item['filepath'] = os.path.join(
-                os.path.basename(root).removesuffix('.list'),
-                os.path.basename(item['filepath']),
+            item["filepath"] = os.path.join(
+                os.path.basename(root).removesuffix(".list"),
+                os.path.basename(item["filepath"]),
             )
         return raw_data
 
@@ -369,8 +391,8 @@ class AudioCollator:
     def __call__(self, batch: list[DataType]):
         batch = [x for x in batch if x is not None]
 
-        audio_maxlen = max(len(item['waveform']) for item in batch)
-        text_maxlen = max(len(item['text_input_id']) for item in batch)
+        audio_maxlen = max(len(item["waveform"]) for item in batch)
+        text_maxlen = max(len(item["text_input_id"]) for item in batch)
 
         filepath = []
         speaker = []
@@ -382,65 +404,67 @@ class AudioCollator:
         waveform_attention_mask = []
 
         for x in batch:
-            filepath.append(x['filepath'])
-            speaker.append(x['speaker'])
-            lang.append(x['lang'])
-            text.append(x['text'])
+            filepath.append(x["filepath"])
+            speaker.append(x["speaker"])
+            lang.append(x["lang"])
+            text.append(x["text"])
             text_input_id.append(
                 torch.nn.functional.pad(
-                    x['text_input_id'],
-                    (text_maxlen - len(x['text_attention_mask']), 0),
+                    x["text_input_id"],
+                    (text_maxlen - len(x["text_attention_mask"]), 0),
                     value=self.text_pad,
                 )
             )
             text_attention_mask.append(
                 torch.nn.functional.pad(
-                    x['text_attention_mask'],
-                    (text_maxlen - len(x['text_attention_mask']), 0),
+                    x["text_attention_mask"],
+                    (text_maxlen - len(x["text_attention_mask"]), 0),
                     value=0,
                 )
             )
             waveform.append(
                 torch.nn.functional.pad(
-                    x['waveform'],
-                    (0, audio_maxlen - len(x['waveform_attention_mask'])),
+                    x["waveform"],
+                    (0, audio_maxlen - len(x["waveform_attention_mask"])),
                     value=self.audio_pad,
                 )
             )
             waveform_attention_mask.append(
                 torch.nn.functional.pad(
-                    x['waveform_attention_mask'],
-                    (0, audio_maxlen - len(x['waveform_attention_mask'])),
+                    x["waveform_attention_mask"],
+                    (0, audio_maxlen - len(x["waveform_attention_mask"])),
                     value=0,
                 )
             )
         return {
-            'filepath': filepath,
-            'speaker': speaker,
-            'lang': lang,
-            'text': text,
-            'text_input_id': torch.stack(text_input_id),
-            'text_attention_mask': torch.stack(text_attention_mask),
-            'waveform': torch.stack(waveform),
-            'waveform_attention_mask': torch.stack(waveform_attention_mask),
+            "filepath": filepath,
+            "speaker": speaker,
+            "lang": lang,
+            "text": text,
+            "text_input_id": torch.stack(text_input_id),
+            "text_attention_mask": torch.stack(text_attention_mask),
+            "waveform": torch.stack(waveform),
+            "waveform_attention_mask": torch.stack(waveform_attention_mask),
         }
 
 
 def formalize_xz_list(src_folder: str):
     for root, _, files in os.walk(src_folder):
         for file in files:
-            if file.endswith('.list'):
+            if file.endswith(".list"):
                 filepath = os.path.join(root, file)
                 print(filepath)
                 lazy_data = XzListFolder(filepath).lazy_data
                 XzListFolder.save_config(filepath, lazy_data, rel_path=src_folder)
 
 
-def concat_dataset(src_folder: str, save_folder: str | None = None, langs: list[str] = ['zh', 'en']) -> None:
+def concat_dataset(
+    src_folder: str, save_folder: str | None = None, langs: list[str] = ["zh", "en"]
+) -> None:
     if save_folder is None:
         save_folder = src_folder
     if os.path.isfile(save_folder):
-        raise FileExistsError(f'{save_folder} already exists as a file!')
+        raise FileExistsError(f"{save_folder} already exists as a file!")
     elif not os.path.exists(save_folder):
         os.makedirs(save_folder)
     lazy_data = []
@@ -448,16 +472,20 @@ def concat_dataset(src_folder: str, save_folder: str | None = None, langs: list[
     for root, _, files in os.walk(src_folder):
         for file in files:
             filepath = os.path.join(root, file)
-            if same_folder and file in ('all.list', 'all.json'):
+            if same_folder and file in ("all.list", "all.json"):
                 continue
-            if file.endswith('.list'):
+            if file.endswith(".list"):
                 print(filepath)
                 lazy_data += ListFolder(filepath).lazy_data
-            if file.endswith('.json'):
+            if file.endswith(".json"):
                 print(filepath)
                 lazy_data += JsonFolder(filepath).lazy_data
     if langs is not None:
-        lazy_data = [item for item in lazy_data if item['lang'] in langs]
-    ListFolder.save_config(os.path.join(save_folder, 'all.list'), lazy_data, rel_path=save_folder)
-    JsonFolder.save_config(os.path.join(save_folder, 'all.json'), lazy_data, rel_path=save_folder)
-    print(f'all.list and all.json are saved to {save_folder}')
+        lazy_data = [item for item in lazy_data if item["lang"] in langs]
+    ListFolder.save_config(
+        os.path.join(save_folder, "all.list"), lazy_data, rel_path=save_folder
+    )
+    JsonFolder.save_config(
+        os.path.join(save_folder, "all.json"), lazy_data, rel_path=save_folder
+    )
+    print(f"all.list and all.json are saved to {save_folder}")
