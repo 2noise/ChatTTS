@@ -1,18 +1,16 @@
-# numpy<2.0.0
+numpy<2.0.0
 numba
-# torch>=2.1.0
-# torchaudio
+torch>=2.1.0
+torchaudio
 tqdm
 vector_quantize_pytorch
-transformers
+transformers>=4.41.1
 vocos
-# IPython
-# gradio
+IPython
+gradio
 pybase16384
-# pynini==2.1.5; sys_platform == 'linux'
-# WeTextProcessing; sys_platform == 'linux'
-# nemo_text_processing; sys_platform == 'linux'
-# av
-# pydub
-
-# git+https://github.com/NVIDIA/TransformerEngine.git@stable
+pynini==2.1.5; sys_platform == 'linux'
+WeTextProcessing; sys_platform == 'linux'
+nemo_text_processing; sys_platform == 'linux'
+av
+pydub
