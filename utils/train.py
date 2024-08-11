@@ -40,26 +40,31 @@ def train_autoencoder(
     if not validate:
         match train_module:
             case TrainModule.DVAE:
-                chat.dvae.train().requires_grad_()
                 train_params = list(chat.dvae.parameters())
             case TrainModule.DVAE_ENCODER:
-                chat.dvae.downsample_conv.train().requires_grad_()
-                chat.dvae.encoder.train().requires_grad_()
-                chat.dvae.vq_layer.train().requires_grad_()
                 train_params = []
                 train_params += list(chat.dvae.downsample_conv.parameters())
                 train_params += list(chat.dvae.encoder.parameters())
                 train_params += list(chat.dvae.vq_layer.parameters())
             case TrainModule.DVAE_DECODER:
-                chat.dvae.decoder.train().requires_grad_()
-                chat.dvae.out_conv.train().requires_grad_()
                 train_params = []
                 train_params += list(chat.dvae.decoder.parameters())
                 train_params += list(chat.dvae.out_conv.parameters())
-
         optimizer = torch.optim.AdamW(train_params, lr=lr, betas=[0.8, 0.99], eps=1e-6)
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs, 1e-7)
         # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.999999)
+
+        def activate_params():
+            match train_module:
+                case TrainModule.DVAE:
+                    chat.dvae.train().requires_grad_()
+                case TrainModule.DVAE_ENCODER:
+                    chat.dvae.downsample_conv.train().requires_grad_()
+                    chat.dvae.encoder.train().requires_grad_()
+                    chat.dvae.vq_layer.train().requires_grad_()
+                case TrainModule.DVAE_DECODER:
+                    chat.dvae.decoder.train().requires_grad_()
+                    chat.dvae.out_conv.train().requires_grad_()
 
     loader = torch.utils.data.DataLoader(
         dataset,
@@ -71,8 +76,10 @@ def train_autoencoder(
     logger = MetricLogger()
     logger.create_meters(loss=None)
     if not validate:
-        train_autoencoder(chat=chat, dataset=dataset, batch_size=10, validate=True)
+        train_autoencoder(chat=chat, dataset=dataset, validate=True)
     for _epoch in range(1 if validate else epochs):
+        if not validate:
+            activate_params()
         _epoch += 1
         logger.reset()
         if validate:
@@ -105,7 +112,7 @@ def train_autoencoder(
                 optimizer.step()
         if not validate:
             lr_scheduler.step()
-            train_autoencoder(chat=chat, dataset=dataset, batch_size=10, validate=True)
+            train_autoencoder(chat=chat, dataset=dataset, validate=True)
     if not validate:
         optimizer.zero_grad()
 
@@ -116,24 +123,23 @@ def train_gpt(
     train_module: TrainModule = TrainModule.GPT_ALL,
     batch_size: int = 10,
     epochs: int = 10,
+    grad_norm_clip: float = 1.0,
     speaker_embeds: dict[str, torch.Tensor] = {},
     train_text: bool = False,
     validate: bool = False,
 ) -> dict[str, torch.Tensor]:
-    speaker_embeds = {
-        speaker: chat.speaker.sample_random_tensor().to(device=chat.device).requires_grad_(
-            not validate and train_module in [TrainModule.GPT_ALL, TrainModule.GPT_SPEAKER, TrainModule.SPEAKER],
-        ) for speaker in dataset.speakers
-    } | speaker_embeds
+    for speaker in dataset.speakers:
+        if speaker not in speaker_embeds:
+            speaker_embeds[speaker] = chat.speaker.sample_random_tensor().to(device=chat.device)
 
     chat.dvae.eval().requires_grad_(False)
     chat.gpt.eval().requires_grad_(False)
     chat.decoder.eval().requires_grad_(False)
+
     if not validate:
+        train_speaker = train_module in [TrainModule.GPT_ALL, TrainModule.GPT_SPEAKER, TrainModule.SPEAKER]
         match train_module:
             case TrainModule.GPT_ALL:
-                chat.gpt.train().requires_grad_()
-                chat.decoder.train().requires_grad_()
                 train_params = []
                 train_params += list(speaker_embeds.values())
                 train_params += list(chat.gpt.parameters())
@@ -142,24 +148,35 @@ def train_gpt(
                 optimizer.add_param_group({'params': chat.decoder.parameters(), 'lr': 1e-5, 'weight_decay': 0, 'betas': [0.9, 0.95]})
                 optimizer.add_param_group({'params': speaker_embeds.values(), 'lr': 1e-2, 'weight_decay': 0, 'betas': [0.9, 0.95]})
             case TrainModule.GPT_SPEAKER:
-                chat.gpt.train().requires_grad_()
                 train_params = []
                 train_params += list(speaker_embeds.values())
                 train_params += list(chat.gpt.parameters())
                 optimizer = torch.optim.Adam(chat.gpt.parameters(), lr=1e-5, weight_decay=0, betas=[0.9, 0.95])
-                optimizer.add_param_group({'params': speaker_embeds.values(), 'lr': 1e-1, 'weight_decay': 0, 'betas': [0.9, 0.95]})
+                optimizer.add_param_group({'params': speaker_embeds.values(), 'lr': 1e-2, 'weight_decay': 0, 'betas': [0.9, 0.95]})
             case TrainModule.GPT:
-                chat.gpt.train().requires_grad_()
                 train_params = list(chat.gpt.parameters())
             case TrainModule.DECODER:
-                chat.decoder.train().requires_grad_()
                 train_params = list(chat.decoder.parameters())
             case TrainModule.SPEAKER:
                 train_params = list(speaker_embeds.values())
                 optimizer = torch.optim.Adam(train_params, lr=1e-2, weight_decay=0, betas=[0.9, 0.95])
-
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs, 1e-7)
         # lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=functools.partial())
+
+        def activate_params():
+            if train_speaker:
+                for speaker_embed in speaker_embeds.values():
+                    speaker_embed.requires_grad_(True)
+            match train_module:
+                case TrainModule.GPT_ALL:
+                    chat.gpt.train().requires_grad_()
+                    chat.decoder.train().requires_grad_()
+                case TrainModule.GPT_SPEAKER:
+                    chat.gpt.train().requires_grad_()
+                case TrainModule.GPT:
+                    chat.gpt.train().requires_grad_()
+                case TrainModule.DECODER:
+                    chat.decoder.train().requires_grad_()
 
     loader = torch.utils.data.DataLoader(
         dataset,
@@ -169,10 +186,14 @@ def train_gpt(
         # num_workers=4,
     )
     logger = MetricLogger()
-    logger.create_meters(loss=None, audio_loss=None, text_loss=None, mse_loss=None)
+    logger.create_meters(audio_loss=None, mse_loss=None)
+    if validate or train_text:
+        logger.create_meters(text_loss=None)
     if not validate:
-        train_gpt(chat=chat, dataset=dataset, batch_size=10, validate=True)
+        train_gpt(chat=chat, dataset=dataset, speaker_embeds=speaker_embeds, validate=True)
     for _epoch in range(1 if validate else epochs):
+        if not validate:
+            activate_params()
         _epoch += 1
         logger.reset()
         if validate:
@@ -221,34 +242,33 @@ def train_gpt(
             )  # (batch_size, mel_len+1, num_vq, num_class_audio)
             audio_loss: torch.Tensor = torch.nn.functional.cross_entropy(audio_logits.flatten(0, 2), audio_labels.flatten(0, 2))
             loss: torch.Tensor = audio_loss
-            if train_text:
+            if validate or train_text:
                 text_hidden_states = hidden_states[:, :text_len-1]  # (batch_size, text_len-1, 768)
                 text_labels = labels[:, 1:text_len, 0]  # (batch_size, text_len-1)
 
                 text_logits: torch.Tensor = chat.gpt.head_text(text_hidden_states)  # (batch_size, text_len-1, num_class_text)
                 text_loss: torch.Tensor = torch.nn.functional.cross_entropy(text_logits.flatten(0, 1), text_labels.flatten(0, 1))
-                loss += text_loss
+                loss = loss + text_loss
                 logger.meters['text_loss'].update(text_loss.item(), n=batch_size)
 
-            gen_mel_specs = chat.decoder(audio_hidden_states[:, :-1].transpose(1, 2))
-            gen_mel_specs = gen_mel_specs * mel_attention_mask.unsqueeze(1)  # clip
+            decoder_mel_specs = chat.decoder(audio_hidden_states[:, :-1].transpose(1, 2))
+            decoder_mel_specs = decoder_mel_specs * mel_attention_mask.unsqueeze(1)  # clip
             mse_loss = torch.nn.functional.mse_loss(
-                gen_mel_specs,
+                decoder_mel_specs,
                 mel_specs,
             )
-            loss += mse_loss
-            logger.meters['loss'].update(loss.item(), n=batch_size)
+            loss = loss + 10 * mse_loss
             logger.meters['mse_loss'].update(mse_loss.item(), n=batch_size)
             logger.meters['audio_loss'].update(audio_loss.item(), n=batch_size)
 
             if not validate:
                 optimizer.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(train_params, 1.0)
+                torch.nn.utils.clip_grad_norm_(train_params, grad_norm_clip)
                 optimizer.step()
         if not validate:
             lr_scheduler.step()
-            train_gpt(chat=chat, dataset=dataset, batch_size=10, validate=True)
+            train_gpt(chat=chat, dataset=dataset, speaker_embeds=speaker_embeds, validate=True)
     if not validate:
         optimizer.zero_grad()
     return speaker_embeds
