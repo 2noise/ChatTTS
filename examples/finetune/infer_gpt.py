@@ -55,7 +55,7 @@ def main():
 
     if speaker is None:
         if len(speaker_embeds) == 0:
-            speaker_embed = chat.speaker.sample_random_tensor()
+            speaker_embed = chat.speaker._sample_random()
         else:
             speaker_embed = random.choice(list(speaker_embeds.values()))
     else:

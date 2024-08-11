@@ -16,7 +16,7 @@ class Speaker:
         self.dim = dim
 
     def sample_random(self) -> str:
-        return self._encode(self.sample_random_tensor())
+        return self._encode(self._sample_random())
 
     @torch.no_grad()
     def apply(
@@ -120,7 +120,7 @@ class Speaker:
         return torch.from_numpy(p.astype(np.int32)).view(*shp)
 
     @torch.no_grad()
-    def sample_random_tensor(self) -> torch.Tensor:
+    def _sample_random(self) -> torch.Tensor:
         spk = (
             torch.randn(self.dim, device=self.std.device, dtype=self.std.dtype)
             .mul_(self.std)

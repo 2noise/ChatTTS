@@ -146,7 +146,7 @@ def train_gpt(
 ) -> dict[str, torch.Tensor]:
     for speaker in dataset.speakers:
         if speaker not in speaker_embeds:
-            speaker_embeds[speaker] = chat.speaker.sample_random_tensor().to(
+            speaker_embeds[speaker] = chat.speaker._sample_random().to(
                 device=chat.device
             )
 
