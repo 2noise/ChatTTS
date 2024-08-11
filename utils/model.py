@@ -100,6 +100,7 @@ def dvae_decode(
     return x * dvae.coef    # (batch_size, 100, mel_len)
 
 
+# TODO: a better name
 def get_hidden_states_and_labels(
     chat: ChatTTS.Chat,
     mel_specs: torch.Tensor,  # (batch_size, 100, mel_len)
