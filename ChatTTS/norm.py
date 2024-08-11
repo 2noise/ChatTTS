@@ -97,8 +97,6 @@ class Normalizer:
         self.english_word_pattern = re.compile(r"\b[A-Za-z]+\b")
         self.character_simplifier = str.maketrans(
             {
-                "？": "。",
-                "?": ".",
                 "：": "，",
                 "；": "，",
                 "！": "。",
@@ -184,7 +182,6 @@ class Normalizer:
         if len(invalid_characters):
             self.logger.warning(f"found invalid characters: {invalid_characters}")
             text = self._apply_character_map(text)
-            invalid_characters = self._count_invalid_characters(text)
         if do_homophone_replacement:
             arr, replaced_words = _fast_replace(
                 self.homophones_map,
