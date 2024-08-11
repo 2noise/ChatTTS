@@ -16,8 +16,8 @@ import numpy as np
 import ChatTTS
 import ChatTTS.model.gpt
 import ChatTTS.model.dvae
-from utils.dataset import XzListTar
-from utils.train import TrainModule, train_autoencoder, train_gpt
+from ChatTTS.utils.finetune.dataset import XzListTar
+from ChatTTS.utils.finetune.train import TrainModule, train_autoencoder, train_gpt
 
 logging.basicConfig(level=logging.ERROR)
 

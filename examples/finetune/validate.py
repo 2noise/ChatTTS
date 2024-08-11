@@ -18,8 +18,8 @@ import numpy as np
 import ChatTTS
 import ChatTTS.model.gpt
 import ChatTTS.model.dvae
-from utils.dataset import XzListTar
-from utils.train import train_autoencoder, train_gpt
+from ChatTTS.utils.finetune.dataset import XzListTar
+from ChatTTS.utils.finetune.train import train_autoencoder, train_gpt
 
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 logging.basicConfig(level=logging.ERROR)
