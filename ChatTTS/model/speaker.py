@@ -22,16 +22,19 @@ class Speaker:
     def apply(
         self,
         emb: torch.Tensor,
-        spk_emb: str,
+        spk_emb: Union[str, torch.Tensor],
         input_ids: torch.Tensor,
         spk_emb_ids: int,
         device: torch.device,
-    ):
+        inplace: bool = True,
+    ) -> torch.Tensor:
+        if isinstance(spk_emb, str):
+            spk_emb_tensor = torch.from_numpy(self._decode(spk_emb))
+        else:
+            spk_emb_tensor = spk_emb
         n = (
             F.normalize(
-                torch.from_numpy(
-                    self._decode(spk_emb),
-                ),
+                spk_emb_tensor,
                 p=2.0,
                 dim=0,
                 eps=1e-12,
@@ -43,8 +46,10 @@ class Speaker:
             .expand(emb.shape)
         )
         cond = input_ids.narrow(-1, 0, 1).eq(spk_emb_ids).expand(emb.shape)
-        torch.where(cond, n, emb, out=emb)
-        del cond, n
+        out = torch.where(cond, n, emb, out=emb if inplace else None)
+        if inplace:
+            del cond, n
+        return out
 
     @staticmethod
     @torch.no_grad()
