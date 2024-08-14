@@ -127,6 +127,7 @@ class Chat:
         coef: Optional[torch.Tensor] = None,
         use_flash_attn=False,
         use_vllm=False,
+        experimental: bool = False,
     ) -> bool:
         download_path = self.download_models(source, force_redownload, custom_path)
         if download_path is None:
@@ -137,6 +138,7 @@ class Chat:
             coef=coef,
             use_flash_attn=use_flash_attn,
             use_vllm=use_vllm,
+            experimental=experimental,
             **{
                 k: os.path.join(download_path, v)
                 for k, v in asdict(self.config.path).items()
@@ -233,9 +235,10 @@ class Chat:
         coef: Optional[str] = None,
         use_flash_attn=False,
         use_vllm=False,
+        experimental: bool = False,
     ):
         if device is None:
-            device = select_device()
+            device = select_device(experimental=experimental)
             self.logger.info("use device %s", str(device))
         self.device = device
         self.device_gpt = device if "mps" not in str(device) else torch.device("cpu")
@@ -287,7 +290,7 @@ class Chat:
             logger=self.logger,
         ).eval()
         assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
-        gpt.from_pretrained(gpt_ckpt_path)
+        gpt.from_pretrained(gpt_ckpt_path, experimental=experimental)
         gpt.prepare(compile=compile and "cuda" in str(device))
         self.gpt = gpt
 
