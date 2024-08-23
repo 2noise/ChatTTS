@@ -4,7 +4,6 @@ import os
 import sys
 
 import numpy as np
-import torch
 
 import ChatTTS
 from tools.logger import get_logger
@@ -66,9 +65,9 @@ def main(
 
     is_load = False
     if os.path.isdir(custom_path) and source == "custom":
-        is_load = chat.load(compile=True, source="custom", custom_path=custom_path)
+        is_load = chat.load(source="custom", custom_path=custom_path)
     else:
-        is_load = chat.load(compile=True, source=source)
+        is_load = chat.load(source=source)
 
     if is_load:
         logger.info("Models loaded successfully.")
