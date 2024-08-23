@@ -64,9 +64,7 @@ def load_chat(cust_path: Optional[str], coef: Optional[str]) -> bool:
         ret = chat.load(coef=coef)
     else:
         logger.info("local model path: %s", cust_path)
-        ret = chat.load(
-            "custom", custom_path=cust_path, coef=coef
-        )
+        ret = chat.load("custom", custom_path=cust_path, coef=coef)
         global custom_path
         custom_path = cust_path
     if ret:
