@@ -13,7 +13,7 @@ from vocos.pretrained import instantiate_class
 from huggingface_hub import snapshot_download
 
 from .config import Config
-from .model import DVAE, GPT, gen_logits, Tokenizer, Speaker
+from .model import DVAE, Embed, GPT, gen_logits, Tokenizer, Speaker
 from .utils import (
     check_all_assets,
     download_all_assets,
@@ -46,7 +46,7 @@ class Chat:
 
     def has_loaded(self, use_decoder=False):
         not_finish = False
-        check_list = ["vocos", "gpt", "tokenizer"]
+        check_list = ["vocos", "gpt", "tokenizer", "embed"]
 
         if use_decoder:
             check_list.append("decoder")
@@ -150,7 +150,7 @@ class Chat:
         self.normalizer.destroy()
         del self.normalizer
         del self.sha256_map
-        del_list = ["vocos", "gpt", "decoder", "dvae", "tokenizer"]
+        del_list = ["vocos", "gpt", "decoder", "dvae", "tokenizer", "embed"]
         for module in del_list:
             if hasattr(self, module):
                 delattr(self, module)
@@ -228,6 +228,7 @@ class Chat:
         vocos_ckpt_path: str = None,
         dvae_ckpt_path: str = None,
         gpt_ckpt_path: str = None,
+        embed_path: str = None,
         decoder_ckpt_path: str = None,
         tokenizer_path: str = None,
         device: Optional[torch.device] = None,
@@ -293,11 +294,22 @@ class Chat:
         gpt.from_pretrained(gpt_ckpt_path, experimental=experimental)
         gpt.prepare(compile=compile and "cuda" in str(device))
         self.gpt = gpt
+        self.logger.log(logging.INFO, "gpt loaded.")
+
+        embed = Embed(
+            self.config.embed.hidden_size,
+            self.config.embed.num_audio_tokens,
+            self.config.embed.num_text_tokens,
+            self.config.embed.num_vq,
+        )
+        embed.from_pretrained(self.config.path.embed_path)
+        self.embed = embed
+        self.logger.log(logging.INFO, "embed loaded.")
 
         self.speaker = Speaker(
             self.config.gpt.hidden_size, self.config.spk_stat, device
         )
-        self.logger.log(logging.INFO, "gpt loaded.")
+        self.logger.log(logging.INFO, "speaker loaded.")
 
         decoder = (
             DVAE(
@@ -528,7 +540,7 @@ class Chat:
                 ),
             ]
 
-        emb = gpt(input_ids, text_mask)
+        emb = self.embed(input_ids, text_mask)
 
         del text_mask
 
@@ -626,7 +638,7 @@ class Chat:
                 attentions=[],
             )
 
-        emb = gpt(input_ids, text_mask)
+        emb = self.embed(input_ids, text_mask)
 
         del text_mask
 

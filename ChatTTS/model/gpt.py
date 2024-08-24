@@ -198,43 +198,6 @@ class GPT(nn.Module):
             except RuntimeError as e:
                 self.logger.warning(f"compile failed: {e}. fallback to normal mode.")
 
-    def __call__(
-        self, input_ids: torch.Tensor, text_mask: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        get_emb
-        """
-        return super().__call__(input_ids, text_mask)
-
-    def forward(self, input_ids: torch.Tensor, text_mask: torch.Tensor) -> torch.Tensor:
-        """
-        get_emb
-        """
-
-        emb_text: torch.Tensor = self.emb_text(
-            input_ids[text_mask].narrow(1, 0, 1).squeeze_(1).to(self.device_gpt)
-        )
-
-        text_mask_inv = text_mask.logical_not().to(self.device_gpt)
-        masked_input_ids: torch.Tensor = input_ids[text_mask_inv].to(self.device_gpt)
-
-        emb_code = [
-            self.emb_code[i](masked_input_ids[:, i]) for i in range(self.num_vq)
-        ]
-        emb_code = torch.stack(emb_code, 2).sum(2)
-
-        emb = torch.zeros(
-            (input_ids.shape[:-1]) + (emb_text.shape[-1],),
-            device=emb_text.device,
-            dtype=emb_text.dtype,
-        )
-        emb[text_mask] = emb_text
-        emb[text_mask_inv] = emb_code.to(emb.dtype)
-
-        del emb_text, emb_code, text_mask_inv
-
-        return emb
-
     @dataclass(repr=False, eq=False)
     class _GenerationInputs:
         position_ids: torch.Tensor
