@@ -1,4 +1,3 @@
-import sys
 import random
 from typing import Optional
 from time import sleep
