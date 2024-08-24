@@ -139,10 +139,6 @@ class Chat:
             use_flash_attn=use_flash_attn,
             use_vllm=use_vllm,
             experimental=experimental,
-            **{
-                k: os.path.join(download_path, v)
-                for k, v in asdict(self.config.path).items()
-            },
         )
 
     def unload(self):
@@ -225,12 +221,6 @@ class Chat:
     @torch.no_grad()
     def _load(
         self,
-        vocos_ckpt_path: str = None,
-        dvae_ckpt_path: str = None,
-        gpt_ckpt_path: str = None,
-        embed_path: str = None,
-        decoder_ckpt_path: str = None,
-        tokenizer_path: str = None,
         device: Optional[torch.device] = None,
         compile: bool = False,
         coef: Optional[str] = None,
@@ -260,8 +250,8 @@ class Chat:
             )
             .eval()
         )
-        assert vocos_ckpt_path, "vocos_ckpt_path should not be None"
-        vocos.load_state_dict(torch.load(vocos_ckpt_path, weights_only=True, mmap=True))
+        assert self.config.path.vocos_ckpt_path, "vocos_ckpt_path should not be None"
+        vocos.load_state_dict(torch.load(self.config.path.vocos_ckpt_path, weights_only=True, mmap=True))
         self.vocos = vocos
         self.logger.log(logging.INFO, "vocos loaded.")
 
@@ -277,24 +267,10 @@ class Chat:
             .eval()
         )
         coef = str(dvae)
-        assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
-        dvae.load_state_dict(torch.load(dvae_ckpt_path, weights_only=True, mmap=True))
+        assert self.config.path.dvae_ckpt_path, "dvae_ckpt_path should not be None"
+        dvae.load_state_dict(torch.load(self.config.path.dvae_ckpt_path, weights_only=True, mmap=True))
         self.dvae = dvae
         self.logger.log(logging.INFO, "dvae loaded.")
-
-        gpt = GPT(
-            gpt_config=asdict(self.config.gpt),
-            use_flash_attn=use_flash_attn,
-            use_vllm=use_vllm,
-            device=device,
-            device_gpt=self.device_gpt,
-            logger=self.logger,
-        ).eval()
-        assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
-        gpt.from_pretrained(gpt_ckpt_path, experimental=experimental)
-        gpt.prepare(compile=compile and "cuda" in str(device))
-        self.gpt = gpt
-        self.logger.log(logging.INFO, "gpt loaded.")
 
         embed = Embed(
             self.config.embed.hidden_size,
@@ -305,6 +281,21 @@ class Chat:
         embed.from_pretrained(self.config.path.embed_path)
         self.embed = embed
         self.logger.log(logging.INFO, "embed loaded.")
+
+        gpt = GPT(
+            gpt_config=asdict(self.config.gpt),
+            embed=self.embed,
+            use_flash_attn=use_flash_attn,
+            use_vllm=use_vllm,
+            device=device,
+            device_gpt=self.device_gpt,
+            logger=self.logger,
+        ).eval()
+        assert self.config.path.gpt_ckpt_path, "gpt_ckpt_path should not be None"
+        gpt.from_pretrained(self.config.path.gpt_ckpt_path, self.config.path.embed_path, experimental=experimental)
+        gpt.prepare(compile=compile and "cuda" in str(device))
+        self.gpt = gpt
+        self.logger.log(logging.INFO, "gpt loaded.")
 
         self.speaker = Speaker(
             self.config.gpt.hidden_size, self.config.spk_stat, device
@@ -321,15 +312,15 @@ class Chat:
             .eval()
         )
         coef = str(decoder)
-        assert decoder_ckpt_path, "decoder_ckpt_path should not be None"
+        assert self.config.path.decoder_ckpt_path, "decoder_ckpt_path should not be None"
         decoder.load_state_dict(
-            torch.load(decoder_ckpt_path, weights_only=True, mmap=True)
+            torch.load(self.config.path.decoder_ckpt_path, weights_only=True, mmap=True)
         )
         self.decoder = decoder
         self.logger.log(logging.INFO, "decoder loaded.")
 
-        if tokenizer_path:
-            self.tokenizer = Tokenizer(tokenizer_path)
+        if self.config.path.tokenizer_path:
+            self.tokenizer = Tokenizer(self.config.path.tokenizer_path)
             self.logger.log(logging.INFO, "tokenizer loaded.")
 
         self.coef = coef

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class Path:
     vocos_ckpt_path: str = "asset/Vocos.pt"
     dvae_ckpt_path: str = "asset/DVAE_full.pt"
-    gpt_ckpt_path: str = "asset/GPT.pt"
+    gpt_ckpt_path: str = "asset/gpt"
     decoder_ckpt_path: str = "asset/Decoder.pt"
     tokenizer_path: str = "asset/tokenizer"
     embed_path: str = "asset/Embed.safetensors"
