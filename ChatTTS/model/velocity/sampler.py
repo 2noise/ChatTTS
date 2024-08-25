@@ -4,6 +4,7 @@ from typing import List, Callable
 
 from ..embed import Embed
 
+
 class Sampler:
     def __init__(self, post_model: Embed, num_audio_tokens: int, num_vq: int):
         self.post_model = post_model
