@@ -56,7 +56,9 @@ class GPT(nn.Module):
         self.head_text = embed.head_text.__call__
         self.head_code = [hc.__call__ for hc in embed.head_code]
 
-    def from_pretrained(self, gpt_folder: str, embed_file_path: str, experimental=False):
+    def from_pretrained(
+        self, gpt_folder: str, embed_file_path: str, experimental=False
+    ):
         if self.is_vllm and platform.system().lower() == "linux":
 
             from .velocity import LLM
@@ -70,7 +72,9 @@ class GPT(nn.Module):
             self.logger.info("vLLM model loaded")
             return
 
-        self.gpt: LlamaModel = LlamaModel.from_pretrained(gpt_folder).to(self.device_gpt)
+        self.gpt: LlamaModel = LlamaModel.from_pretrained(gpt_folder).to(
+            self.device_gpt
+        )
         del self.gpt.embed_tokens
 
         if (

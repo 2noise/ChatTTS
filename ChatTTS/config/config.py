@@ -62,6 +62,7 @@ class GPT:
     num_text_tokens: int = 21178
     num_vq: int = 4
 
+
 @dataclass(repr=False, eq=False)
 class Embed:
     hidden_size: int = 768
