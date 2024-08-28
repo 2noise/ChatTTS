@@ -42,7 +42,14 @@ def check_model(
             os.remove(bakfile)
     return True
 
-def check_folder(base_dir: Path, *innder_dirs: str, names: Tuple[str], sha256_map: Dict[str, str], update=False) -> bool:
+
+def check_folder(
+    base_dir: Path,
+    *innder_dirs: str,
+    names: Tuple[str],
+    sha256_map: Dict[str, str],
+    update=False,
+) -> bool:
     key = "sha256_"
     current_dir = base_dir
     for d in innder_dirs:
@@ -51,41 +58,62 @@ def check_folder(base_dir: Path, *innder_dirs: str, names: Tuple[str], sha256_ma
 
     for model in names:
         menv = model.replace(".", "_")
-        if not check_model(
-            current_dir, model, sha256_map[f"{key}{menv}"], update
-        ):
+        if not check_model(current_dir, model, sha256_map[f"{key}{menv}"], update):
             return False
     return True
+
 
 def check_all_assets(base_dir: Path, sha256_map: Dict[str, str], update=False) -> bool:
     logger.get_logger().info("checking assets...")
 
-    if not check_folder(base_dir, "asset", names=(
-        "Decoder.pt",
-        "DVAE_full.pt",
-        "Embed.safetensors",
-        "Vocos.pt",
-    ), sha256_map=sha256_map, update=update):
+    if not check_folder(
+        base_dir,
+        "asset",
+        names=(
+            "Decoder.pt",
+            "DVAE_full.pt",
+            "Embed.safetensors",
+            "Vocos.pt",
+        ),
+        sha256_map=sha256_map,
+        update=update,
+    ):
         return False
 
-    if not check_folder(base_dir, "asset", "gpt", names=(
-        "config.json",
-        "model.safetensors",
-    ), sha256_map=sha256_map, update=update):
+    if not check_folder(
+        base_dir,
+        "asset",
+        "gpt",
+        names=(
+            "config.json",
+            "model.safetensors",
+        ),
+        sha256_map=sha256_map,
+        update=update,
+    ):
         return False
 
-    if not check_folder(base_dir, "asset", "tokenizer", names=(
-        "special_tokens_map.json",
-        "tokenizer_config.json",
-        "tokenizer.json",
-    ), sha256_map=sha256_map, update=update):
+    if not check_folder(
+        base_dir,
+        "asset",
+        "tokenizer",
+        names=(
+            "special_tokens_map.json",
+            "tokenizer_config.json",
+            "tokenizer.json",
+        ),
+        sha256_map=sha256_map,
+        update=update,
+    ):
         return False
 
     logger.get_logger().info("all assets are already latest.")
     return True
 
 
-def download_and_extract_tar_gz(url: str, folder: str, headers: Optional[Dict[str, str]] = None):
+def download_and_extract_tar_gz(
+    url: str, folder: str, headers: Optional[Dict[str, str]] = None
+):
     import tarfile
 
     logger.get_logger().info(f"downloading {url}")
@@ -99,7 +127,9 @@ def download_and_extract_tar_gz(url: str, folder: str, headers: Optional[Dict[st
         logger.get_logger().info(f"extracted into {folder}")
 
 
-def download_and_extract_zip(url: str, folder: str, headers: Optional[Dict[str, str]] = None):
+def download_and_extract_zip(
+    url: str, folder: str, headers: Optional[Dict[str, str]] = None
+):
     import zipfile
 
     logger.get_logger().info(f"downloading {url}")
@@ -158,13 +188,17 @@ def download_all_assets(tmpdir: str, version="0.2.8"):
             os.chmod(cmdfile, 0o755)
         subprocess.run([cmdfile, "-notui", "-w", "0", "assets/chtts"])
     except Exception:
-        BASE_URL = "https://gitea.seku.su/fumiama/RVC-Models-Downloader/releases/download/"
+        BASE_URL = (
+            "https://gitea.seku.su/fumiama/RVC-Models-Downloader/releases/download/"
+        )
         suffix = "zip" if is_win else "tar.gz"
         RVCMD_URL = BASE_URL + f"v{version}/rvcmd_{system_type}_{architecture}.{suffix}"
         download_dns_yaml(
             "https://gitea.seku.su/fumiama/RVC-Models-Downloader/raw/branch/main/dns.yaml",
             tmpdir,
-            headers={"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0"},
+            headers={
+                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0"
+            },
         )
         if is_win:
             download_and_extract_zip(RVCMD_URL, tmpdir)
