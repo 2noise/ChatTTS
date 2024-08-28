@@ -97,7 +97,7 @@ class Chat:
                 try:
                     download_path = snapshot_download(
                         repo_id="2Noise/ChatTTS",
-                        allow_patterns=["*.pt", "*.yaml", "*.json"],
+                        allow_patterns=["*.pt", "*.yaml", "*.json", "*.safetensors"],
                     )
                 except:
                     download_path = None
