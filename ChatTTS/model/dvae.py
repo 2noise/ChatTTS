@@ -36,7 +36,7 @@ class ConvNeXtBlock(nn.Module):
         )  # pointwise/1x1 convs, implemented with linear layers
         self.act = nn.GELU()
         self.pwconv2 = nn.Linear(intermediate_dim, dim)
-        self.gamma = (
+        self.weight = (
             nn.Parameter(layer_scale_init_value * torch.ones(dim), requires_grad=True)
             if layer_scale_init_value > 0
             else None
@@ -55,8 +55,8 @@ class ConvNeXtBlock(nn.Module):
         del y
         y = self.pwconv2(x)
         del x
-        if self.gamma is not None:
-            y *= self.gamma
+        if self.weight is not None:
+            y *= self.weight
         y.transpose_(1, 2)  # (B, T, C) -> (B, C, T)
 
         x = y + residual
