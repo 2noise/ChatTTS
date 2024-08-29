@@ -22,7 +22,8 @@ from .sequence import (
     SequenceOutput,
 )
 from vllm.utils import in_wsl
-from .post_model import PostModel, Sampler
+from ..embed import Embed
+from .sampler import Sampler
 from safetensors.torch import safe_open
 
 logger = init_logger(__name__)
@@ -78,7 +79,7 @@ class ModelRunner:
 
     def load_model(self) -> None:
         self.model = get_model(self.model_config)
-        self.post_model = PostModel(
+        self.post_model = Embed(
             self.model_config.get_hidden_size(),
             self.model_config.num_audio_tokens,
             self.model_config.num_text_tokens,

@@ -1,15 +1,13 @@
-import os, platform
+import platform
 from dataclasses import dataclass
 import logging
 from typing import Union, List, Optional, Tuple, Callable
 import gc
-from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.utils.parametrize as P
-from torch.nn.utils.parametrizations import weight_norm
 from tqdm import tqdm
 from transformers import LlamaModel, LlamaConfig
 from transformers.cache_utils import Cache
@@ -17,12 +15,14 @@ from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.utils import is_flash_attn_2_available
 
 from ..utils import del_all
+from .embed import Embed
 
 
 class GPT(nn.Module):
     def __init__(
         self,
         gpt_config: dict,
+        embed: Embed,
         use_flash_attn=False,
         use_vllm=False,
         device=torch.device("cpu"),
@@ -38,7 +38,6 @@ class GPT(nn.Module):
 
         self.generator = torch.Generator(device=device)
 
-        self.config = gpt_config
         self.num_vq = int(gpt_config["num_vq"])
         self.num_audio_tokens = int(gpt_config["num_audio_tokens"])
         self.num_text_tokens = int(gpt_config["num_text_tokens"])
@@ -50,88 +49,33 @@ class GPT(nn.Module):
         if self.is_vllm:
             return
 
-        self.gpt, self.llama_config = self._build_llama(gpt_config, self.device_gpt)
+        self.llama_config = self._build_llama_config(gpt_config)
 
-        self.model_dim = int(self.gpt.config.hidden_size)
-        self.emb_code = nn.ModuleList(
-            [
-                nn.Embedding(
-                    self.num_audio_tokens,
-                    self.model_dim,
-                    device=self.device_gpt,
-                )
-                for _ in range(self.num_vq)
-            ],
-        )
-        self.emb_text = nn.Embedding(
-            self.num_text_tokens, self.model_dim, device=self.device_gpt
-        )
+        self.emb_code = [ec.__call__ for ec in embed.emb_code]
+        self.emb_text = embed.emb_text.__call__
+        self.head_text = embed.head_text.__call__
+        self.head_code = [hc.__call__ for hc in embed.head_code]
 
-        self.head_text = weight_norm(
-            nn.Linear(
-                self.model_dim,
-                self.num_text_tokens,
-                bias=False,
-                device=device,
-            ),
-            name="weight",
-        )
-        self.head_code = nn.ModuleList(
-            [
-                weight_norm(
-                    nn.Linear(
-                        self.model_dim,
-                        self.num_audio_tokens,
-                        bias=False,
-                        device=device,
-                    ),
-                    name="weight",
-                )
-                for _ in range(self.num_vq)
-            ],
-        )
-
-    def from_pretrained(self, file_path: str, experimental=False):
+    def from_pretrained(
+        self, gpt_folder: str, embed_file_path: str, experimental=False
+    ):
         if self.is_vllm and platform.system().lower() == "linux":
-            from safetensors.torch import save_file
 
-            from .velocity import LLM, PostModel
+            from .velocity import LLM
 
-            vllm_folder = Path(os.getcwd()) / "asset" / "vllm"
-            if not os.path.exists(vllm_folder):
-                self.logger.info("initializing vLLM model to %s", str(vllm_folder))
-                vllm_folder.mkdir(mode=0o755, parents=True, exist_ok=True)
-                gpt = GPT(gpt_config=self.config)
-                gpt.from_pretrained(file_path)
-                gpt.gpt.save_pretrained(vllm_folder / "gpt")
-                post_model = (
-                    PostModel(
-                        int(gpt.gpt.config.hidden_size),
-                        self.num_audio_tokens,
-                        self.num_text_tokens,
-                    )
-                    .to(self.device)
-                    .eval()
-                )
-                post_model.emb_code = gpt.emb_code
-                post_model.emb_text = gpt.emb_text
-                post_model.head_text = gpt.head_text
-                post_model.head_code = gpt.head_code
-                save_file(
-                    post_model.state_dict(),
-                    vllm_folder / "post_model.safetensors",
-                )
-                del post_model, gpt
             self.llm = LLM(
-                model=str(vllm_folder / "gpt"),
+                model=gpt_folder,
                 num_audio_tokens=self.num_audio_tokens,
                 num_text_tokens=self.num_text_tokens,
-                post_model_path=vllm_folder / "post_model.safetensors",
+                post_model_path=embed_file_path,
             )
             self.logger.info("vLLM model loaded")
             return
 
-        self.load_state_dict(torch.load(file_path, weights_only=True, mmap=True))
+        self.gpt: LlamaModel = LlamaModel.from_pretrained(gpt_folder).to(
+            self.device_gpt
+        )
+        del self.gpt.embed_tokens
 
         if (
             experimental
@@ -166,10 +110,9 @@ class GPT(nn.Module):
         def get(self) -> bool:
             return self._interrupt
 
-    def _build_llama(
+    def _build_llama_config(
         self,
         config: dict,
-        device: torch.device,
     ) -> Tuple[LlamaModel, LlamaConfig]:
 
         if self.use_flash_attn and is_flash_attn_2_available():
@@ -183,10 +126,7 @@ class GPT(nn.Module):
         else:
             llama_config = LlamaConfig(**config)
 
-        model = LlamaModel(llama_config)
-        del model.embed_tokens
-
-        return model.to(device), llama_config
+        return llama_config
 
     def prepare(self, compile=False):
         if self.use_flash_attn and is_flash_attn_2_available():
@@ -197,43 +137,6 @@ class GPT(nn.Module):
                 self.gpt.compile(backend="inductor", dynamic=True)
             except RuntimeError as e:
                 self.logger.warning(f"compile failed: {e}. fallback to normal mode.")
-
-    def __call__(
-        self, input_ids: torch.Tensor, text_mask: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        get_emb
-        """
-        return super().__call__(input_ids, text_mask)
-
-    def forward(self, input_ids: torch.Tensor, text_mask: torch.Tensor) -> torch.Tensor:
-        """
-        get_emb
-        """
-
-        emb_text: torch.Tensor = self.emb_text(
-            input_ids[text_mask].narrow(1, 0, 1).squeeze_(1).to(self.device_gpt)
-        )
-
-        text_mask_inv = text_mask.logical_not().to(self.device_gpt)
-        masked_input_ids: torch.Tensor = input_ids[text_mask_inv].to(self.device_gpt)
-
-        emb_code = [
-            self.emb_code[i](masked_input_ids[:, i]) for i in range(self.num_vq)
-        ]
-        emb_code = torch.stack(emb_code, 2).sum(2)
-
-        emb = torch.zeros(
-            (input_ids.shape[:-1]) + (emb_text.shape[-1],),
-            device=emb_text.device,
-            dtype=emb_text.dtype,
-        )
-        emb[text_mask] = emb_text
-        emb[text_mask_inv] = emb_code.to(emb.dtype)
-
-        del emb_text, emb_code, text_mask_inv
-
-        return emb
 
     @dataclass(repr=False, eq=False)
     class _GenerationInputs:

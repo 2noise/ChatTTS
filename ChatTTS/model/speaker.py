@@ -18,7 +18,7 @@ class Speaker:
     def sample_random(self) -> str:
         return self._encode(self._sample_random())
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def apply(
         self,
         emb: torch.Tensor,
