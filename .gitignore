@@ -1,7 +1,6 @@
 /.vscode
 /data
 /saved_models
-/.flake8
 /test.py
 
 # Byte-compiled / optimized / DLL files

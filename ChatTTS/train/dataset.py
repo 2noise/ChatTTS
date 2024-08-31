@@ -23,9 +23,9 @@ class LazyDataType(typing.TypedDict):
 
 
 class DataType(LazyDataType):
-    text_input_id: torch.Tensor  # (batch_size, text_len)
+    text_input_ids: torch.Tensor  # (batch_size, text_len)
     text_attention_mask: torch.Tensor  # (batch_size, text_len)
-    waveform: torch.Tensor  # (batch_size, time)
+    waveforms: torch.Tensor  # (batch_size, time)
     waveform_attention_mask: torch.Tensor  # (batch_size, time)
 
 
@@ -43,7 +43,7 @@ class XzListTarKwargsType(typing.TypedDict):
 class AudioFolder(torch.utils.data.Dataset, abc.ABC):
     def __init__(
         self,
-        root: str,
+        root: str | io.TextIOWrapper,
         tokenizer: transformers.PreTrainedTokenizer | None = None,
         normalizer: Normalizer | None = None,
         speakers: typing.Iterable[str] | None = None,
@@ -93,7 +93,7 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
                 self.tar_io.close()
 
     @abc.abstractmethod
-    def get_raw_data(self, root: str) -> list[dict[str, str]]: ...
+    def get_raw_data(self, root: str | io.TextIOWrapper) -> list[dict[str, str]]: ...
 
     @staticmethod
     @abc.abstractmethod
@@ -128,15 +128,15 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
             "speaker": lazy_data["speaker"],
             "lang": lazy_data["lang"],
             "text": lazy_data["text"],
-            "text_input_id": text_input_ids,
+            "text_input_ids": text_input_ids,
             "text_attention_mask": text_attention_mask,
-            "waveform": waveforms,
+            "waveforms": waveforms,
             "waveform_attention_mask": waveform_attention_mask,
         }
 
     def get_lazy_data(
         self,
-        root: str,
+        root: str | io.TextIOWrapper,
         speakers: typing.Iterable[str] | None = None,
     ) -> tuple[list[LazyDataType], set[str]]:
         if speakers is not None:
@@ -195,17 +195,17 @@ class AudioFolder(torch.utils.data.Dataset, abc.ABC):
     def preprocess_audio(self, filepath: str) -> torch.Tensor:
         if self.tar_file is not None:
             file = self.tar_file.extractfile(filepath)
-            waveform, sample_rate = torchaudio.load(file)
+            waveforms, sample_rate = torchaudio.load(file)
         else:
-            waveform, sample_rate = torchaudio.load(filepath)
+            waveforms, sample_rate = torchaudio.load(filepath)
         if sample_rate != self.sample_rate:
-            waveform = torchaudio.functional.resample(
-                waveform,
+            waveforms = torchaudio.functional.resample(
+                waveforms,
                 orig_freq=sample_rate,
                 new_freq=self.sample_rate,
             )
         # (channel, time)
-        return waveform.mean(0)  # (time,)
+        return waveforms.mean(0)  # (time,)
 
 
 class JsonFolder(AudioFolder):
@@ -216,9 +216,10 @@ class JsonFolder(AudioFolder):
     filepath is relative to the dirname of root json file.
     """
 
-    def get_raw_data(self, root: str) -> list[dict[str, str]]:
-        with open(root, "r", encoding="utf-8") as f:
-            raw_data = json.load(f)
+    def get_raw_data(self, root: str | io.TextIOWrapper) -> list[dict[str, str]]:
+        root = open(root, "r", encoding="utf-8") if isinstance(root, str) else root
+        raw_data = json.load(root)
+        root.close()
         return raw_data
 
     @staticmethod
@@ -240,22 +241,23 @@ class ListFolder(AudioFolder):
     filepath is relative to the dirname of root list file.
     """
 
-    def get_raw_data(self, root: str) -> list[dict[str, str]]:
+    def get_raw_data(self, root: str | io.TextIOWrapper) -> list[dict[str, str]]:
         raw_data = []
-        with open(root, "r", encoding="utf-8") as f:
-            for line in f.readlines():
-                line = line.strip().removesuffix("\n")
-                if len(line) == 0:
-                    continue
-                filepath, speaker, lang, text = line.split(sep="|", maxsplit=3)
-                raw_data.append(
-                    {
-                        "text": text,
-                        "filepath": filepath,
-                        "speaker": speaker,
-                        "lang": lang,
-                    }
-                )
+        root = open(root, "r", encoding="utf-8") if isinstance(root, str) else root
+        for line in root.readlines():
+            line = line.strip().removesuffix("\n")
+            if len(line) == 0:
+                continue
+            filepath, speaker, lang, text = line.split(sep="|", maxsplit=3)
+            raw_data.append(
+                {
+                    "text": text,
+                    "filepath": filepath,
+                    "speaker": speaker,
+                    "lang": lang,
+                }
+            )
+        root.close()
         return raw_data
 
     @staticmethod
@@ -273,21 +275,22 @@ class ListFolder(AudioFolder):
 
 
 class XzListTar(ListFolder):
+    """
+    from torchvision.datasets.utils import download_url
+    download_url('https://drive.google.com/file/d/1vv73kAHiKb4KiL_oIH4DOWzUoaTeKzt_', './', 'Xz.tar', md5='47683c253d10250d9c32c964118c2b7c')
+    """  # noqa: E501
+
     url = "https://drive.google.com/file/d/1vv73kAHiKb4KiL_oIH4DOWzUoaTeKzt_"
     md5 = "47683c253d10250d9c32c964118c2b7c"
-    # from torchvision.datasets.utils import download_url
-    # download_url('https://drive.google.com/file/d/1vv73kAHiKb4KiL_oIH4DOWzUoaTeKzt_', './', 'Xz.tar', md5='47683c253d10250d9c32c964118c2b7c')
 
     def __init__(
         self,
         *args,
-        root: str,
+        root: str | io.TextIOWrapper,
         tar_path: str | None = None,
         **kwargs: typing.Unpack[XzListTarKwargsType],
     ):
-        if isinstance(root, io.BytesIO):
-            assert tar_path is not None
-        else:
+        if isinstance(root, str):
             # make sure root is a list file
             if not root.endswith(".list"):  # folder case
                 if os.path.isfile(root):
@@ -298,6 +301,7 @@ class XzListTar(ListFolder):
             # make sure tar_path is a tar file
             if tar_path is None:
                 dirname = os.path.dirname(root)
+                assert dirname
                 tar_path = os.path.join(dirname, "Xz.tar")
             elif not tar_path.endswith(".tar"):  # folder case
                 if os.path.isfile(tar_path):
@@ -305,47 +309,52 @@ class XzListTar(ListFolder):
                 elif not os.path.exists(tar_path):
                     os.makedirs(tar_path)
                 tar_path = os.path.join(tar_path, "Xz.tar")
+        else:
+            assert tar_path is not None
         # download tar file if not exists
         if not os.path.isfile(tar_path):
             dirname, basename = os.path.split(tar_path)
             if not os.path.isdir(dirname):
                 os.makedirs(dirname)
             download_url(self.url, dirname, basename, md5=self.md5)
-            self.concat_dataset()  # prepare all.list
-        # if root is all.list, make sure it is prepared
-        if (
-            isinstance(root, str)
-            and os.path.samefile(
-                root, os.path.join(os.path.dirname(tar_path), "all.list")
-            )
-            and not os.path.isfile(root)
-        ):
-            self.concat_dataset()  # prepare all.list
+            self.prepare_all_list()  # prepare all.list
+        if isinstance(root, str) and not os.path.isfile(root):
+            # if root is all.list, make sure it is prepared
+            if not root.endswith("all.list"):
+                with tarfile.open(tar_path) as tar_file:
+                    root_str = tar_file.extractfile(root).read().decode("utf-8")
+                    root = io.StringIO(root_str)
+            else:
+                self.prepare_all_list(tar_path=tar_path)  # prepare all.list
 
         super().__init__(root, *args, tar_path=tar_path, **kwargs)
 
-    def concat_dataset(
-        self, save_folder: str | None = None, langs: list[str] = ["zh", "en"]
+    @staticmethod
+    def prepare_all_list(
+        tar_path: str,
+        save_folder: str | None = None,
+        langs: list[str] = ["zh", "en"],
     ) -> None:
         if save_folder is None:
-            save_folder = os.path.dirname(self.tar_path)
+            save_folder = os.path.dirname(tar_path)
         if os.path.isfile(save_folder):
             raise FileExistsError(f"{save_folder} already exists as a file!")
         elif not os.path.exists(save_folder):
             os.makedirs(save_folder)
         lazy_data = []
 
-        for member in self.tar_file.getmembers():
-            if not member.isfile():
-                continue
-            if member.name.endswith(".list"):
-                print(member.name)
-                root_io = self.tar_file.extractfile(member)
-                lazy_data += ListFolder(root_io).lazy_data
-            if member.name.endswith(".json"):
-                print(member.name)
-                root_io = self.tar_file.extractfile(member)
-                lazy_data += JsonFolder(root_io).lazy_data
+        with tarfile.open(tar_path) as tar_file:
+            for member in tar_file.getmembers():
+                if not member.isfile():
+                    continue
+                if member.name.endswith(".list"):
+                    print(member.name)
+                    root_io = io.TextIOWrapper(tar_file.extractfile(member))
+                    lazy_data += ListFolder(root_io).lazy_data
+                if member.name.endswith(".json"):
+                    print(member.name)
+                    root_io = io.TextIOWrapper(tar_file.extractfile(member))
+                    lazy_data += JsonFolder(root_io).lazy_data
         if langs is not None:
             lazy_data = [item for item in lazy_data if item["lang"] in langs]
         ListFolder.save_config(os.path.join(save_folder, "all.list"), lazy_data)
@@ -391,16 +400,16 @@ class AudioCollator:
     def __call__(self, batch: list[DataType]):
         batch = [x for x in batch if x is not None]
 
-        audio_maxlen = max(len(item["waveform"]) for item in batch)
-        text_maxlen = max(len(item["text_input_id"]) for item in batch)
+        audio_maxlen = max(len(item["waveforms"]) for item in batch)
+        text_maxlen = max(len(item["text_input_ids"]) for item in batch)
 
         filepath = []
         speaker = []
         lang = []
         text = []
-        text_input_id = []
+        text_input_ids = []
         text_attention_mask = []
-        waveform = []
+        waveforms = []
         waveform_attention_mask = []
 
         for x in batch:
@@ -408,9 +417,9 @@ class AudioCollator:
             speaker.append(x["speaker"])
             lang.append(x["lang"])
             text.append(x["text"])
-            text_input_id.append(
+            text_input_ids.append(
                 torch.nn.functional.pad(
-                    x["text_input_id"],
+                    x["text_input_ids"],
                     (text_maxlen - len(x["text_attention_mask"]), 0),
                     value=self.text_pad,
                 )
@@ -422,9 +431,9 @@ class AudioCollator:
                     value=0,
                 )
             )
-            waveform.append(
+            waveforms.append(
                 torch.nn.functional.pad(
-                    x["waveform"],
+                    x["waveforms"],
                     (0, audio_maxlen - len(x["waveform_attention_mask"])),
                     value=self.audio_pad,
                 )
@@ -441,9 +450,9 @@ class AudioCollator:
             "speaker": speaker,
             "lang": lang,
             "text": text,
-            "text_input_id": torch.stack(text_input_id),
+            "text_input_ids": torch.stack(text_input_ids),
             "text_attention_mask": torch.stack(text_attention_mask),
-            "waveform": torch.stack(waveform),
+            "waveforms": torch.stack(waveforms),
             "waveform_attention_mask": torch.stack(waveform_attention_mask),
         }
 
@@ -458,7 +467,7 @@ def formalize_xz_list(src_folder: str):
                 XzListFolder.save_config(filepath, lazy_data, rel_path=src_folder)
 
 
-def concat_dataset(
+def prepare_all_list(
     src_folder: str, save_folder: str | None = None, langs: list[str] = ["zh", "en"]
 ) -> None:
     if save_folder is None:
@@ -477,7 +486,7 @@ def concat_dataset(
             if file.endswith(".list"):
                 print(filepath)
                 lazy_data += ListFolder(filepath).lazy_data
-            if file.endswith(".json"):
+            elif file.endswith(".json"):
                 print(filepath)
                 lazy_data += JsonFolder(filepath).lazy_data
     if langs is not None:

@@ -5,16 +5,16 @@ import torch.nn.functional
 import torch.utils.data
 
 import ChatTTS
+from ChatTTS.utils.ansi import ansi, get_ansi_len, output_iter
+from ChatTTS.utils.log import MetricLogger
 
 from .dataset import AudioFolder, AudioCollator
-from .logger import MetricLogger
-from .model import (
+from .utils import (
     get_mel_specs,
     get_mel_attention_mask,
     get_dvae_mel_specs,
     get_hidden_states_and_labels,
 )
-from .output import ansi, get_ansi_len, output_iter
 
 
 class TrainModule(StrEnum):
@@ -98,7 +98,7 @@ def train_autoencoder(
             header = header.ljust(max(len("Epoch"), 30) + get_ansi_len(header))
         iterator = logger.log_every(loader, header=header, tqdm_header="Batch")
         for batch in iterator:
-            waveforms: torch.Tensor = batch["waveform"]  # (batch_size, time)
+            waveforms: torch.Tensor = batch["waveforms"]  # (batch_size, time)
             waveform_attention_mask: torch.Tensor = batch[
                 "waveform_attention_mask"
             ]  # (batch_size, time)
@@ -261,12 +261,12 @@ def train_gpt(
         for batch in iterator:
             speakers: list[str] = batch["speaker"]  # (batch_size,)
             text_input_ids: torch.Tensor = batch[
-                "text_input_id"
+                "text_input_ids"
             ]  # (batch_size, text_len)
             text_attention_mask: torch.Tensor = batch[
                 "text_attention_mask"
             ]  # (batch_size, text_len)
-            waveforms: torch.Tensor = batch["waveform"]  # (batch_size, time)
+            waveforms: torch.Tensor = batch["waveforms"]  # (batch_size, time)
             waveform_attention_mask: torch.Tensor = batch[
                 "waveform_attention_mask"
             ]  # (batch_size, time)

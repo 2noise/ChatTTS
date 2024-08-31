@@ -201,7 +201,7 @@ def get_hidden_states_and_labels(
     labels[~attention_mask.bool()] = IGNORE_TOKEN_ID
 
     # (batch_size, text_len + mel_len, 768)
-    inputs_embeds = chat.gpt.forward(input_ids=input_ids, text_mask=text_mask)
+    inputs_embeds = chat.embed(input_ids, text_mask).clone()
 
     for i, speaker in enumerate(speakers):
         inputs_embeds[i] = chat.speaker.apply(
