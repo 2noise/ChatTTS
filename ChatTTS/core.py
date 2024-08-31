@@ -272,6 +272,7 @@ class Chat:
                 vq_config=asdict(self.config.dvae.vq),
                 dim=self.config.dvae.decoder.idim,
                 coef=coef,
+                device=self.device,
             )
             .to(device)
             .eval()
