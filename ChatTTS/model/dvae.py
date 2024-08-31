@@ -179,8 +179,10 @@ class MelSpectrogramFeatures(torch.nn.Module):
         hop_length=256,
         n_mels=100,
         padding: Literal["center", "same"] = "center",
+        device: torch.device = torch.device("cuda"),
     ):
         super().__init__()
+        self.device = device
         if padding not in ["center", "same"]:
             raise ValueError("Padding must be 'center' or 'same'.")
         self.padding = padding
@@ -197,6 +199,7 @@ class MelSpectrogramFeatures(torch.nn.Module):
         return super().__call__(audio)
 
     def forward(self, audio: torch.Tensor) -> torch.Tensor:
+        audio = audio.to(self.device)
         mel: torch.Tensor = self.mel_spec(audio)
         features = torch.log(torch.clip(mel, min=1e-5))
         return features
@@ -210,6 +213,7 @@ class DVAE(nn.Module):
         vq_config: Optional[dict] = None,
         dim=512,
         coef: Optional[str] = None,
+        device: torch.device = torch.device("cuda"),
     ):
         super().__init__()
         if coef is None:
@@ -227,7 +231,7 @@ class DVAE(nn.Module):
                 nn.Conv1d(dim, dim, 4, 2, 1),
                 nn.GELU(),
             )
-            self.preprocessor_mel = MelSpectrogramFeatures()
+            self.preprocessor_mel = MelSpectrogramFeatures(device=device)
             self.encoder: Optional[DVAEDecoder] = DVAEDecoder(**encoder_config)
 
         self.decoder = DVAEDecoder(**decoder_config)
