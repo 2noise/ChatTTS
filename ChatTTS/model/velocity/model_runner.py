@@ -526,6 +526,7 @@ class ModelRunner:
                     for i in range(self.post_model.num_vq)
                 ]
                 input_emb = torch.stack(code_emb, 3).sum(3)
+                start_idx = input_tokens_history.shape[-2] - 1 if input_tokens_history.shape[-2] > 0 else 0 
         else:
             input_emb = self.post_model(input_tokens, text_mask)
         # print(input_emb.shape)
