@@ -4,7 +4,8 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 from torch.nn.utils.parametrizations import weight_norm
-from .modeling_llama import LlamaModel, LlamaConfig
+
+from modeling_llama import LlamaModel, LlamaConfig
 
 
 class GPT(nn.Module):

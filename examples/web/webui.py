@@ -10,8 +10,8 @@ import argparse
 
 import gradio as gr
 
-from examples.web.funcs import *
-from examples.web.ex import ex
+from funcs import *
+from ex import ex
 
 
 def main():

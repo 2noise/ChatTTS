@@ -1,22 +1,22 @@
-from typing import Optional, List
-import argparse
-import os
-import sys
-
-import numpy as np
-import torch
-
-import ChatTTS
-from tools.logger import get_logger
-from tools.audio import pcm_arr_to_mp3_view
-from tools.normalizer.en import normalizer_en_nemo_text
-from tools.normalizer.zh import normalizer_zh_tn
+import os, sys
 
 if sys.platform == "darwin":
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
+
+from typing import Optional, List
+import argparse
+
+import numpy as np
+
+import ChatTTS
+
+from tools.logger import get_logger
+from tools.audio import pcm_arr_to_mp3_view
+from tools.normalizer.en import normalizer_en_nemo_text
+from tools.normalizer.zh import normalizer_zh_tn
 
 logger = get_logger("Command")
 
@@ -66,9 +66,9 @@ def main(
 
     is_load = False
     if os.path.isdir(custom_path) and source == "custom":
-        is_load = chat.load(compile=True, source="custom", custom_path=custom_path)
+        is_load = chat.load(source="custom", custom_path=custom_path)
     else:
-        is_load = chat.load(compile=True, source=source)
+        is_load = chat.load(source=source)
 
     if is_load:
         logger.info("Models loaded successfully.")

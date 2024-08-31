@@ -1,6 +1,13 @@
+import os, sys
+
+if sys.platform == "darwin":
+    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+
+now_dir = os.getcwd()
+sys.path.append(now_dir)
+
 from dataclasses import asdict
 import argparse
-import os
 import torch
 from tqdm import tqdm
 from ChatTTS.model.dvae import DVAE
@@ -8,7 +15,8 @@ from ChatTTS.config import Config
 from vocos import Vocos
 from vocos.pretrained import instantiate_class
 import torch.jit as jit
-from examples.onnx.gpt import GPT
+
+from gpt import GPT
 
 # disable cuda
 torch.cuda.is_available = lambda: False

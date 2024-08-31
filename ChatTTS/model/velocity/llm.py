@@ -2,12 +2,12 @@ from typing import List, Optional, Union
 
 from tqdm import tqdm
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
+from vllm.utils import Counter
 
 from .configs import EngineArgs
 from .llm_engine import LLMEngine
 from .output import RequestOutput
 from .sampling_params import SamplingParams
-from vllm.utils import Counter
 
 
 class LLM:
