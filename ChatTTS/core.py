@@ -288,8 +288,8 @@ class Chat:
             self.config.embed.num_text_tokens,
             self.config.embed.num_vq,
         )
-        embed.from_pretrained(embed_path)
-        self.embed = embed
+        embed.from_pretrained(embed_path, device=self.device)
+        self.embed = embed.to(self.device)
         self.logger.log(logging.INFO, "embed loaded.")
 
         gpt = GPT(

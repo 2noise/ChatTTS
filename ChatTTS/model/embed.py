@@ -34,12 +34,13 @@ class Embed(nn.Module):
         )
 
     @torch.inference_mode()
-    def from_pretrained(self, filename: str):
+    def from_pretrained(self, filename: str, device: torch.device):
         state_dict_tensors = {}
         with safe_open(filename, framework="pt") as f:
             for k in f.keys():
                 state_dict_tensors[k] = f.get_tensor(k)
         self.load_state_dict(state_dict_tensors)
+        self.to(device)
 
     def __call__(
         self, input_ids: torch.Tensor, text_mask: torch.Tensor
