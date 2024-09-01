@@ -16,6 +16,8 @@ import ChatTTS
 import ChatTTS.model.gpt
 import ChatTTS.model.dvae
 
+from tools.normalizer import load_normalizer
+
 
 def main():
     parser = argparse.ArgumentParser(description="ChatTTS demo Launch")
@@ -60,6 +62,8 @@ def main():
             speaker_embed = random.choice(list(speaker_embeds.values()))
     else:
         speaker_embed = speaker_embeds[speaker]
+
+    load_normalizer(chat)
 
     decoder_wav = chat.infer(
         [text],

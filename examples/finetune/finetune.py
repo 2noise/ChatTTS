@@ -19,6 +19,8 @@ import ChatTTS.model.dvae
 from ChatTTS.train.dataset import XzListTar
 from ChatTTS.train.model import TrainModule, train_autoencoder, train_gpt
 
+from tools.normalizer import load_normalizer
+
 logging.basicConfig(level=logging.ERROR)
 
 
@@ -136,6 +138,8 @@ def main():
             kwargs = {}
         case _:
             raise ValueError(f"invalid train_module: {train_module}")
+
+    load_normalizer(chat)
 
     dataset = XzListTar(
         root=data_path,

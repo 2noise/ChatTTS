@@ -21,6 +21,8 @@ import ChatTTS.model.dvae
 from ChatTTS.train.dataset import XzListTar
 from ChatTTS.train.model import train_autoencoder, train_gpt
 
+from tools.normalizer import load_normalizer
+
 IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 logging.basicConfig(level=logging.ERROR)
 
@@ -76,6 +78,8 @@ def main():
             speaker: torch.from_numpy(speaker_embed).to(chat.device)
             for speaker, speaker_embed in np_speaker_embeds.items()
         }
+
+    load_normalizer(chat)
 
     dataset = XzListTar(
         root=data_path,
