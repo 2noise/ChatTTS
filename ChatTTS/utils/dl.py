@@ -200,6 +200,7 @@ def download_all_assets(tmpdir: str, version="0.2.8"):
                 "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0"
             },
         )
+        cmdfile = os.path.join(tmpdir, "rvcmd")
         if is_win:
             download_and_extract_zip(RVCMD_URL, tmpdir)
             cmdfile += ".exe"
