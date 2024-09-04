@@ -272,7 +272,7 @@ class Chat:
                 vq_config=asdict(self.config.dvae.vq),
                 dim=self.config.dvae.decoder.idim,
                 coef=coef,
-                device=self.device,
+                device=device,
             )
             .to(device)
             .eval()
@@ -289,8 +289,8 @@ class Chat:
             self.config.embed.num_text_tokens,
             self.config.embed.num_vq,
         )
-        embed.from_pretrained(embed_path, device=self.device)
-        self.embed = embed.to(self.device)
+        embed.from_pretrained(embed_path, device=device)
+        self.embed = embed.to(device)
         self.logger.log(logging.INFO, "embed loaded.")
 
         gpt = GPT(
@@ -318,6 +318,7 @@ class Chat:
                 decoder_config=asdict(self.config.decoder),
                 dim=self.config.decoder.idim,
                 coef=coef,
+                device=device,
             )
             .to(device)
             .eval()
