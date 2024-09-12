@@ -1,11 +1,11 @@
-import io
 import os
 import sys
-import zipfile
 
+import numpy as np
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
+from tools.audio.np import pcm_to_wav_bytes, pcm_to_bytes
 
 if sys.platform == "darwin":
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
@@ -13,11 +13,10 @@ if sys.platform == "darwin":
 now_dir = os.getcwd()
 sys.path.append(now_dir)
 
-from typing import Optional
+from typing import Optional, AsyncGenerator
 
 import ChatTTS
 
-from tools.audio import pcm_arr_to_mp3_view
 from tools.logger import get_logger
 import torch
 
@@ -36,7 +35,7 @@ async def startup_event():
 
     chat = ChatTTS.Chat(get_logger("ChatTTS"))
     logger.info("Initializing ChatTTS...")
-    if chat.load():
+    if chat.load(use_vllm=True):
         logger.info("Models loaded successfully.")
     else:
         logger.error("Models load failed.")
@@ -52,8 +51,9 @@ class ChatTTSParams(BaseModel):
     use_decoder: bool = True
     do_text_normalization: bool = True
     do_homophone_replacement: bool = False
-    params_refine_text: ChatTTS.Chat.RefineTextParams
-    params_infer_code: ChatTTS.Chat.InferCodeParams
+    params_refine_text: Optional[ChatTTS.Chat.RefineTextParams] = None
+    params_infer_code: Optional[ChatTTS.Chat.InferCodeParams] = None
+    stream_batch_size: int = 16
 
 
 @app.post("/generate_voice")
@@ -66,10 +66,11 @@ async def generate_voice(params: ChatTTSParams):
         params.params_infer_code.spk_emb = chat.sample_random_speaker()
 
     # text seed for text refining
-    if params.params_refine_text:
-        text = chat.infer(
+    if params.params_refine_text and params.skip_refine_text is False:
+        results_generator = chat.infer(
             text=params.text, skip_refine_text=False, refine_text_only=True
         )
+        text = await next(results_generator)
         logger.info(f"Refined text: {text}")
     else:
         # no text refining
@@ -79,7 +80,8 @@ async def generate_voice(params: ChatTTSParams):
     logger.info(params.params_infer_code.spk_emb)
 
     logger.info("Start voice inference.")
-    wavs = chat.infer(
+
+    results_generator = chat.infer(
         text=text,
         stream=params.stream,
         lang=params.lang,
@@ -90,18 +92,24 @@ async def generate_voice(params: ChatTTSParams):
         params_infer_code=params.params_infer_code,
         params_refine_text=params.params_refine_text,
     )
-    logger.info("Inference completed.")
 
-    # zip all of the audio files together
-    buf = io.BytesIO()
-    with zipfile.ZipFile(
-        buf, "a", compression=zipfile.ZIP_DEFLATED, allowZip64=False
-    ) as f:
-        for idx, wav in enumerate(wavs):
-            f.writestr(f"{idx}.mp3", pcm_arr_to_mp3_view(wav))
-    logger.info("Audio generation successful.")
-    buf.seek(0)
+    if params.stream:
 
-    response = StreamingResponse(buf, media_type="application/zip")
-    response.headers["Content-Disposition"] = "attachment; filename=audio_files.zip"
-    return response
+        async def stream_results() -> AsyncGenerator[bytes, None]:
+            async for output in results_generator:
+                yield pcm_to_bytes(output[0])
+
+        return StreamingResponse(
+            content=stream_results(), media_type="text/event-stream"
+        )
+
+    output = None
+    async for request_output in results_generator:
+        if output is None:
+            output = request_output[0]
+        else:
+            output = np.concatenate((output, request_output[0]), axis=0)
+    output = pcm_to_wav_bytes(output)
+    return Response(
+        content=output, media_type="audio/wav", headers={"Cache-Control": "no-cache"}
+    )

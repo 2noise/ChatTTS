@@ -68,6 +68,7 @@ class GPT(nn.Module):
                 num_audio_tokens=self.num_audio_tokens,
                 num_text_tokens=self.num_text_tokens,
                 post_model_path=embed_file_path,
+                dtype="float32"
             )
             self.logger.info("vLLM model loaded")
             return
@@ -273,6 +274,7 @@ class GPT(nn.Module):
         ids: List[torch.Tensor]
         attentions: List[Optional[Tuple[torch.FloatTensor, ...]]]
         hiddens: List[torch.Tensor]
+        finished: bool
 
         def destroy(self):
             del_all(self.ids)
@@ -288,6 +290,7 @@ class GPT(nn.Module):
         attentions: List[Optional[Tuple[torch.FloatTensor, ...]]],
         hiddens: List[torch.Tensor],
         infer_text: bool,
+        finished: bool,
     ) -> GenerationOutputs:
         inputs_ids = [
             inputs_ids[idx].narrow(0, start_idx, i) for idx, i in enumerate(end_idx)
@@ -305,10 +308,11 @@ class GPT(nn.Module):
             ids=inputs_ids,
             attentions=attentions,
             hiddens=hiddens,
+            finished=finished,
         )
 
     @torch.no_grad()
-    def generate(
+    async def generate(
         self,
         emb: torch.Tensor,
         inputs_ids: torch.Tensor,
@@ -581,6 +585,7 @@ class GPT(nn.Module):
                         attentions,
                         hiddens,
                         infer_text,
+                        False
                     )
             del not_finished
 
@@ -610,4 +615,5 @@ class GPT(nn.Module):
             attentions,
             hiddens,
             infer_text,
+            True
         )

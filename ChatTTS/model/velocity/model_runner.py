@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn as nn
+from torch import Tensor
 
 from .configs import ModelConfig, ParallelConfig, SchedulerConfig
 from vllm.logger import init_logger
@@ -105,11 +106,12 @@ class ModelRunner:
     def _prepare_prompt(
         self,
         seq_group_metadata_list: List[SequenceGroupMetadata],
-    ) -> Tuple[torch.Tensor, torch.Tensor, InputMetadata, List[int]]:
+    ) -> tuple[list[list[int]], list[list[int]], InputMetadata, list[int], list[Tensor]]:
         assert len(seq_group_metadata_list) > 0
         input_tokens: List[List[int]] = []
         input_positions: List[List[int]] = []
         slot_mapping: List[List[int]] = []
+        embedding: List[torch.Tensor] = []
 
         prompt_lens: List[int] = []
         for seq_group_metadata in seq_group_metadata_list:
@@ -127,7 +129,7 @@ class ModelRunner:
             # NOTE(woosuk): Here we assume that the first token in the prompt
             # is always the first token in the sequence.
             input_positions.append(list(range(prompt_len)))
-
+            embedding.append(seq_group_metadata.speaker_embedding_param)
             if seq_group_metadata.block_tables is None:
                 # During memory profiling, the block tables are not initialized
                 # yet. In this case, we just use a dummy slot mapping.
@@ -166,6 +168,10 @@ class ModelRunner:
             slot_mapping, max_prompt_len, pad=_PAD_SLOT_ID, dtype=torch.long
         )
 
+        embedding = _make_with_pad(
+            embedding, max_prompt_len, pad=0, dtype=torch.float32
+        )
+
         input_metadata = InputMetadata(
             is_prompt=True,
             slot_mapping=slot_mapping,
@@ -174,7 +180,7 @@ class ModelRunner:
             block_tables=None,
             use_cuda_graph=False,
         )
-        return input_tokens, input_positions, input_metadata, prompt_lens
+        return input_tokens, input_positions, input_metadata, prompt_lens, embedding
 
     def _prepare_decode(
         self,
@@ -353,14 +359,15 @@ class ModelRunner:
     def prepare_input_tensors(
         self,
         seq_group_metadata_list: Optional[List[SequenceGroupMetadata]],
-    ) -> Tuple[torch.Tensor, torch.Tensor, InputMetadata, SamplingMetadata]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, InputMetadata, SamplingMetadata, list[torch.Tensor]]:
+        speaker_embedding = None
         if self.is_driver_worker:
             # NOTE: We assume that all sequences in the group are all prompts or
             # all decodes.
             is_prompt = seq_group_metadata_list[0].is_prompt
             # Prepare input tensors.
             if is_prompt:
-                (input_tokens, input_positions, input_metadata, prompt_lens) = (
+                (input_tokens, input_positions, input_metadata, prompt_lens, speaker_embedding) = (
                     self._prepare_prompt(seq_group_metadata_list)
                 )
             else:
@@ -454,7 +461,7 @@ class ModelRunner:
                 perform_sampling=False,
             )
 
-        return input_tokens, input_positions, input_metadata, sampling_metadata
+        return input_tokens, input_positions, input_metadata, sampling_metadata, speaker_embedding
 
     @torch.inference_mode()
     def execute_model(
@@ -462,39 +469,19 @@ class ModelRunner:
         seq_group_metadata_list: Optional[List[SequenceGroupMetadata]],
         kv_caches: List[Tuple[torch.Tensor, torch.Tensor]],
     ) -> Optional[SamplerOutput]:
-        input_tokens, input_positions, input_metadata, sampling_metadata = (
+
+        input_tokens, input_positions, input_metadata, sampling_metadata, speaker_embedding = (
             self.prepare_input_tensors(seq_group_metadata_list)
         )
         # print(sampling_metadata.seq_data)
         seq_groups = []
-        input_tokens_history = []
         for i, rtn in enumerate(sampling_metadata.seq_groups):
             seq_groups.append(rtn[0][0])
-            tokens_history = sampling_metadata.seq_data[rtn[0][0]].output_token_ids
-            if len(tokens_history) >= 1:
-                if len(tokens_history[0]) == 1:
-                    tokens_history = [token[0] for token in tokens_history]
-                else:
-                    tokens_history = [list(token) for token in tokens_history]
-            input_tokens_history.append(tokens_history)
-        input_tokens_history = torch.tensor(input_tokens_history).to(
-            input_tokens.device
-        )
-        # token_ids = rtn.outputs[0].token_ids
-        # for j, token_id in enumerate(token_ids):
-        #     if len(token_id) == 1:
-        #         token_ids[j] = token_id[0]
-        #     else:
-        #         token_ids[j] = list(token_id)
 
         # Execute the model.
-        # print("it1",input_tokens)
         if len(input_tokens.shape) == 2:
             input_tokens = input_tokens.unsqueeze(2).repeat(1, 1, 4)
-        if len(input_tokens_history.shape) == 2:
-            input_tokens_history = input_tokens_history.unsqueeze(2).repeat(1, 1, 4)
-        # print(input_tokens_history.shape)
-        # print("it2",input_tokens.shape)
+
         text_mask = input_tokens != 0
         text_mask = text_mask[:, :, 0]
 
@@ -514,10 +501,10 @@ class ModelRunner:
         # print(logits_processors, logits_warpers)
         min_new_token = sampling_metadata.seq_groups[0][1].min_new_token
         eos_token = sampling_metadata.seq_groups[0][1].eos_token
-        start_idx = sampling_metadata.seq_groups[0][1].start_idx
+        start_idx = input_tokens[0].shape[0]
         if input_tokens.shape[-2] == 1:
             if infer_text:
-                input_emb: torch.Tensor = self.post_model.emb_text(
+                speaker_embedding_params: torch.Tensor = self.post_model.emb_text(
                     input_tokens[:, :, 0]
                 )
             else:
@@ -525,32 +512,32 @@ class ModelRunner:
                     self.post_model.emb_code[i](input_tokens[:, :, i])
                     for i in range(self.post_model.num_vq)
                 ]
-                input_emb = torch.stack(code_emb, 3).sum(3)
-                start_idx = (
-                    input_tokens_history.shape[-2] - 1
-                    if input_tokens_history.shape[-2] > 0
-                    else 0
-                )
+                speaker_embedding_params = torch.stack(code_emb, 3).sum(3)
         else:
-            input_emb = self.post_model(input_tokens, text_mask)
-        # print(input_emb.shape)
+            # 通过for循环，拼接成一个tensor
+            if seq_group_metadata_list[0].speaker_embedding_param is not None:
+                speaker_embedding_params = None
+                for i in range(input_tokens.shape[0]):
+                    if speaker_embedding_params is None:
+                        speaker_embedding_params = speaker_embedding[i]
+                    else:
+                        speaker_embedding_params = torch.cat((speaker_embedding_params, speaker_embedding[i]))
+
+            else:
+                speaker_embedding_params = self.post_model(input_tokens, text_mask)
+
         hidden_states = model_executable(
-            input_emb=input_emb,
+            input_emb=speaker_embedding_params,
             positions=input_positions,
             kv_caches=kv_caches,
             input_metadata=input_metadata,
         )
         # print(hidden_states.shape)
         # print(input_tokens)
-        B_NO_PAD = input_tokens_history.shape[0]
-        input_tokens = input_tokens[:B_NO_PAD, :, :]
-        hidden_states = hidden_states[:B_NO_PAD, :, :]
+        input_tokens = input_tokens[:, :, :]
+        hidden_states = hidden_states[:, :, :]
         idx_next, logprob, finish = self.sampler.sample(
-            inputs_ids=(
-                input_tokens
-                if input_tokens_history.shape[-2] == 0
-                else input_tokens_history
-            ),
+            inputs_ids=input_tokens,
             hidden_states=hidden_states,
             infer_text=infer_text,
             temperature=temperture,
@@ -572,7 +559,7 @@ class ModelRunner:
         #     sampling_metadata=sampling_metadata,
         # )
         results = []
-        for i in range(idx_next.shape[0]):
+        for i,val in enumerate(seq_groups):
             idx_next_i = idx_next[i, 0, :].tolist()
             logprob_i = logprob[i].tolist()
             tmp_hidden_states = hidden_states[i]
@@ -618,6 +605,7 @@ class ModelRunner:
                 is_prompt=True,
                 seq_data={group_id: seq_data},
                 sampling_params=sampling_params,
+                speaker_embedding_param=torch.zeros(1, seq_len, 768).to("cuda"),
                 block_tables=None,
             )
             seqs.append(seq)
@@ -773,11 +761,11 @@ class CUDAGraphRunner:
         return self.forward(*args, **kwargs)
 
 
-def _pad_to_max(x: List[int], max_len: int, pad: int) -> List[int]:
+def _pad_to_max(x: List[int], max_len: int, pad: List[int]) -> List[int]:
     assert len(x) <= max_len
     if len(x) == max_len:
         return list(x)
-    return list(x) + [pad] * (max_len - len(x))
+    return [pad] * (max_len - len(x)) + list(x)
 
 
 def _make_tensor_with_pad(
@@ -791,17 +779,35 @@ def _make_tensor_with_pad(
     padded_x = []
     for x_i in x:
         pad_i = pad
-        if isinstance(x[0][0], tuple):
+        if isinstance(x[0][0], list):
+            pad_i = [0,] * len(x[0][0])
+        elif isinstance(x[0][0], tuple):
             pad_i = (0,) * len(x[0][0])
         padded_x.append(_pad_to_max(x_i, max_len, pad_i))
-
     return torch.tensor(
         padded_x,
         dtype=dtype,
         device=device,
-        pin_memory=pin_memory and str(device) == "cpu",
     )
 
+def _make_with_pad(
+    x: List[torch.Tensor],
+    max_len: int,
+    pad: int,
+    dtype: torch.dtype,
+    device: Union[str, torch.device] = "cuda",
+) -> torch.Tensor:
+    padded_x = []
+    for x_i in x:
+        assert x_i.shape[-2] <= max_len
+        if x_i.shape[-2] == max_len:
+            padded_x.append(x_i)
+        else:
+            padded_x.append(
+                torch.cat((torch.zeros(1, max_len-x_i.shape[-2], 768).to(device), x_i), dim=1)
+            )
+
+    return padded_x
 
 def _get_graph_batch_size(batch_size: int) -> int:
     if batch_size <= 2:
