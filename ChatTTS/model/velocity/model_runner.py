@@ -106,7 +106,9 @@ class ModelRunner:
     def _prepare_prompt(
         self,
         seq_group_metadata_list: List[SequenceGroupMetadata],
-    ) -> tuple[list[list[int]], list[list[int]], InputMetadata, list[int], list[Tensor]]:
+    ) -> tuple[
+        list[list[int]], list[list[int]], InputMetadata, list[int], list[Tensor]
+    ]:
         assert len(seq_group_metadata_list) > 0
         input_tokens: List[List[int]] = []
         input_positions: List[List[int]] = []
@@ -359,7 +361,9 @@ class ModelRunner:
     def prepare_input_tensors(
         self,
         seq_group_metadata_list: Optional[List[SequenceGroupMetadata]],
-    ) -> Tuple[torch.Tensor, torch.Tensor, InputMetadata, SamplingMetadata, list[torch.Tensor]]:
+    ) -> Tuple[
+        torch.Tensor, torch.Tensor, InputMetadata, SamplingMetadata, list[torch.Tensor]
+    ]:
         speaker_embedding = None
         if self.is_driver_worker:
             # NOTE: We assume that all sequences in the group are all prompts or
@@ -367,9 +371,13 @@ class ModelRunner:
             is_prompt = seq_group_metadata_list[0].is_prompt
             # Prepare input tensors.
             if is_prompt:
-                (input_tokens, input_positions, input_metadata, prompt_lens, speaker_embedding) = (
-                    self._prepare_prompt(seq_group_metadata_list)
-                )
+                (
+                    input_tokens,
+                    input_positions,
+                    input_metadata,
+                    prompt_lens,
+                    speaker_embedding,
+                ) = self._prepare_prompt(seq_group_metadata_list)
             else:
                 (input_tokens, input_positions, input_metadata) = self._prepare_decode(
                     seq_group_metadata_list
@@ -461,7 +469,13 @@ class ModelRunner:
                 perform_sampling=False,
             )
 
-        return input_tokens, input_positions, input_metadata, sampling_metadata, speaker_embedding
+        return (
+            input_tokens,
+            input_positions,
+            input_metadata,
+            sampling_metadata,
+            speaker_embedding,
+        )
 
     @torch.inference_mode()
     def execute_model(
@@ -470,9 +484,13 @@ class ModelRunner:
         kv_caches: List[Tuple[torch.Tensor, torch.Tensor]],
     ) -> Optional[SamplerOutput]:
 
-        input_tokens, input_positions, input_metadata, sampling_metadata, speaker_embedding = (
-            self.prepare_input_tensors(seq_group_metadata_list)
-        )
+        (
+            input_tokens,
+            input_positions,
+            input_metadata,
+            sampling_metadata,
+            speaker_embedding,
+        ) = self.prepare_input_tensors(seq_group_metadata_list)
         # print(sampling_metadata.seq_data)
         seq_groups = []
         for i, rtn in enumerate(sampling_metadata.seq_groups):
@@ -521,7 +539,9 @@ class ModelRunner:
                     if speaker_embedding_params is None:
                         speaker_embedding_params = speaker_embedding[i]
                     else:
-                        speaker_embedding_params = torch.cat((speaker_embedding_params, speaker_embedding[i]))
+                        speaker_embedding_params = torch.cat(
+                            (speaker_embedding_params, speaker_embedding[i])
+                        )
 
             else:
                 speaker_embedding_params = self.post_model(input_tokens, text_mask)
@@ -559,7 +579,7 @@ class ModelRunner:
         #     sampling_metadata=sampling_metadata,
         # )
         results = []
-        for i,val in enumerate(seq_groups):
+        for i, val in enumerate(seq_groups):
             idx_next_i = idx_next[i, 0, :].tolist()
             logprob_i = logprob[i].tolist()
             tmp_hidden_states = hidden_states[i]
@@ -780,7 +800,9 @@ def _make_tensor_with_pad(
     for x_i in x:
         pad_i = pad
         if isinstance(x[0][0], list):
-            pad_i = [0,] * len(x[0][0])
+            pad_i = [
+                0,
+            ] * len(x[0][0])
         elif isinstance(x[0][0], tuple):
             pad_i = (0,) * len(x[0][0])
         padded_x.append(_pad_to_max(x_i, max_len, pad_i))
@@ -789,6 +811,7 @@ def _make_tensor_with_pad(
         dtype=dtype,
         device=device,
     )
+
 
 def _make_with_pad(
     x: List[torch.Tensor],
@@ -804,10 +827,14 @@ def _make_with_pad(
             padded_x.append(x_i)
         else:
             padded_x.append(
-                torch.cat((torch.zeros(1, max_len-x_i.shape[-2], 768).to(device), x_i), dim=1)
+                torch.cat(
+                    (torch.zeros(1, max_len - x_i.shape[-2], 768).to(device), x_i),
+                    dim=1,
+                )
             )
 
     return padded_x
+
 
 def _get_graph_batch_size(batch_size: int) -> int:
     if batch_size <= 2:

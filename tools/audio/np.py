@@ -12,8 +12,10 @@ def float_to_int16(audio: np.ndarray) -> np.ndarray:
     am = 32767 * 32768 // am
     return np.multiply(audio, am).astype(np.int16)
 
+
 def pcm_to_bytes(pcm_data: np.ndarray) -> bytes:
     return float_to_int16(pcm_data).tobytes()
+
 
 def pcm_to_wav_bytes(pcm_data: np.ndarray) -> bytes:
     buf = io.BytesIO()

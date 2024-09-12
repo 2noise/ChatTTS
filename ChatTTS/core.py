@@ -404,6 +404,7 @@ class Chat:
                 keep_cols = np.sum(abs(wavs[0][length:]) > 1e-6, axis=0) > 0
 
                 import librosa
+
                 silence_intervals = librosa.effects.split(wavs[0][length:], top_db=10)
                 silence_left = 0
                 if len(silence_intervals) == 0:
@@ -529,16 +530,14 @@ class Chat:
             input_ids = [i.tolist() for i in input_ids]
 
             result = gpt.llm.generate(
-                None,
-                sample_params,
-                uuid.uuid4(),
-                speaker_embedding_param,
-                input_ids[0]
+                None, sample_params, uuid.uuid4(), speaker_embedding_param, input_ids[0]
             )
             async for i in result:
                 token_ids = []
                 hidden_states = []
-                if (stream and len(i.outputs[0].token_ids) % stream_batch_size == 0) or i.finished:
+                if (
+                    stream and len(i.outputs[0].token_ids) % stream_batch_size == 0
+                ) or i.finished:
                     token_ids.append(torch.tensor(i.outputs[0].token_ids))
                     hidden_states.append(
                         i.outputs[0].hidden_states.to(torch.float32).to(self.device)
@@ -574,9 +573,7 @@ class Chat:
                 hidden_states = []
                 if (stream and len(i.ids[0]) % stream_batch_size == 0) or i.finished:
                     token_ids.append(i.ids[0])
-                    hidden_states.append(
-                        i.hiddens[0].to(torch.float32).to(self.device)
-                    )
+                    hidden_states.append(i.hiddens[0].to(torch.float32).to(self.device))
                     yield GPT.GenerationOutputs(
                         ids=token_ids,
                         finished=i.finished,

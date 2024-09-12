@@ -112,12 +112,12 @@ class LLM:
         self.request_counter = Counter()
 
     async def generate(
-            self,
-            prompt: Optional[str],
-            sampling_params: SamplingParams,
-            request_id: str,
-            speaker_embedding_param: torch.Tensor,
-            prompt_token_ids: Optional[List[int]] = None,
+        self,
+        prompt: Optional[str],
+        sampling_params: SamplingParams,
+        request_id: str,
+        speaker_embedding_param: torch.Tensor,
+        prompt_token_ids: Optional[List[int]] = None,
     ) -> AsyncIterator[RequestOutput]:
         """Generate outputs for a request.
 
