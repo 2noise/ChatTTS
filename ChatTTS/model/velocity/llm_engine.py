@@ -330,6 +330,9 @@ class LLMEngine:
         sampling_params: SamplingParams,
         prompt_token_ids: Optional[List[int]] = None,
         arrival_time: Optional[float] = None,
+        use_refine: bool = False,
+        spk_emb: str = None,
+        text_mask = None,
     ) -> None:
         """Add a request to the engine's request pool.
 

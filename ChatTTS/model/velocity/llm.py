@@ -193,7 +193,7 @@ class LLM:
     ) -> None:
         request_id = str(next(self.request_counter))
         self.llm_engine.add_request(
-            request_id, prompt, sampling_params, prompt_token_ids, use_refine, spk_emb, text_mask
+            request_id, prompt, sampling_params, prompt_token_ids, use_refine = use_refine, spk_emb = spk_emb, text_mask = text_mask
         )
 
     def _run_engine(self, use_tqdm: bool) -> List[RequestOutput]:
