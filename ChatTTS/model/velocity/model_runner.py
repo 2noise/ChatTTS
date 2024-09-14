@@ -122,6 +122,9 @@ class ModelRunner:
             prompt_tokens = seq_data.get_token_ids()
             prompt_len = len(prompt_tokens)
             prompt_lens.append(prompt_len)
+            use_refine = seq_data.use_refine
+            spk_emb = seq_data.spk_emb
+            text_mask = seq_data.text_mask
 
             input_tokens.append(prompt_tokens)
             # NOTE(woosuk): Here we assume that the first token in the prompt
@@ -174,7 +177,7 @@ class ModelRunner:
             block_tables=None,
             use_cuda_graph=False,
         )
-        return input_tokens, input_positions, input_metadata, prompt_lens
+        return input_tokens, input_positions, input_metadata, prompt_lens, use_refine, spk_emb, text_mask
 
     def _prepare_decode(
         self,
@@ -354,13 +357,16 @@ class ModelRunner:
         self,
         seq_group_metadata_list: Optional[List[SequenceGroupMetadata]],
     ) -> Tuple[torch.Tensor, torch.Tensor, InputMetadata, SamplingMetadata]:
+        use_refine = False
+        spk_emb = None
+        text_mask = None
         if self.is_driver_worker:
             # NOTE: We assume that all sequences in the group are all prompts or
             # all decodes.
             is_prompt = seq_group_metadata_list[0].is_prompt
             # Prepare input tensors.
             if is_prompt:
-                (input_tokens, input_positions, input_metadata, prompt_lens) = (
+                (input_tokens, input_positions, input_metadata, prompt_lens, use_refine, spk_emb, text_mask) = (
                     self._prepare_prompt(seq_group_metadata_list)
                 )
             else:
@@ -454,7 +460,7 @@ class ModelRunner:
                 perform_sampling=False,
             )
 
-        return input_tokens, input_positions, input_metadata, sampling_metadata
+        return input_tokens, input_positions, input_metadata, sampling_metadata, use_refine, spk_emb, text_mask
 
     @torch.inference_mode()
     def execute_model(
@@ -462,7 +468,7 @@ class ModelRunner:
         seq_group_metadata_list: Optional[List[SequenceGroupMetadata]],
         kv_caches: List[Tuple[torch.Tensor, torch.Tensor]],
     ) -> Optional[SamplerOutput]:
-        input_tokens, input_positions, input_metadata, sampling_metadata = (
+        input_tokens, input_positions, input_metadata, sampling_metadata, use_refine, spk_emb, text_mask = (
             self.prepare_input_tensors(seq_group_metadata_list)
         )
         # print(sampling_metadata.seq_data)
@@ -495,8 +501,11 @@ class ModelRunner:
             input_tokens_history = input_tokens_history.unsqueeze(2).repeat(1, 1, 4)
         # print(input_tokens_history.shape)
         # print("it2",input_tokens.shape)
-        text_mask = input_tokens != 0
-        text_mask = text_mask[:, :, 0]
+        # text_mask = input_tokens != 0
+        # text_mask = text_mask[:, :, 0]
+        if text_mask is None:
+            text_mask = input_tokens != 0
+            text_mask = text_mask[:, :, 0]
 
         if input_metadata.use_cuda_graph:
             graph_batch_size = input_tokens.shape[0]
@@ -533,6 +542,16 @@ class ModelRunner:
                 )
         else:
             input_emb = self.post_model(input_tokens, text_mask)
+            if not use_refine:
+                if spk_emb is not None:
+                    self.speaker.apply(
+                        input_emb,
+                        spk_emb,
+                        input_tokens,
+                        21143,
+                        'cuda:0',
+                    )
+
         # print(input_emb.shape)
         hidden_states = model_executable(
             input_emb=input_emb,

@@ -523,6 +523,9 @@ class Chat:
                 None,
                 sample_params,
                 input_ids,
+                use_refine=False,
+                spk_emb=params.spk_emb,
+                text_mask=text_mask, 
             )
 
             token_ids = []
@@ -625,7 +628,7 @@ class Chat:
             del input_ids
 
             result = gpt.llm.generate(
-                None, sample_params, input_ids_list, params.show_tqdm
+                None, sample_params, input_ids_list, params.show_tqdm, use_refine=True
             )
             token_ids = []
             hidden_states = []

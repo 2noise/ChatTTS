@@ -65,12 +65,18 @@ class SequenceData:
     def __init__(
         self,
         prompt_token_ids: List[int],
+        use_refine: bool = True,
+        spk_emb: str = None,
+        text_mask = None,
     ) -> None:
         self.prompt_token_ids = prompt_token_ids
         self.output_token_ids: List[int] = []
         self.cumulative_logprob = 0.0
         self.hidden_states: Optional[torch.Tensor] = None
         self.finished = False
+        self.use_refine = use_refine
+        self.spk_emb = spk_emb
+        self.text_mask = text_mask
 
     def append_token_id(self, token_id: int, logprob: float) -> None:
         if isinstance(self.cumulative_logprob, float):
@@ -132,12 +138,15 @@ class Sequence:
         prompt: str,
         prompt_token_ids: List[int],
         block_size: int,
+        use_refine: bool,
+        spk_emb: str,
+        text_mask,
     ) -> None:
         self.seq_id = seq_id
         self.prompt = prompt
         self.block_size = block_size
 
-        self.data = SequenceData(prompt_token_ids)
+        self.data = SequenceData(prompt_token_ids, use_refine, spk_emb, text_mask)
         self.output_logprobs: SampleLogprobs = []
         self.output_text = ""
 

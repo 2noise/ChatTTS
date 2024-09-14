@@ -354,7 +354,7 @@ class LLMEngine:
         # Create the sequences.
         block_size = self.cache_config.block_size
         seq_id = next(self.seq_counter)
-        seq = Sequence(seq_id, prompt, prompt_token_ids, block_size)
+        seq = Sequence(seq_id, prompt, prompt_token_ids, block_size, use_refine, spk_emb, text_mask)
 
         # Create the sequence group.
         seq_group = SequenceGroup(request_id, [seq], sampling_params, arrival_time)

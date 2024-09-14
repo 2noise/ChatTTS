@@ -125,6 +125,9 @@ class LLM:
         sampling_params: Optional[SamplingParams] = None,
         prompt_token_ids: Optional[List[List[int]]] = None,
         use_tqdm: bool = True,
+        use_refine: bool = False,
+        spk_emb: str = None,
+        text_mask = None,
     ) -> List[RequestOutput]:
         """Generates the completions for the input prompts.
 
@@ -166,7 +169,7 @@ class LLM:
         for i in range(num_requests):
             prompt = prompts[i] if prompts is not None else None
             token_ids = None if prompt_token_ids is None else prompt_token_ids[i]
-            self._add_request(prompt, sampling_params, token_ids)
+            self._add_request(prompt, sampling_params, token_ids, use_refine, spk_emb, text_mask)
 
         rtns = self._run_engine(use_tqdm)
         for i, rtn in enumerate(rtns):
@@ -184,10 +187,13 @@ class LLM:
         prompt: Optional[str],
         sampling_params: SamplingParams,
         prompt_token_ids: Optional[List[int]],
+        use_refine: bool,
+        spk_emb: str,
+        text_mask = None,
     ) -> None:
         request_id = str(next(self.request_counter))
         self.llm_engine.add_request(
-            request_id, prompt, sampling_params, prompt_token_ids
+            request_id, prompt, sampling_params, prompt_token_ids, use_refine, spk_emb, text_mask
         )
 
     def _run_engine(self, use_tqdm: bool) -> List[RequestOutput]:

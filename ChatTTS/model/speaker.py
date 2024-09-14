@@ -64,6 +64,7 @@ class Speaker:
                 t.replace("[Stts]", "")
                 .replace("[spk_emb]", "")
                 .replace("[empty_spk]", "")
+                .replace("[Ebreak]", "")
                 .strip()
             )
             """
