@@ -179,7 +179,7 @@ class MelSpectrogramFeatures(torch.nn.Module):
         hop_length=256,
         n_mels=100,
         padding: Literal["center", "same"] = "center",
-        device: torch.device = torch.device("cuda"),
+        device: torch.device = torch.device("cpu"),
     ):
         super().__init__()
         self.device = device
@@ -213,7 +213,7 @@ class DVAE(nn.Module):
         vq_config: Optional[dict] = None,
         dim=512,
         coef: Optional[str] = None,
-        device: torch.device = torch.device("cuda"),
+        device: torch.device = torch.device("cpu"),
     ):
         super().__init__()
         if coef is None:
