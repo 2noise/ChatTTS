@@ -122,7 +122,7 @@ class IndentRedirect:  # TODO: inherit TextIOWrapper?
         self.__console__.flush()
 
     @contextmanager
-    def __call__(self) -> None:
+    def __call__(self):
         try:
             sys.stdout = self
             yield
