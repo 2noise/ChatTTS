@@ -253,9 +253,9 @@ class Chat:
         vocos = (
             Vocos(feature_extractor=feature_extractor, backbone=backbone, head=head)
             .to(
-                # vocos on mps will crash, use cpu fallback
+                # vocos on mps and Ascend npu will crash, use cpu fallback
                 "cpu"
-                if "mps" in str(device)
+                if "mps" in str(device) or "npu" in str(device)
                 else device
             )
             .eval()
@@ -422,7 +422,7 @@ class Chat:
 
     @torch.inference_mode()
     def _vocos_decode(self, spec: torch.Tensor) -> np.ndarray:
-        if "mps" in str(self.device):
+        if "mps" in str(self.device) or "npu" in str(self.device):
             return self.vocos.decode(spec.cpu()).cpu().numpy()
         else:
             return self.vocos.decode(spec).cpu().numpy()
