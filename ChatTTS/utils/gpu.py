@@ -9,43 +9,28 @@ from .log import logger
 
 
 def select_device(min_memory=2047, experimental=False):
-    if torch.cuda.is_available():
-        selected_gpu = 0
-        max_free_memory = -1
-        for i in range(torch.cuda.device_count()):
-            props = torch.cuda.get_device_properties(i)
-            free_memory = props.total_memory - torch.cuda.memory_reserved(i)
-            if max_free_memory < free_memory:
-                selected_gpu = i
-                max_free_memory = free_memory
-        free_memory_mb = max_free_memory / (1024 * 1024)
-        if free_memory_mb < min_memory:
-            logger.get_logger().warning(
-                f"GPU {selected_gpu} has {round(free_memory_mb, 2)} MB memory left. Switching to CPU."
-            )
-            device = torch.device("cpu")
-        else:
-            device = torch.device(f"cuda:{selected_gpu}")
-    elif _is_torch_npu_available():
+    has_cuda = torch.cuda.is_available()
+    if has_cuda or _is_torch_npu_available():
+        provider = torch.cuda if has_cuda else torch.npu
         """
         Using Ascend NPU to accelerate the process of inferencing when GPU is not found.
         """
-        selected_npu = 0
+        dev_idx = 0
         max_free_memory = -1
-        for i in range(torch.npu.device_count()):
-            props = torch.npu.get_device_properties(i)
-            free_memory = props.total_memory - torch.npu.memory_reserved(i)
+        for i in range(provider.device_count()):
+            props = provider.get_device_properties(i)
+            free_memory = props.total_memory - provider.memory_reserved(i)
             if max_free_memory < free_memory:
-                selected_npu = i
+                dev_idx = i
                 max_free_memory = free_memory
         free_memory_mb = max_free_memory / (1024 * 1024)
         if free_memory_mb < min_memory:
             logger.get_logger().warning(
-                f"NPU {selected_npu} has {round(free_memory_mb, 2)} MB memory left. Switching to CPU."
+                f"{provider.device(dev_idx)} has {round(free_memory_mb, 2)} MB memory left. Switching to CPU."
             )
             device = torch.device("cpu")
         else:
-            device = torch.device(f"npu:{selected_npu}")
+            device = provider.device(dev_idx)
     elif torch.backends.mps.is_available():
         """
         Currently MPS is slower than CPU while needs more memory and core utility,
