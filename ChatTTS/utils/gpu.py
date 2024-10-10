@@ -14,7 +14,9 @@ def select_device(min_memory=2047, experimental=False):
             if max_free_memory < free_memory:
                 selected_gpu = i
                 max_free_memory = free_memory
-        device = _select_device_if_available(min_memory, selected_gpu, max_free_memory, "GPU")
+        device = _select_device_if_available(
+            min_memory, selected_gpu, max_free_memory, "GPU"
+        )
     elif torch.npu.is_available():
         """
         Using Ascend NPU to accelerate the process of inferencing when GPU is not found.
@@ -27,7 +29,9 @@ def select_device(min_memory=2047, experimental=False):
             if max_free_memory < free_memory:
                 selected_npu = i
                 max_free_memory = free_memory
-        device = _select_device_if_available(min_memory, selected_npu, max_free_memory, "NPU")
+        device = _select_device_if_available(
+            min_memory, selected_npu, max_free_memory, "NPU"
+        )
     elif torch.backends.mps.is_available():
         """
         Currently MPS is slower than CPU while needs more memory and core utility,
@@ -47,7 +51,9 @@ def select_device(min_memory=2047, experimental=False):
     return device
 
 
-def _select_device_if_available(min_memory, selected_device, max_free_memory, device_type: str):
+def _select_device_if_available(
+    min_memory, selected_device, max_free_memory, device_type: str
+):
     free_memory_mb = max_free_memory / (1024 * 1024)
     if free_memory_mb < min_memory:
         logger.get_logger().warning(
