@@ -253,7 +253,9 @@ class Chat:
         vocos = (
             Vocos(feature_extractor=feature_extractor, backbone=backbone, head=head)
             .to(
-                # vocos on mps and Ascend npu will crash, use cpu fallback
+                # Vocos on mps will crash, use cpu fallback.
+                # Plus, complex dtype used in the decode process of Vocos is not supported in torch_npu now,
+                # so we put this calculation of data on CPU instead of NPU.
                 "cpu"
                 if "mps" in str(device) or "npu" in str(device)
                 else device
