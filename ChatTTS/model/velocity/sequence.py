@@ -131,10 +131,12 @@ class Sequence:
         seq_id: int,
         prompt: str,
         prompt_token_ids: List[int],
+        speaker_embedding_param: torch.Tensor,
         block_size: int,
     ) -> None:
         self.seq_id = seq_id
         self.prompt = prompt
+        self.speaker_embedding_param = speaker_embedding_param
         self.block_size = block_size
 
         self.data = SequenceData(prompt_token_ids)
@@ -260,11 +262,13 @@ class SequenceGroup:
         request_id: str,
         seqs: List[Sequence],
         sampling_params: SamplingParams,
+        speaker_embedding_param: torch.Tensor,
         arrival_time: float,
     ) -> None:
         self.request_id = request_id
         self.seqs_dict = {seq.seq_id: seq for seq in seqs}
         self.sampling_params = sampling_params
+        self.speaker_embedding_param = speaker_embedding_param
         self.arrival_time = arrival_time
         self.prompt_logprobs: Optional[PromptLogprobs] = None
 
@@ -366,12 +370,14 @@ class SequenceGroupMetadata:
         is_prompt: bool,
         seq_data: Dict[int, SequenceData],
         sampling_params: SamplingParams,
+        speaker_embedding_param: torch.Tensor,
         block_tables: Dict[int, List[int]],
     ) -> None:
         self.request_id = request_id
         self.is_prompt = is_prompt
         self.seq_data = seq_data
         self.sampling_params = sampling_params
+        self.speaker_embedding_param = speaker_embedding_param
         self.block_tables = block_tables
 
 

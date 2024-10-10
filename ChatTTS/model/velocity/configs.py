@@ -578,6 +578,9 @@ class EngineArgs:
     max_context_len_to_capture: int = 8192
     num_audio_tokens: int = 1024
     num_text_tokens: int = 80
+    engine_use_ray: bool = False
+    disable_log_requests: bool = False
+    max_log_len: int = 8192
 
     def __post_init__(self):
         if self.tokenizer is None:
