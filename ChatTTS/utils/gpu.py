@@ -56,6 +56,7 @@ def _is_torch_npu_available():
     """
     try:
         import torch_npu
+
         _ = torch.npu.device_count()  # will raise a RuntimeError if no NPU found
         return torch.npu.is_available()
     except (ImportError, RuntimeError):
