@@ -30,7 +30,7 @@ def select_device(min_memory=2047, experimental=False):
             )
             device = torch.device("cpu")
         else:
-            device = provider.device(dev_idx)
+            device = provider._get_device(dev_idx)
     elif torch.backends.mps.is_available():
         """
         Currently MPS is slower than CPU while needs more memory and core utility,
