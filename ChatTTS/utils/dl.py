@@ -70,10 +70,10 @@ def check_all_assets(base_dir: Path, sha256_map: Dict[str, str], update=False) -
         base_dir,
         "asset",
         names=(
-            "Decoder.pt",
-            "DVAE_full.pt",
+            "Decoder.safetensors",
+            "DVAE.safetensors",
             "Embed.safetensors",
-            "Vocos.pt",
+            "Vocos.safetensors",
         ),
         sha256_map=sha256_map,
         update=update,

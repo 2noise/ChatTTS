@@ -15,6 +15,7 @@ from huggingface_hub import snapshot_download
 from .config import Config
 from .model import DVAE, Embed, GPT, gen_logits, Tokenizer, Speaker
 from .utils import (
+    load_safetensors,
     check_all_assets,
     download_all_assets,
     select_device,
@@ -97,7 +98,7 @@ class Chat:
                 try:
                     download_path = snapshot_download(
                         repo_id="2Noise/ChatTTS",
-                        allow_patterns=["*.pt", "*.yaml", "*.json", "*.safetensors"],
+                        allow_patterns=["*.yaml", "*.json", "*.safetensors"],
                     )
                 except:
                     download_path = None
@@ -263,26 +264,22 @@ class Chat:
             .eval()
         )
         assert vocos_ckpt_path, "vocos_ckpt_path should not be None"
-        vocos.load_state_dict(torch.load(vocos_ckpt_path, weights_only=True, mmap=True))
+        vocos.load_state_dict(load_safetensors(vocos_ckpt_path))
         self.vocos = vocos
         self.logger.log(logging.INFO, "vocos loaded.")
 
-        dvae = (
-            DVAE(
-                decoder_config=asdict(self.config.dvae.decoder),
-                encoder_config=asdict(self.config.dvae.encoder),
-                vq_config=asdict(self.config.dvae.vq),
-                dim=self.config.dvae.decoder.idim,
-                coef=coef,
-                device=device,
-            )
-            .to(device)
-            .eval()
+        dvae = DVAE(
+            decoder_config=asdict(self.config.dvae.decoder),
+            encoder_config=asdict(self.config.dvae.encoder),
+            vq_config=asdict(self.config.dvae.vq),
+            dim=self.config.dvae.decoder.idim,
+            coef=coef,
+            device=device,
         )
         coef = str(dvae)
         assert dvae_ckpt_path, "dvae_ckpt_path should not be None"
-        dvae.load_state_dict(torch.load(dvae_ckpt_path, weights_only=True, mmap=True))
-        self.dvae = dvae
+        dvae.load_pretrained(dvae_ckpt_path, device)
+        self.dvae = dvae.eval()
         self.logger.log(logging.INFO, "dvae loaded.")
 
         embed = Embed(
@@ -291,7 +288,7 @@ class Chat:
             self.config.embed.num_text_tokens,
             self.config.embed.num_vq,
         )
-        embed.from_pretrained(embed_path, device=device)
+        embed.load_pretrained(embed_path, device=device)
         self.embed = embed.to(device)
         self.logger.log(logging.INFO, "embed loaded.")
 
@@ -305,7 +302,7 @@ class Chat:
             logger=self.logger,
         ).eval()
         assert gpt_ckpt_path, "gpt_ckpt_path should not be None"
-        gpt.from_pretrained(gpt_ckpt_path, embed_path, experimental=experimental)
+        gpt.load_pretrained(gpt_ckpt_path, embed_path, experimental=experimental)
         gpt.prepare(compile=compile and "cuda" in str(device))
         self.gpt = gpt
         self.logger.log(logging.INFO, "gpt loaded.")
@@ -315,22 +312,16 @@ class Chat:
         )
         self.logger.log(logging.INFO, "speaker loaded.")
 
-        decoder = (
-            DVAE(
-                decoder_config=asdict(self.config.decoder),
-                dim=self.config.decoder.idim,
-                coef=coef,
-                device=device,
-            )
-            .to(device)
-            .eval()
+        decoder = DVAE(
+            decoder_config=asdict(self.config.decoder),
+            dim=self.config.decoder.idim,
+            coef=coef,
+            device=device,
         )
         coef = str(decoder)
         assert decoder_ckpt_path, "decoder_ckpt_path should not be None"
-        decoder.load_state_dict(
-            torch.load(decoder_ckpt_path, weights_only=True, mmap=True)
-        )
-        self.decoder = decoder
+        decoder.load_pretrained(decoder_ckpt_path, device)
+        self.decoder = decoder.eval()
         self.logger.log(logging.INFO, "decoder loaded.")
 
         if tokenizer_path:
