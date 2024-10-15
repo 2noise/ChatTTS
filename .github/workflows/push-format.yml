@@ -24,6 +24,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
 
+      - name: Create venv
+        run: python3 -m venv .venv
+
+      - name: Activate venv
+        run: |
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
       - name: Install Black
         run: pip install "black[jupyter]"
 
