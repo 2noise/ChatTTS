@@ -1,26 +1,36 @@
 import torch
 
+try:
+    import torch_npu
+except ImportError:
+    pass
+
 from .log import logger
 
 
 def select_device(min_memory=2047, experimental=False):
-    if torch.cuda.is_available():
-        selected_gpu = 0
+    has_cuda = torch.cuda.is_available()
+    if has_cuda or _is_torch_npu_available():
+        provider = torch.cuda if has_cuda else torch.npu
+        """
+        Using Ascend NPU to accelerate the process of inferencing when GPU is not found.
+        """
+        dev_idx = 0
         max_free_memory = -1
-        for i in range(torch.cuda.device_count()):
-            props = torch.cuda.get_device_properties(i)
-            free_memory = props.total_memory - torch.cuda.memory_reserved(i)
+        for i in range(provider.device_count()):
+            props = provider.get_device_properties(i)
+            free_memory = props.total_memory - provider.memory_reserved(i)
             if max_free_memory < free_memory:
-                selected_gpu = i
+                dev_idx = i
                 max_free_memory = free_memory
         free_memory_mb = max_free_memory / (1024 * 1024)
         if free_memory_mb < min_memory:
             logger.get_logger().warning(
-                f"GPU {selected_gpu} has {round(free_memory_mb, 2)} MB memory left. Switching to CPU."
+                f"{provider.device(dev_idx)} has {round(free_memory_mb, 2)} MB memory left. Switching to CPU."
             )
             device = torch.device("cpu")
         else:
-            device = torch.device(f"cuda:{selected_gpu}")
+            device = provider._get_device(dev_idx)
     elif torch.backends.mps.is_available():
         """
         Currently MPS is slower than CPU while needs more memory and core utility,
@@ -34,7 +44,16 @@ def select_device(min_memory=2047, experimental=False):
             logger.get_logger().info("found Apple GPU, but use CPU.")
             device = torch.device("cpu")
     else:
-        logger.get_logger().warning("no GPU found, use CPU instead")
+        logger.get_logger().warning("no GPU or NPU found, use CPU instead")
         device = torch.device("cpu")
 
     return device
+
+
+def _is_torch_npu_available():
+    try:
+        # will raise a AttributeError if torch_npu is not imported or a RuntimeError if no NPU found
+        _ = torch.npu.device_count()
+        return torch.npu.is_available()
+    except (AttributeError, RuntimeError):
+        return False
