@@ -199,8 +199,15 @@ class MelSpectrogramFeatures(torch.nn.Module):
         return super().__call__(audio)
 
     def forward(self, audio: torch.Tensor) -> torch.Tensor:
-        audio = audio.to(self.device)
-        mel: torch.Tensor = self.mel_spec(audio)
+        if "npu" in str(self.device):
+            # Computation of MelSpectrogram on npu is not supported now, use cpu fallback.
+            audio = audio.to(torch.device("cpu"))
+            self.mel_spec.to(torch.device("cpu"))
+            mel: torch.Tensor = self.mel_spec(audio)
+            mel = mel.to(self.device)
+        else:
+            audio = audio.to(self.device)
+            mel: torch.Tensor = self.mel_spec(audio)
         features = torch.log(torch.clip(mel, min=1e-5))
         return features
 
