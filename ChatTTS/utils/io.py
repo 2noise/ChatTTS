@@ -17,6 +17,7 @@ def load_safetensors(filename: str):
             state_dict_tensors[k] = f.get_tensor(k)
     return state_dict_tensors
 
+
 def get_latest_modified_file(directory):
 
     files = [os.path.join(directory, f) for f in os.listdir(directory)]
