@@ -251,7 +251,7 @@ class DVAE(nn.Module):
         self, inp: torch.Tensor, mode: Literal["encode", "decode"] = "decode"
     ) -> torch.Tensor:
         return super().__call__(inp, mode)
-    
+
     @torch.inference_mode()
     def load_pretrained(self, filename: str, device: torch.device):
         state_dict_tensors = load_safetensors(filename)

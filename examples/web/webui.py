@@ -249,12 +249,8 @@ def main():
     )
     parser.add_argument("--server_port", type=int, default=8080, help="server port")
     parser.add_argument("--root_path", type=str, help="root path")
-    parser.add_argument(
-        "--custom_path", type=str, help="custom model path"
-    )
-    parser.add_argument(
-        "--coef", type=str, help="custom dvae coefficient"
-    )
+    parser.add_argument("--custom_path", type=str, help="custom model path")
+    parser.add_argument("--coef", type=str, help="custom dvae coefficient")
     args = parser.parse_args()
 
     logger.info("loading ChatTTS model...")
