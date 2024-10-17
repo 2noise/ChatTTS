@@ -56,7 +56,7 @@ class GPT(nn.Module):
         self.head_text = embed.head_text.__call__
         self.head_code = [hc.__call__ for hc in embed.head_code]
 
-    def from_pretrained(
+    def load_pretrained(
         self, gpt_folder: str, embed_file_path: str, experimental=False
     ):
         if self.is_vllm and platform.system().lower() == "linux":

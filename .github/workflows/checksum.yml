@@ -13,7 +13,7 @@ jobs:
 
       - name: Run RVC-Models-Downloader
         run: |
-          wget https://github.com/fumiama/RVC-Models-Downloader/releases/download/v0.2.8/rvcmd_linux_amd64.deb
+          wget https://github.com/fumiama/RVC-Models-Downloader/releases/download/v0.2.9/rvcmd_linux_amd64.deb
           sudo apt -y install ./rvcmd_linux_amd64.deb
           rm -f ./rvcmd_linux_amd64.deb
           rvcmd -notrs -w 1 -notui assets/chtts

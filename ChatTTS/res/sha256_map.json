@@ -1,8 +1,8 @@
 {
-	"sha256_asset_Decoder_pt"        : "9964e36e840f0e3a748c5f716fe6de6490d2135a5f5155f4a642d51860e2ec38",
-	"sha256_asset_DVAE_full_pt"      : "553eb75763511e23f3e5f86303e2163c5ca775489d637fb635d979c8ae58bbe5",
-	"sha256_asset_Embed_safetensors" : "2ff0be7134934155741b643b74e32fb6bf3eec41257984459b2ed60cdb4c48b0",
-	"sha256_asset_Vocos_pt"          : "09a670eda1c08b740013679c7a90ebb7f1a97646ea7673069a6838e6b51d6c58",
+	"sha256_asset_Decoder_safetensors": "77aa55e0a977949c4733df3c6f876fa85860d3298cba63295a7bc6901729d4e0",
+	"sha256_asset_DVAE_safetensors"   : "1d0b044a8368c0513100a2eca98456b289e6be6a18b7a63be1bcaa315ea874d9",
+	"sha256_asset_Embed_safetensors"  : "2ff0be7134934155741b643b74e32fb6bf3eec41257984459b2ed60cdb4c48b0",
+	"sha256_asset_Vocos_safetensors"  : "07e5561491cce41f7f90cfdb94b2ff263ff5742c3d89339db99b17ad82cc3f44",
 
 	"sha256_asset_gpt_config_json"         : "0aaa1ecd96c49ad4f473459eb1982fa7ad79fa5de08cde2781bf6ad1f9a0c236",
 	"sha256_asset_gpt_model_safetensors"   : "cd0806fd971f52f6a22c923ec64982b305e817bcc41ca83417fcf9141b984a0f",

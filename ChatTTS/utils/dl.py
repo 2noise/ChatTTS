@@ -70,10 +70,10 @@ def check_all_assets(base_dir: Path, sha256_map: Dict[str, str], update=False) -
         base_dir,
         "asset",
         names=(
-            "Decoder.pt",
-            "DVAE_full.pt",
+            "Decoder.safetensors",
+            "DVAE.safetensors",
             "Embed.safetensors",
-            "Vocos.pt",
+            "Vocos.safetensors",
         ),
         sha256_map=sha256_map,
         update=update,
@@ -151,7 +151,7 @@ def download_dns_yaml(url: str, folder: str, headers: Dict[str, str]):
         logger.get_logger().info(f"downloaded into {folder}")
 
 
-def download_all_assets(tmpdir: str, version="0.2.8"):
+def download_all_assets(tmpdir: str, version="0.2.9"):
     import subprocess
     import platform
 

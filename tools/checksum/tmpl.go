@@ -1,10 +1,10 @@
 package main
 
 var files = [...]string{
-	"asset/Decoder.pt",
-	"asset/DVAE_full.pt",
+	"asset/Decoder.safetensors",
+	"asset/DVAE.safetensors",
 	"asset/Embed.safetensors",
-	"asset/Vocos.pt",
+	"asset/Vocos.safetensors",
 
 	"asset/gpt/config.json",
 	"asset/gpt/model.safetensors",
@@ -15,10 +15,10 @@ var files = [...]string{
 }
 
 const jsontmpl = `{
-	"sha256_asset_Decoder_pt"        : "%s",
-	"sha256_asset_DVAE_full_pt"      : "%s",
-	"sha256_asset_Embed_safetensors" : "%s",
-	"sha256_asset_Vocos_pt"          : "%s",
+	"sha256_asset_Decoder_safetensors": "%s",
+	"sha256_asset_DVAE_safetensors"   : "%s",
+	"sha256_asset_Embed_safetensors"  : "%s",
+	"sha256_asset_Vocos_safetensors"  : "%s",
 
 	"sha256_asset_gpt_config_json"         : "%s",
 	"sha256_asset_gpt_model_safetensors"   : "%s",
