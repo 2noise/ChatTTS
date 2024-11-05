@@ -96,7 +96,7 @@ pip install --upgrade -r requirements.txt
 
 #### 2. Install from conda
 ```bash
-conda create -n chattts
+conda create -n chattts python=3.11
 conda activate chattts
 pip install -r requirements.txt
 ```
