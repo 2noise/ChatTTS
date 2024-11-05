@@ -5,14 +5,14 @@ on:
 
 jobs:
   close-issues:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       issues: write
       pull-requests: write
     steps:
       - uses: actions/stale@v5
         with:
-          exempt-issue-labels: "help wanted,good first issue,documentation,following up,todo list"
+          exempt-issue-labels: "help wanted,following up,todo list,enhancement,algorithm,delayed,performance"
           days-before-issue-stale: 30
           days-before-issue-close: 15
           stale-issue-label: "stale"

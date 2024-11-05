@@ -25,6 +25,14 @@ jobs:
         run: |
           sudo apt-get install -y portaudio19-dev python3-pyaudio
 
+      - name: Create venv
+        run: python3 -m venv .venv
+
+      - name: Activate venv
+        run: |
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
       - name: Test Install
         run: pip install .
 

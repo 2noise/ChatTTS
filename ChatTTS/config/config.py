@@ -3,10 +3,10 @@ from dataclasses import dataclass
 
 @dataclass(repr=False, eq=False)
 class Path:
-    vocos_ckpt_path: str = "asset/Vocos.pt"
-    dvae_ckpt_path: str = "asset/DVAE_full.pt"
+    vocos_ckpt_path: str = "asset/Vocos.safetensors"
+    dvae_ckpt_path: str = "asset/DVAE.safetensors"
     gpt_ckpt_path: str = "asset/gpt"
-    decoder_ckpt_path: str = "asset/Decoder.pt"
+    decoder_ckpt_path: str = "asset/Decoder.safetensors"
     tokenizer_path: str = "asset/tokenizer"
     embed_path: str = "asset/Embed.safetensors"
 

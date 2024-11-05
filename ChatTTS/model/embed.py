@@ -1,7 +1,8 @@
-from safetensors.torch import safe_open
 import torch
 import torch.nn as nn
 from torch.nn.utils.parametrizations import weight_norm
+
+from ..utils import load_safetensors
 
 
 class Embed(nn.Module):
@@ -34,11 +35,8 @@ class Embed(nn.Module):
         )
 
     @torch.inference_mode()
-    def from_pretrained(self, filename: str, device: torch.device):
-        state_dict_tensors = {}
-        with safe_open(filename, framework="pt") as f:
-            for k in f.keys():
-                state_dict_tensors[k] = f.get_tensor(k)
+    def load_pretrained(self, filename: str, device: torch.device):
+        state_dict_tensors = load_safetensors(filename)
         self.load_state_dict(state_dict_tensors)
         self.to(device)
 

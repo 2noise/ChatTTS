@@ -8,7 +8,7 @@ jobs:
   # This workflow closes invalid PR
   change-or-close-pr:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions: write-all
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -62,6 +62,14 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v5
+
+      - name: Create venv
+        run: python3 -m venv .venv
+
+      - name: Activate venv
+        run: |
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Install Black
         run: pip install "black[jupyter]"

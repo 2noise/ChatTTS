@@ -10,7 +10,7 @@ import numpy as np
 from .utils import del_all
 
 
-@jit
+@jit(nopython=True)
 def _find_index(table: np.ndarray, val: np.uint16):
     for i in range(table.size):
         if table[i] == val:
@@ -18,7 +18,7 @@ def _find_index(table: np.ndarray, val: np.uint16):
     return -1
 
 
-@jit
+@jit(nopython=True)
 def _fast_replace(
     table: np.ndarray, text: bytes
 ) -> Tuple[np.ndarray, List[Tuple[str, str]]]:
@@ -34,7 +34,7 @@ def _fast_replace(
     return result, replaced_words
 
 
-@jit
+@jit(nopython=True)
 def _split_tags(text: str) -> Tuple[List[str], List[str]]:
     texts: List[str] = []
     tags: List[str] = []
@@ -57,7 +57,7 @@ def _split_tags(text: str) -> Tuple[List[str], List[str]]:
     return texts, tags
 
 
-@jit
+@jit(nopython=True)
 def _combine_tags(texts: List[str], tags: List[str]) -> str:
     text = ""
     for t in texts:
