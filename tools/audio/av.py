@@ -41,11 +41,11 @@ def wav2(i: BytesIO, o: BufferedWriter, format: str):
 
 
 def load_audio(
-        file: Union[str, BytesIO, Path],
-        sr: Optional[int] = None,
-        format: Optional[str] = None,
-        mono=True,
-    ) -> Union[np.ndarray, Tuple[np.ndarray, int]]:
+    file: Union[str, BytesIO, Path],
+    sr: Optional[int] = None,
+    format: Optional[str] = None,
+    mono=True,
+) -> Union[np.ndarray, Tuple[np.ndarray, int]]:
     """
     https://github.com/fumiama/Retrieval-based-Voice-Conversion-WebUI/blob/412a9950a1e371a018c381d1bfb8579c4b0de329/infer/lib/audio.py#L39
     """
@@ -113,7 +113,7 @@ def load_audio(
 
             np.copyto(decoded_audio[..., offset:end_index], frame_data)
             offset += len(frame_data[0])
-    
+
     container.close()
 
     # Truncate the array to the actual size
