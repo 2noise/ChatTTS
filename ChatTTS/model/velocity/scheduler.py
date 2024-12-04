@@ -313,6 +313,7 @@ class Scheduler:
                 is_prompt=scheduler_outputs.prompt_run,
                 seq_data=seq_data,
                 sampling_params=seq_group.sampling_params,
+                speaker_embedding_param=seq_group.speaker_embedding_param,
                 block_tables=block_tables,
             )
             seq_group_metadata_list.append(seq_group_metadata)

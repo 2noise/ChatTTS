@@ -1,11 +1,12 @@
-from typing import List, Optional, Union
+import asyncio
+import time
+from typing import List, Optional, Union, AsyncIterator
 
-from tqdm import tqdm
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 from vllm.utils import Counter
+import torch
 
+from .async_llm_engine import AsyncLLMEngine
 from .configs import EngineArgs
-from .llm_engine import LLMEngine
 from .output import RequestOutput
 from .sampling_params import SamplingParams
 
@@ -107,107 +108,53 @@ class LLM:
             num_text_tokens=num_text_tokens,
             **kwargs,
         )
-        self.llm_engine = LLMEngine.from_engine_args(engine_args, post_model_path)
+        self.llm_engine = AsyncLLMEngine.from_engine_args(engine_args, post_model_path)
         self.request_counter = Counter()
 
-    def get_tokenizer(self) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
-        return self.llm_engine.tokenizer
-
-    def set_tokenizer(
-        self,
-        tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
-    ) -> None:
-        self.llm_engine.tokenizer = tokenizer
-
-    def generate(
-        self,
-        prompts: Optional[Union[str, List[str]]] = None,
-        sampling_params: Optional[SamplingParams] = None,
-        prompt_token_ids: Optional[List[List[int]]] = None,
-        use_tqdm: bool = True,
-    ) -> List[RequestOutput]:
-        """Generates the completions for the input prompts.
-
-        NOTE: This class automatically batches the given prompts, considering
-        the memory constraint. For the best performance, put all of your prompts
-        into a single list and pass it to this method.
-
-        Args:
-            prompts: A list of prompts to generate completions for.
-            sampling_params: The sampling parameters for text generation. If
-                None, we use the default sampling parameters.
-            prompt_token_ids: A list of token IDs for the prompts. If None, we
-                use the tokenizer to convert the prompts to token IDs.
-            use_tqdm: Whether to use tqdm to display the progress bar.
-
-        Returns:
-            A list of `RequestOutput` objects containing the generated
-            completions in the same order as the input prompts.
-        """
-        if prompts is None and prompt_token_ids is None:
-            raise ValueError("Either prompts or prompt_token_ids must be " "provided.")
-        if isinstance(prompts, str):
-            # Convert a single prompt to a list.
-            prompts = [prompts]
-        if (
-            prompts is not None
-            and prompt_token_ids is not None
-            and len(prompts) != len(prompt_token_ids)
-        ):
-            raise ValueError(
-                "The lengths of prompts and prompt_token_ids " "must be the same."
-            )
-        if sampling_params is None:
-            # Use default sampling params.
-            sampling_params = SamplingParams()
-
-        # Add requests to the engine.
-        num_requests = len(prompts) if prompts is not None else len(prompt_token_ids)
-        for i in range(num_requests):
-            prompt = prompts[i] if prompts is not None else None
-            token_ids = None if prompt_token_ids is None else prompt_token_ids[i]
-            self._add_request(prompt, sampling_params, token_ids)
-
-        rtns = self._run_engine(use_tqdm)
-        for i, rtn in enumerate(rtns):
-            token_ids = rtn.outputs[0].token_ids
-            for j, token_id in enumerate(token_ids):
-                if len(token_id) == 1:
-                    token_ids[j] = token_id[0]
-                else:
-                    token_ids[j] = list(token_id)
-
-        return rtns
-
-    def _add_request(
+    async def generate(
         self,
         prompt: Optional[str],
         sampling_params: SamplingParams,
-        prompt_token_ids: Optional[List[int]],
-    ) -> None:
-        request_id = str(next(self.request_counter))
-        self.llm_engine.add_request(
-            request_id, prompt, sampling_params, prompt_token_ids
-        )
+        request_id: str,
+        speaker_embedding_param: torch.Tensor,
+        prompt_token_ids: Optional[List[int]] = None,
+    ) -> AsyncIterator[RequestOutput]:
+        """Generate outputs for a request.
 
-    def _run_engine(self, use_tqdm: bool) -> List[RequestOutput]:
-        # Initialize tqdm.
-        if use_tqdm:
-            num_requests = self.llm_engine.get_num_unfinished_requests()
-            pbar = tqdm(total=num_requests, desc="Processed prompts")
-        # Run the engine.
-        outputs: List[RequestOutput] = []
-        while self.llm_engine.has_unfinished_requests():
-            step_outputs = self.llm_engine.step()
-            for output in step_outputs:
-                if output.finished:
-                    outputs.append(output)
-                    if use_tqdm:
-                        pbar.update(1)
-        if use_tqdm:
-            pbar.close()
-        # Sort the outputs by request ID.
-        # This is necessary because some requests may be finished earlier than
-        # its previous requests.
-        outputs = sorted(outputs, key=lambda x: int(x.request_id))
-        return outputs
+        Generate outputs for a request. This method is a coroutine. It adds the
+        request into the waiting queue of the LLMEngine and streams the outputs
+        from the LLMEngine to the caller.
+
+        Args:
+            prompt: The prompt string. Can be None if prompt_token_ids is
+                provided.
+            sampling_params: The sampling parameters of the request.
+            request_id: The unique id of the request.
+            prompt_token_ids: The token IDs of the prompt. If None, we
+                use the tokenizer to convert the prompts to token IDs.
+
+        Yields:
+            The output `RequestOutput` objects from the LLMEngine for the
+            request.
+        """
+        # Preprocess the request.
+        # This should not be used for logging, as it is monotonic time.
+        arrival_time = time.monotonic()
+
+        try:
+            stream = await self.llm_engine.add_request(
+                request_id,
+                prompt,
+                sampling_params,
+                speaker_embedding_param=speaker_embedding_param,
+                prompt_token_ids=prompt_token_ids,
+                arrival_time=arrival_time,
+            )
+
+            async for request_output in stream:
+                yield request_output
+        except (Exception, asyncio.CancelledError) as e:
+            # If there is an exception or coroutine is cancelled, abort the
+            # request.
+            self.llm_engine._abort(request_id)
+            raise e

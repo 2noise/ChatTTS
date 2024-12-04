@@ -22,7 +22,7 @@ from .sequence import (
 )
 from vllm.transformers_utils.tokenizer import detokenize_incrementally, get_tokenizer
 from vllm.utils import Counter, set_cuda_visible_devices, get_ip, get_open_port
-import numpy as np
+import torch
 
 if ray:
     from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
@@ -328,6 +328,7 @@ class LLMEngine:
         request_id: str,
         prompt: Optional[str],
         sampling_params: SamplingParams,
+        speaker_embedding_param: torch.Tensor,
         prompt_token_ids: Optional[List[int]] = None,
         arrival_time: Optional[float] = None,
     ) -> None:
@@ -342,6 +343,7 @@ class LLMEngine:
             prompt: The prompt string. Can be None if prompt_token_ids is
                 provided.
             sampling_params: The sampling parameters for text generation.
+            speaker_embedding_param: The speaker embedding parameter
             prompt_token_ids: The token IDs of the prompt. If None, we
                 use the tokenizer to convert the prompts to token IDs.
             arrival_time: The arrival time of the request. If None, we use
@@ -354,10 +356,14 @@ class LLMEngine:
         # Create the sequences.
         block_size = self.cache_config.block_size
         seq_id = next(self.seq_counter)
-        seq = Sequence(seq_id, prompt, prompt_token_ids, block_size)
+        seq = Sequence(
+            seq_id, prompt, prompt_token_ids, speaker_embedding_param, block_size
+        )
 
         # Create the sequence group.
-        seq_group = SequenceGroup(request_id, [seq], sampling_params, arrival_time)
+        seq_group = SequenceGroup(
+            request_id, [seq], sampling_params, speaker_embedding_param, arrival_time
+        )
 
         # Add the sequence group to the scheduler.
         self.scheduler.add_seq_group(seq_group)
