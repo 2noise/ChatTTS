@@ -91,12 +91,14 @@ class Chat:
                         repo_id="2Noise/ChatTTS",
                         allow_patterns=["*.yaml", "*.json", "*.safetensors"],
                         cache_dir=cache_dir,
-                        force_download=force_redownload
+                        force_download=force_redownload,
                     )
                 except:
                     download_path = None
             else:
-                hf_home = os.getenv("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
+                hf_home = os.getenv(
+                    "HF_HOME", os.path.expanduser("~/.cache/huggingface")
+                )
                 try:
                     download_path = get_latest_modified_file(
                         os.path.join(hf_home, "hub/models--2Noise--ChatTTS/snapshots")
@@ -117,7 +119,8 @@ class Chat:
                         download_path = None
                 else:
                     self.logger.log(
-                        logging.INFO, f"load latest snapshot from cache: {download_path}"
+                        logging.INFO,
+                        f"load latest snapshot from cache: {download_path}",
                     )
         elif source == "custom":
             self.logger.log(logging.INFO, f"try to load from local: {custom_path}")
@@ -146,7 +149,9 @@ class Chat:
         experimental: bool = False,
         cache_dir: Optional[str] = None,
     ) -> bool:
-        download_path = self.download_models(source, force_redownload, custom_path, cache_dir)
+        download_path = self.download_models(
+            source, force_redownload, custom_path, cache_dir
+        )
         if download_path is None:
             return False
         return self._load(
