@@ -61,14 +61,16 @@ class Chat:
 
         return not not_finish
 
+    # Modified
     def download_models(
         self,
         source: Literal["huggingface", "local", "custom"] = "local",
         force_redownload=False,
         custom_path: Optional[torch.serialization.FILE_LIKE] = None,
+        cache_dir: Optional[str] = None,
     ) -> Optional[str]:
         if source == "local":
-            download_path = os.getcwd()
+            download_path = cache_dir if cache_dir else os.getcwd()
             if (
                 not check_all_assets(Path(download_path), self.sha256_map, update=True)
                 or force_redownload
@@ -83,32 +85,40 @@ class Chat:
                     )
                     return None
         elif source == "huggingface":
-            hf_home = os.getenv("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
-            try:
-                download_path = get_latest_modified_file(
-                    os.path.join(hf_home, "hub/models--2Noise--ChatTTS/snapshots")
-                )
-            except:
-                download_path = None
-            if download_path is None or force_redownload:
-                self.logger.log(
-                    logging.INFO,
-                    f"download from HF: https://huggingface.co/2Noise/ChatTTS",
-                )
+            if cache_dir:
                 try:
                     download_path = snapshot_download(
                         repo_id="2Noise/ChatTTS",
                         allow_patterns=["*.yaml", "*.json", "*.safetensors"],
+                        cache_dir=cache_dir,
+                        force_download=force_redownload
                     )
                 except:
                     download_path = None
             else:
-                self.logger.log(
-                    logging.INFO, f"load latest snapshot from cache: {download_path}"
-                )
-            if download_path is None:
-                self.logger.error("download from huggingface failed.")
-                return None
+                hf_home = os.getenv("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
+                try:
+                    download_path = get_latest_modified_file(
+                        os.path.join(hf_home, "hub/models--2Noise--ChatTTS/snapshots")
+                    )
+                except:
+                    download_path = None
+                if download_path is None or force_redownload:
+                    self.logger.log(
+                        logging.INFO,
+                        f"download from HF: https://huggingface.co/2Noise/ChatTTS",
+                    )
+                    try:
+                        download_path = snapshot_download(
+                            repo_id="2Noise/ChatTTS",
+                            allow_patterns=["*.yaml", "*.json", "*.safetensors"],
+                        )
+                    except:
+                        download_path = None
+                else:
+                    self.logger.log(
+                        logging.INFO, f"load latest snapshot from cache: {download_path}"
+                    )
         elif source == "custom":
             self.logger.log(logging.INFO, f"try to load from local: {custom_path}")
             if not check_all_assets(Path(custom_path), self.sha256_map, update=False):
@@ -116,8 +126,13 @@ class Chat:
                 return None
             download_path = custom_path
 
+        if download_path is None:
+            self.logger.error("Model download failed")
+            return None
+
         return download_path
 
+    # Modified
     def load(
         self,
         source: Literal["huggingface", "local", "custom"] = "local",
@@ -129,8 +144,9 @@ class Chat:
         use_flash_attn=False,
         use_vllm=False,
         experimental: bool = False,
+        cache_dir: Optional[str] = None,
     ) -> bool:
-        download_path = self.download_models(source, force_redownload, custom_path)
+        download_path = self.download_models(source, force_redownload, custom_path, cache_dir)
         if download_path is None:
             return False
         return self._load(
