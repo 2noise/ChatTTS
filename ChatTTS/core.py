@@ -61,7 +61,6 @@ class Chat:
 
         return not not_finish
 
-    # Modified
     def download_models(
         self,
         source: Literal["huggingface", "local", "custom"] = "local",
