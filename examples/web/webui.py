@@ -139,6 +139,14 @@ def main():
                 scale=1,
                 interactive=True,
             )
+            split_batch_slider = gr.Slider(
+                minimum=0,
+                maximum=100,
+                step=1,
+                value=4,
+                label="Split Batch",
+                interactive=True,
+            )
             generate_button = gr.Button(
                 "Generate", scale=2, variant="primary", interactive=True
             )
@@ -208,6 +216,7 @@ def main():
                     temperature_slider,
                     top_p_slider,
                     top_k_slider,
+                    split_batch_slider,
                 ],
                 outputs=text_output,
             ).then(
@@ -222,6 +231,7 @@ def main():
                     audio_seed_input,
                     sample_text_input,
                     sample_audio_code_input,
+                    split_batch_slider,
                 ],
                 outputs=audio_output,
             ).then(
