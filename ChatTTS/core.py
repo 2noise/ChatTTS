@@ -84,7 +84,23 @@ class Chat:
                     )
                     return None
         elif source == "huggingface":
-            if cache_dir:
+            if cache_dir is None:
+                hf_home = os.getenv(
+                    "HF_HOME", os.path.expanduser("~/.cache/huggingface")
+                )
+            else:
+                hf_home = cache_dir
+            try:
+                download_path = get_latest_modified_file(
+                    os.path.join(hf_home, "hub/models--2Noise--ChatTTS/snapshots")
+                )
+            except:
+                download_path = None
+            if download_path is None or force_redownload:
+                self.logger.log(
+                    logging.INFO,
+                    f"download from HF: https://huggingface.co/2Noise/ChatTTS",
+                )
                 try:
                     download_path = snapshot_download(
                         repo_id="2Noise/ChatTTS",
@@ -94,28 +110,6 @@ class Chat:
                     )
                 except:
                     download_path = None
-            else:
-                hf_home = os.getenv(
-                    "HF_HOME", os.path.expanduser("~/.cache/huggingface")
-                )
-                try:
-                    download_path = get_latest_modified_file(
-                        os.path.join(hf_home, "hub/models--2Noise--ChatTTS/snapshots")
-                    )
-                except:
-                    download_path = None
-                if download_path is None or force_redownload:
-                    self.logger.log(
-                        logging.INFO,
-                        f"download from HF: https://huggingface.co/2Noise/ChatTTS",
-                    )
-                    try:
-                        download_path = snapshot_download(
-                            repo_id="2Noise/ChatTTS",
-                            allow_patterns=["*.yaml", "*.json", "*.safetensors"],
-                        )
-                    except:
-                        download_path = None
                 else:
                     self.logger.log(
                         logging.INFO,
@@ -134,7 +128,6 @@ class Chat:
 
         return download_path
 
-    # Modified
     def load(
         self,
         source: Literal["huggingface", "local", "custom"] = "local",
