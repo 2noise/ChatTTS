@@ -144,9 +144,7 @@ class Chat:
         use_vllm=False,
         experimental: bool = False,
     ) -> bool:
-        download_path = self.download_models(
-            source, force_redownload, custom_path
-        )
+        download_path = self.download_models(source, force_redownload, custom_path)
         if download_path is None:
             return False
         return self._load(
