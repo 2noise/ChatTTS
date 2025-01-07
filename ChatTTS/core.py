@@ -84,15 +84,13 @@ class Chat:
                     )
                     return None
         elif source == "huggingface":
-            if cache_dir is None:
-                hf_home = os.getenv(
-                    "HF_HOME", os.path.expanduser("~/.cache/huggingface")
-                )
-            else:
-                hf_home = cache_dir
             try:
                 download_path = get_latest_modified_file(
-                    os.path.join(hf_home, "hub/models--2Noise--ChatTTS/snapshots")
+                    os.path.join(os.getenv(
+                        "HF_HOME", os.path.expanduser("~/.cache/huggingface")
+                    ), "hub/models--2Noise--ChatTTS/snapshots")
+                ) if cache_dir is None else get_latest_modified_file(
+                    os.path.join(cache_dir, "models--2Noise--ChatTTS/snapshots")
                 )
             except:
                 download_path = None
