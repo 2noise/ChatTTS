@@ -40,7 +40,7 @@ async def startup_event():
     chat = ChatTTS.Chat(get_logger("ChatTTS"))
     chat.normalizer.register("en", normalizer_en_nemo_text())
     chat.normalizer.register("zh", normalizer_zh_tn())
-    
+
     logger.info("Initializing ChatTTS...")
     if chat.load(source="huggingface"):
         logger.info("Models loaded successfully.")
