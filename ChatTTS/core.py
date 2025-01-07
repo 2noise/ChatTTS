@@ -225,7 +225,7 @@ class Chat:
             if "\n" in text:
                 text = text.split("\n")
             else:
-                text = re.split(r'(?<=[。(.\s)])', text)
+                text = re.split(r"(?<=[。(.\s)])", text)
                 nt = []
                 for t in text:
                     if t:
@@ -234,7 +234,8 @@ class Chat:
             self.logger.info("split text into %d parts", len(text))
             self.logger.debug("%s", str(text))
 
-        if len(text) == 0: return []
+        if len(text) == 0:
+            return []
 
         res_gen = self._infer(
             text,
@@ -256,7 +257,7 @@ class Chat:
             stripped_wavs = []
             for wavs in res_gen:
                 for wav in wavs:
-                    stripped_wavs.append(wav[np.abs(wav)>1e-5])
+                    stripped_wavs.append(wav[np.abs(wav) > 1e-5])
             if split_text:
                 return [np.concatenate(stripped_wavs)]
             return stripped_wavs
@@ -428,13 +429,15 @@ class Chat:
 
         if split_text and len(text) > 1 and params_infer_code.spk_smp is None:
             refer_text = text[0]
-            result = next(self._infer_code(
-                refer_text,
-                False,
-                self.device,
-                use_decoder,
-                params_infer_code,
-            ))
+            result = next(
+                self._infer_code(
+                    refer_text,
+                    False,
+                    self.device,
+                    use_decoder,
+                    params_infer_code,
+                )
+            )
             wavs = self._decode_to_wavs(
                 result.hiddens if use_decoder else result.ids,
                 use_decoder,
@@ -449,16 +452,21 @@ class Chat:
             pass_batch_count = 0
         if split_text:
             n = len(text) // max_split_batch
-            if len(text) % max_split_batch: n += 1
+            if len(text) % max_split_batch:
+                n += 1
         else:
             n = 1
             max_split_batch = len(text)
         for i in range(n):
-            text_remain = text[i*max_split_batch:]
+            text_remain = text[i * max_split_batch :]
             if len(text_remain) > max_split_batch:
                 text_remain = text_remain[:max_split_batch]
             if split_text:
-                self.logger.info("infer split %d~%d", i*max_split_batch, i*max_split_batch+len(text_remain))
+                self.logger.info(
+                    "infer split %d~%d",
+                    i * max_split_batch,
+                    i * max_split_batch + len(text_remain),
+                )
             for result in self._infer_code(
                 text_remain,
                 stream,
@@ -486,7 +494,7 @@ class Chat:
                     yield wavs
             if stream:
                 new_wavs = wavs[:, length:]
-                keep_cols = np.sum(np.abs(new_wavs)>1e-5, axis=0) > 0
+                keep_cols = np.sum(np.abs(new_wavs) > 1e-5, axis=0) > 0
                 yield new_wavs[:][:, keep_cols]
 
     @torch.inference_mode()
