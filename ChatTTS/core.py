@@ -74,7 +74,7 @@ class Chat:
                 or force_redownload
             ):
                 with tempfile.TemporaryDirectory() as tmp:
-                    download_all_assets(tmpdir=tmp)
+                    download_all_assets(tmpdir=tmp, homedir=download_path)
                 if not check_all_assets(
                     Path(download_path), self.sha256_map, update=False
                 ):
