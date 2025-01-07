@@ -66,10 +66,9 @@ class Chat:
         source: Literal["huggingface", "local", "custom"] = "local",
         force_redownload=False,
         custom_path: Optional[torch.serialization.FILE_LIKE] = None,
-        cache_dir: Optional[str] = None,
     ) -> Optional[str]:
         if source == "local":
-            download_path = cache_dir if cache_dir else os.getcwd()
+            download_path = custom_path if custom_path is not None else os.getcwd()
             if (
                 not check_all_assets(Path(download_path), self.sha256_map, update=True)
                 or force_redownload
@@ -94,9 +93,9 @@ class Chat:
                             "hub/models--2Noise--ChatTTS/snapshots",
                         )
                     )
-                    if cache_dir is None
+                    if custom_path is None
                     else get_latest_modified_file(
-                        os.path.join(cache_dir, "models--2Noise--ChatTTS/snapshots")
+                        os.path.join(custom_path, "models--2Noise--ChatTTS/snapshots")
                     )
                 )
             except:
@@ -110,7 +109,7 @@ class Chat:
                     download_path = snapshot_download(
                         repo_id="2Noise/ChatTTS",
                         allow_patterns=["*.yaml", "*.json", "*.safetensors"],
-                        cache_dir=cache_dir,
+                        cache_dir=custom_path,
                         force_download=force_redownload,
                     )
                 except:
@@ -144,10 +143,9 @@ class Chat:
         use_flash_attn=False,
         use_vllm=False,
         experimental: bool = False,
-        cache_dir: Optional[str] = None,
     ) -> bool:
         download_path = self.download_models(
-            source, force_redownload, custom_path, cache_dir
+            source, force_redownload, custom_path
         )
         if download_path is None:
             return False
