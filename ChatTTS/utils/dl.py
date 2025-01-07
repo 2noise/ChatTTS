@@ -215,7 +215,8 @@ def download_all_assets(tmpdir: str, homedir: str, version="0.2.10"):
                 "0",
                 "-dns",
                 os.path.join(tmpdir, "dns.yaml"),
-                "-H", homedir,
+                "-H",
+                homedir,
                 "assets/chtts",
             ]
         )
