@@ -38,6 +38,7 @@ refined_text = chat.infer(
         prompt="[oral_2][laugh_0][break_6]",
         manual_seed=12345,
     ),
+    split_text=False,
 )
 if (
     refined_text[0]

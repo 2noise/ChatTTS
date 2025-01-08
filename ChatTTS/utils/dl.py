@@ -151,7 +151,7 @@ def download_dns_yaml(url: str, folder: str, headers: Dict[str, str]):
         logger.get_logger().info(f"downloaded into {folder}")
 
 
-def download_all_assets(tmpdir: str, version="0.2.9"):
+def download_all_assets(tmpdir: str, homedir: str, version="0.2.10"):
     import subprocess
     import platform
 
@@ -186,7 +186,7 @@ def download_all_assets(tmpdir: str, version="0.2.9"):
         else:
             download_and_extract_tar_gz(RVCMD_URL, tmpdir)
             os.chmod(cmdfile, 0o755)
-        subprocess.run([cmdfile, "-notui", "-w", "0", "assets/chtts"])
+        subprocess.run([cmdfile, "-notui", "-w", "0", "-H", homedir, "assets/chtts"])
     except Exception:
         BASE_URL = (
             "https://gitea.seku.su/fumiama/RVC-Models-Downloader/releases/download/"
@@ -215,6 +215,8 @@ def download_all_assets(tmpdir: str, version="0.2.9"):
                 "0",
                 "-dns",
                 os.path.join(tmpdir, "dns.yaml"),
+                "-H",
+                homedir,
                 "assets/chtts",
             ]
         )

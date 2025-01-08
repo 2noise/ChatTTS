@@ -133,6 +133,7 @@ def refine_text(
     temperature,
     top_P,
     top_K,
+    split_batch,
 ):
     global chat
 
@@ -150,6 +151,7 @@ def refine_text(
             top_K=top_K,
             manual_seed=text_seed_input,
         ),
+        split_text=split_batch > 0,
     )
 
     return text[0] if isinstance(text, list) else text
@@ -165,6 +167,7 @@ def generate_audio(
     audio_seed_input,
     sample_text_input,
     sample_audio_code_input,
+    split_batch,
 ):
     global chat, has_interrupted
 
@@ -189,6 +192,8 @@ def generate_audio(
         skip_refine_text=True,
         params_infer_code=params_infer_code,
         stream=stream,
+        split_text=split_batch > 0,
+        max_split_batch=split_batch,
     )
     if stream:
         for gen in wav:
