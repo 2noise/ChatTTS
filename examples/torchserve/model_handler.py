@@ -43,7 +43,7 @@ class ChatTTSHandler(BaseHandler):
         self.chat = ChatTTS.Chat(logging.getLogger("ChatTTS"))
         self.chat.normalizer.register("en", normalizer_en_nemo_text())
         self.chat.normalizer.register("zh", normalizer_zh_tn())
-        
+
         model_dir = ctx.system_properties.get("model_dir")
         os.chdir(model_dir)
         if self.chat.load(source="custom", custom_path=model_dir):
@@ -68,29 +68,38 @@ class ChatTTSHandler(BaseHandler):
             text = params.pop("text")
 
             key = json.dumps(params)
-            
+
             if key not in batched_requests:
                 params_refine_text = params.get("params_refine_text")
                 params_infer_code = params.get("params_infer_code")
 
-                if params_infer_code and params_infer_code.get("manual_seed") is not None:
+                if (
+                    params_infer_code
+                    and params_infer_code.get("manual_seed") is not None
+                ):
                     torch.manual_seed(params_infer_code.get("manual_seed"))
                     params_infer_code["spk_emb"] = self.chat.sample_random_speaker()
 
                 batched_requests[key] = {
                     "text": [text],
-                    "stream":  params.get("stream", False),
+                    "stream": params.get("stream", False),
                     "lang": params.get("lang"),
                     "skip_refine_text": params.get("skip_refine_text", False),
-                    "use_decoder":  params.get("use_decoder", True),
+                    "use_decoder": params.get("use_decoder", True),
                     "do_text_normalization": params.get("do_text_normalization", True),
-                    "do_homophone_replacement": params.get("do_homophone_replacement", False),
-                    "params_refine_text": ChatTTS.Chat.InferCodeParams(
-                        **params_refine_text
-                    ) if params_refine_text else None,
-                    "params_infer_code": ChatTTS.Chat.InferCodeParams(
-                        **params_infer_code
-                    ) if params_infer_code else None,
+                    "do_homophone_replacement": params.get(
+                        "do_homophone_replacement", False
+                    ),
+                    "params_refine_text": (
+                        ChatTTS.Chat.InferCodeParams(**params_refine_text)
+                        if params_refine_text
+                        else None
+                    ),
+                    "params_infer_code": (
+                        ChatTTS.Chat.InferCodeParams(**params_infer_code)
+                        if params_infer_code
+                        else None
+                    ),
                 }
             else:
                 batched_requests[key]["text"].append(text)
