@@ -8,10 +8,10 @@ TorchServe is designed to deliver high performance for serving PyTorch models, a
 
 2. Horizontal Scaling: TorchServe allows for horizontal scaling, meaning it can easily scale across multiple machines or containers to handle increasing traffic. This ensures that the system remains responsive and can handle large volumes of inference requests without sacrificing performance.
 
-## Navigate to the examples/torchserve directory
+## Install requirements
 
 ``` bash
-cd examples/torchserve
+pip install -r requirements.txt
 ```
 
 ## Download the model if needed
@@ -49,7 +49,9 @@ The configuration properties that we are interested in are the following:
 ## Start TorchServe locally
 
 ``` bash
-torchserve --start --model-store model_store --models chattts=chattts.mar
+pip install ChatTTS nvgpu soundfile nemo_text_processing WeTextProcessing
+
+torchserve --start --model-store model_store --models chattts=chattts.mar  --ts-config config.properties
 ```
 
 ## Optional: Start TorchServe with docker

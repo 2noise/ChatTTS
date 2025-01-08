@@ -1,0 +1,3 @@
+huggingface_hub[cli]
+torchserve
+torch-model-archiver
