@@ -46,7 +46,7 @@ class ChatTTSHandler(BaseHandler):
 
         model_dir = ctx.system_properties.get("model_dir")
         os.chdir(model_dir)
-        if self.chat.load(source="custom", custom_path=model_dir, compile=True):
+        if self.chat.load(source="custom", custom_path=model_dir):
             logger.info("Models loaded successfully.")
         else:
             logger.error("Models load failed.")
