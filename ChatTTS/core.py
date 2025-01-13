@@ -225,12 +225,15 @@ class Chat:
             if "\n" in text:
                 text = text.split("\n")
             else:
-                text = re.split(r"(?<=[。(.\s)])", text)
+                text = re.split(r"(?<=。)|(?<=\.\s)", text)
                 nt = []
-                for t in text:
-                    if t:
-                        nt.append(t)
-                text = nt
+                if isinstance(text, list):
+                    for t in text:
+                        if t:
+                            nt.append(t)
+                    text = nt
+                else:
+                    text = [text]
             self.logger.info("split text into %d parts", len(text))
             self.logger.debug("%s", str(text))
 
