@@ -4,6 +4,10 @@ from time import sleep
 
 import gradio as gr
 
+import sys
+
+sys.path.append("..")
+sys.path.append("../..")
 from tools.audio import float_to_int16, has_ffmpeg_installed, load_audio
 from tools.logger import get_logger
 
