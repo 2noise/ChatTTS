@@ -102,7 +102,7 @@ def main():
                 minimum=seed_min,
                 maximum=seed_max,
             )
-            generate_audio_seed = gr.Button("\U0001F3B2", interactive=True)
+            generate_audio_seed = gr.Button("\U0001f3b2", interactive=True)
             text_seed_input = gr.Number(
                 value=ex[0][5],
                 label="Text Seed",
@@ -110,7 +110,7 @@ def main():
                 minimum=seed_min,
                 maximum=seed_max,
             )
-            generate_text_seed = gr.Button("\U0001F3B2", interactive=True)
+            generate_text_seed = gr.Button("\U0001f3b2", interactive=True)
 
         with gr.Row():
             spk_emb_text = gr.Textbox(
