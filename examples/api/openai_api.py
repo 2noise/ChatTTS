@@ -7,13 +7,10 @@ openai_api.py
 - 支持多语音选择和多种音频格式
 - 增加输入验证和性能监控
 - 支持更多 OpenAI TTS 参数（如 speed）
-运行方式：
-uvicorn openai_api:app --host 0.0.0.0 --port 8000
 """
 import io
 import os
 import sys
-import threading
 import asyncio
 from typing import Optional, Dict
 from fastapi import FastAPI, HTTPException
@@ -34,7 +31,6 @@ from tools.audio import pcm_arr_to_mp3_view, pcm_arr_to_ogg_view, pcm_arr_to_wav
 from tools.logger import get_logger
 from tools.normalizer.en import normalizer_en_nemo_text
 from tools.normalizer.zh import normalizer_zh_tn
-import uvicorn
 
 # 初始化日志记录器
 logger = get_logger("Command")
@@ -236,6 +232,3 @@ async def generate_voice(request_data: Dict):
 async def health_check():
     """健康检查端点"""
     return {"status": "healthy", "model_loaded": bool(app.state.chat)}
-
-#if __name__ == "__main__":
-#    uvicorn.run(app, host="0.0.0.0", port=8000)
