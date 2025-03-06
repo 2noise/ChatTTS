@@ -1,8 +1,39 @@
+"""
+openai_api.py
+
+这个模块实现了一个基于 FastAPI 的语音合成 API，兼容 OpenAI 的接口规范。
+
+主要功能：
+- 初始化 FastAPI 应用
+- 加载 ChatTTS 语音合成模型和预训练的说话者嵌入
+- 定义请求数据模型，并提供参数验证
+- 实现语音合成接口，支持流式传输
+
+类和函数：
+- startup_event: 在应用启动时加载模型和说话者嵌入
+- OpenAITTSRequest: 定义请求数据模型，并提供参数验证方法
+- generate_voice: 处理语音合成请求，生成并返回音频数据
+
+使用方法：
+1. 启动 FastAPI 应用：`uvicorn openai_api:app --host 0.0.0.0 --port 8000`
+2. 发送 POST 请求到 `/v1/audio/speech`，请求体包含文本输入及其他可选参数
+3. 接收并处理生成的音频数据
+
+注意事项：
+- 确保在运行前安装所有依赖库，如 fastapi、pydantic、torch 等
+- 根据需要调整模型加载路径和说话者嵌入文件路径
+"""
+
 import io
 import os
 import sys
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+
+# 获取当前工作目录并添加到 Python 路径
+now_dir = os.getcwd()
+sys.path.append(now_dir)
+
 from pydantic import BaseModel, Field
 from typing import Optional, Dict
 import torch
@@ -13,90 +44,133 @@ from tools.normalizer.en import normalizer_en_nemo_text
 from tools.normalizer.zh import normalizer_zh_tn
 import uvicorn
 
-now_dir = os.getcwd()
-sys.path.append(now_dir)
 
-# 初始化 FastAPI
+
+# 初始化日志记录器
 logger = get_logger("Command")
+
+# 初始化 FastAPI 应用
 app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
+    """应用启动时执行，加载 ChatTTS 模型及说话者嵌入"""
     global chat, spk_emb
+    
     chat = ChatTTS.Chat(get_logger("ChatTTS"))
+    # 注册文本正则化模块
     chat.normalizer.register("en", normalizer_en_nemo_text())
     chat.normalizer.register("zh", normalizer_zh_tn())
-    logger.info("Initializing ChatTTS...")
+    
+    logger.info("正在初始化 ChatTTS...")
     if chat.load(source="huggingface"):
-        logger.info("Models loaded successfully.")
+        logger.info("模型加载成功。")
     else:
-        logger.error("Models load failed.")
+        logger.error("模型加载失败。")
         sys.exit(1)
     
-    # 加载预训练的嵌入式模型
-    spk_emb_path = "2443.pt"
+    # 加载预训练的说话者嵌入文件
+    spk_emb_path = "1000.pt"
     if os.path.exists(spk_emb_path):
         spk_emb = torch.load(spk_emb_path, map_location=torch.device("cpu"))
-        logger.info(f"Loaded speaker embedding from {spk_emb_path}")
+        logger.info(f"成功加载说话者嵌入文件: {spk_emb_path}")
     else:
         spk_emb = None
-        logger.warning(f"Speaker embedding file {spk_emb_path} not found, using default.")
+        logger.warning(f"未找到说话者嵌入文件 {spk_emb_path}，将使用默认配置。")
 
-# 允许的参数列表
+# 允许的请求参数
 ALLOWED_PARAMS = {"model", "input", "voice", "response_format", "stream", "output_format"}
 
 class OpenAITTSRequest(BaseModel):
-    model: str = "tts-1"
-    input: str = Field(..., description="Text input for speech synthesis")
+    """定义 OpenAI TTS 请求数据模型，并提供参数验证。
+    其实也就input 和 stream 有用。 其他的参数都忽略了。
+    输出的音频格式使用的mp3, 没有对其他格式的音频输出做设置。
+    输出的声音特征在generate_voice函数中调整。"""
+    
+    model: str = Field(..., description="语音合成模型，将所有输入统一转换为 'tts-1'")
+    input: str = Field(..., description="待合成的文本内容")
     voice: Optional[str] = "default"
     response_format: Optional[str] = "mp3"
     stream: Optional[bool] = False
-    output_format: Optional[str] = "mp3"  # 可选：mp3, wav, ogg
-    extra_params: Dict[str, Optional[str]] = Field(default_factory=dict, description="Unsupported parameters")
+    output_format: Optional[str] = "mp3"  # 可选格式：mp3, wav, ogg
+    extra_params: Dict[str, Optional[str]] = Field(default_factory=dict, description="不支持的额外参数")
 
     @classmethod
     def validate_request(cls, request_data: Dict):
+        """过滤不支持的请求参数，并统一 model 值为 'tts-1'"""
+        request_data["model"] = "tts-1"  # 统一 model 值
         unsupported_params = set(request_data.keys()) - ALLOWED_PARAMS
         if unsupported_params:
-            logger.warning(f"Ignoring unsupported parameters: {unsupported_params}")
+            logger.warning(f"忽略不支持的参数: {unsupported_params}")
         return {key: request_data[key] for key in ALLOWED_PARAMS if key in request_data}
 
 @app.post("/v1/audio/speech")
 async def generate_voice(request_data: Dict):
-    """ OpenAI 兼容的语音生成接口，自动过滤不支持的参数 """
+    """ 处理语音合成请求，并返回音频数据 """
     request_data = OpenAITTSRequest.validate_request(request_data)
     request = OpenAITTSRequest(**request_data)
     
-    logger.info(f"Received text input: {request.input}")
+    logger.info(f"收到文本输入: {request.input}")
     
-    # 仅支持 spk_emb 参数
+    # main infer params
+    params_infer_main = {
+        "text": [request.input],
+        "stream": request.stream,
+        "lang": None,
+        "skip_refine_text": True,
+        "refine_text_only": False,
+        "use_decoder": True,
+        "audio_seed": 12345678,
+        "text_seed": 87654321,
+        "do_text_normalization": True,
+        "do_homophone_replacement": False,
+    }
+    
+    # refine text params
+    params_refine_text = ChatTTS.Chat.RefineTextParams(
+        prompt = "",
+        top_P = 0.7,
+        top_K = 20,
+        temperature = 0.7,
+        repetition_penalty = 1.0,
+        max_new_token = 384,
+        min_new_token = 0,
+        show_tqdm = True,
+        ensure_non_empty = True,
+        manual_seed = None,        
+    )
+    
+    # infer code params
     params_infer_code = ChatTTS.Chat.InferCodeParams(
-        prompt = "[speed_5]",    # 输入的提示文本，用于引导模型生成内容。这里默认值是 "[speed_5]"，控制速度
-        top_P = 0.5,             # Top-p 采样（也叫核采样，nucleus sampling）的概率阈值。模型会从累积概率达到 top_P 的最小词集合中采样。
-        top_K = 10,              # Top-k 采样，模型从概率最高的前 top_K 个词中选择。
-        temperature = 0.1,       # 温度参数，控制生成随机性。值越低，模型越倾向于选择高概率的词；值越高，随机性越强。
-        repetition_penalty = 1.1, # 重复惩罚参数，用于减少生成内容中词语或短语的重复。值大于 1 表示施加惩罚。
-        max_new_token = 2048,    # 生成的最大新 token 数量（可能是单词、子词等）。
-        min_new_token = 0,       # 生成的最小新 token 数量。
-        show_tqdm = True,        # 是否显示进度条（基于 Python 的 tqdm 库）。
-        ensure_non_empty = True, # 确保生成结果非空。
-        manual_seed = 42,        # 随机种子，用于控制生成的可重复性。
-        spk_emb = spk_emb,       # “speaker embedding”（说话者嵌入）的路径或标识，用于指定语音生成的说话者特征。
-        spk_smp = None,          # “speaker sample”（说话者样本）的路径，用于提供说话者参考音频。
-        txt_smp = None,          # “text sample”（文本样本）的路径，用于提供参考文本。
-        stream_batch = 24,       # 流式生成时的批次大小。
-        stream_speed = 12000,    # 流式生成的处理速度（可能是每秒处理的样本数或 token 数）。
-        pass_first_n_batches = 2 # 跳过前 N 个批次（可能是为了预热或避免初始不稳定输出）。
-        )
+        prompt="[speed_5]", 
+        top_P=0.5,
+        top_K=10,
+        temperature=0.1,
+        repetition_penalty=1.1,
+        max_new_token=2048,
+        min_new_token=0,
+        show_tqdm=True,
+        ensure_non_empty=True,
+        manual_seed=42,
+        spk_emb=spk_emb,
+        spk_smp=None,
+        txt_smp=None,
+        stream_batch=24,
+        stream_speed=12000,
+        pass_first_n_batches=2
+    )
     
     # 进行语音合成
     wavs = chat.infer(
-        text=[request.input],
-        stream=request.stream,
-        lang="zh" if request.voice == "zh" else "en",
-        use_decoder=True,
-        do_text_normalization=True,
-        params_infer_code=params_infer_code,
+        text = params_infer_main['text'],
+        stream = params_infer_main["stream"],
+        lang = None,  # 只支持中英文，模型自己就识别了，不用设置。
+        skip_refine_text = params_infer_main['skip_refine_text'],
+        use_decoder = params_infer_main['use_decoder'],
+        do_text_normalization = params_infer_main['do_text_normalization'],
+        do_homophone_replacement = params_infer_main['do_homophone_replacement'],
+        params_refine_text = params_refine_text,
+        params_infer_code = params_infer_code,   
     )
     
     if request.stream:
@@ -106,10 +180,11 @@ async def generate_voice(request_data: Dict):
         return StreamingResponse(audio_stream(), media_type="audio/mpeg")
     
     # 直接返回 MP3 文件
-    mp3_data = pcm_arr_to_mp3_view(wavs[0])  # 仅返回第一段音频
+    mp3_data = pcm_arr_to_mp3_view(wavs[0])
     return StreamingResponse(io.BytesIO(mp3_data), media_type="audio/mpeg", headers={
         "Content-Disposition": "attachment; filename=output.mp3"
     })
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+#if __name__ == "__main__":
+    # 运行 FastAPI 应用
+    #uvicorn.run(app, host="0.0.0.0", port=8000)
