@@ -26,6 +26,7 @@ import io
 import os
 import sys
 import asyncio
+import time 
 from typing import Optional, Dict
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -92,13 +93,15 @@ async def startup_event():
         raise RuntimeError("Failed to load ChatTTS model")
     
     # 加载默认说话者嵌入 / Load default speaker embedding
-    default_spk_path = VOICE_MAP["default"]
-    if os.path.exists(default_spk_path):
-        app.state.spk_emb = torch.load(default_spk_path, map_location=torch.device("cpu"))
-        logger.info(f"成功加载默认说话者嵌入文件: {default_spk_path} / Successfully loaded default speaker embedding: {default_spk_path}")
-    else:
-        app.state.spk_emb = None
-        logger.warning(f"未找到默认说话者嵌入文件 {default_spk_path}，使用默认配置。 / Default speaker embedding {default_spk_path} not found, using default configuration.")
+    # 在启动时预加载所有支持的说话者嵌入到内存中，避免运行时重复加载
+    app.state.spk_emb_map = {}
+    for voice, spk_path in VOICE_MAP.items():
+        if os.path.exists(spk_path):
+            app.state.spk_emb_map[voice] = torch.load(spk_path, map_location=torch.device("cpu"))
+            logger.info(f"预加载说话者嵌入: {voice} -> {spk_path}")
+        else:
+            logger.warning(f"未找到 {spk_path}，跳过预加载")
+    app.state.spk_emb = app.state.spk_emb_map.get("default")  # 默认嵌入
 
 # 请求参数白名单 / Request parameter whitelist
 ALLOWED_PARAMS = {"model", "input", "voice", "response_format", "speed", "stream", "output_format"}
@@ -110,7 +113,7 @@ class OpenAITTSRequest(BaseModel):
     voice: Optional[str] = Field("default", description="语音选择，支持: default, alloy, echo / Voice selection, supports: default, alloy, echo")
     response_format: Optional[str] = Field("mp3", description="音频格式: mp3, wav, ogg / Audio format: mp3, wav, ogg")
     speed: Optional[float] = Field(1.0, ge=0.5, le=2.0, description="语速，范围 0.5-2.0 / Speed, range 0.5-2.0")
-    stream: Optional[bool] = Field(True, description="是否流式传输 / Whether to stream")
+    stream: Optional[bool] = Field(False, description="是否流式传输 / Whether to stream")
     output_format: Optional[str] = "mp3"  # 可选格式：mp3, wav, ogg / Optional formats: mp3, wav, ogg
     extra_params: Dict[str, Optional[str]] = Field(default_factory=dict, description="不支持的额外参数 / Unsupported extra parameters")
 
@@ -142,15 +145,13 @@ async def generate_voice(request_data: Dict):
     
     logger.info(f"收到请求: text={request.input[:50]}..., voice={request.voice}, stream={request.stream} / Received request: text={request.input[:50]}..., voice={request.voice}, stream={request.stream}")
     
-    # 加载指定语音的说话者嵌入 / Load speaker embedding for the specified voice
-    spk_path = VOICE_MAP.get(request.voice)
-    if spk_path and os.path.exists(spk_path):
-        spk_emb = torch.load(spk_path, map_location=torch.device("cpu"))
-        logger.info(f"说话人嵌入模型 {spk_path} 加载成功 / Speaker embedding model {spk_path} loaded successfully")
-    else:
-        spk_emb = app.state.spk_emb
-        logger.warning(f"未找到语音 {request.voice} 的嵌入文件，使用默认配置 / Embedding file for voice {request.voice} not found, using default configuration")
+    # 验证音频格式
+    if request.response_format not in ALLOWED_FORMATS:
+        raise HTTPException(400, detail=f"不支持的音频格式: {request.response_format}，支持: {', '.join(ALLOWED_FORMATS)}")
 
+    # 加载指定语音的说话者嵌入 / Load speaker embedding for the specified voice
+    spk_emb = app.state.spk_emb_map.get(request.voice, app.state.spk_emb)
+    
     # 推理参数 / Inference parameters
     params_infer_main = {
         "text": [request.input],
@@ -180,6 +181,7 @@ async def generate_voice(request_data: Dict):
     )    
     # 推理代码参数 / Inference code parameters
     params_infer_code = app.state.chat.InferCodeParams(
+        #prompt=f"[speed_{int(request.speed * 10)}]",  # 转换为 ChatTTS 支持的格式
         prompt="[speed_5]", 
         top_P=0.5,
         top_K=10,
@@ -200,6 +202,7 @@ async def generate_voice(request_data: Dict):
 
     try:
         async with app.state.model_lock:
+            start_time = time.time()
             # 第一步：单独精炼文本 / Step 1: Refine text separately
             refined_text = app.state.chat.infer(
                 text=params_infer_main["text"],
@@ -207,7 +210,8 @@ async def generate_voice(request_data: Dict):
                 refine_text_only=True  # 只精炼文本，不生成语音 / Only refine text, do not generate speech
             )
             logger.info(f"Refined text: {refined_text}")
-            
+            logger.info(f"Refined text time: {time.time() - start_time:.2f} 秒")
+
             # 第二步：用精炼后的文本生成语音 / Step 2: Generate speech with refined text
             wavs = app.state.chat.infer(
                 text=params_infer_main["text"],
@@ -223,26 +227,55 @@ async def generate_voice(request_data: Dict):
     except Exception as e:
         raise HTTPException(500, detail=f"语音合成失败 / Speech synthesis failed: {str(e)}")
 
+    def generate_wav_header(sample_rate=24000, bits_per_sample=16, channels=1):
+        """生成 WAV 文件头部（不指定数据长度） / Generate WAV file header (without data length)"""
+        header = bytearray()
+        header.extend(b"RIFF")
+        header.extend(b"\xFF\xFF\xFF\xFF")  # 文件大小未知 / File size unknown
+        header.extend(b"WAVEfmt ")
+        header.extend((16).to_bytes(4, "little"))  # fmt chunk size
+        header.extend((1).to_bytes(2, "little"))  # PCM format
+        header.extend((channels).to_bytes(2, "little"))  # Channels
+        header.extend((sample_rate).to_bytes(4, "little"))  # Sample rate
+        byte_rate = sample_rate * channels * bits_per_sample // 8
+        header.extend((byte_rate).to_bytes(4, "little"))  # Byte rate
+        block_align = channels * bits_per_sample // 8
+        header.extend((block_align).to_bytes(2, "little"))  # Block align
+        header.extend((bits_per_sample).to_bytes(2, "little"))  # Bits per sample
+        header.extend(b"data")
+        header.extend(b"\xFF\xFF\xFF\xFF")  # 数据长度未知 / Data size unknown
+        return bytes(header)
+
     # 处理音频输出格式 / Handle audio output format
     def convert_audio(wav, format):
-        """将 PCM 数据转换为指定音频格式 / Convert PCM data to specified audio format"""
+        """转换音频格式 / Convert audio format"""
         if format == "mp3":
             return pcm_arr_to_mp3_view(wav)
         elif format == "wav":
-            return pcm_arr_to_wav_view(wav)  
+            return pcm_arr_to_wav_view(wav, include_header=False)  # 流式时不含头部 / No header in streaming
         elif format == "ogg":
-            return pcm_arr_to_ogg_view(wav) 
-        return pcm_arr_to_mp3_view(wav)  # 默认 / Default
-
-    if request.stream:
-        async def audio_stream():
-            """生成音频流 / Generate audio stream"""
-            for wav in wavs:
-                yield convert_audio(wav, request.response_format)
-        return StreamingResponse(audio_stream(), media_type="audio/mpeg")
+            return pcm_arr_to_ogg_view(wav)
+        return pcm_arr_to_mp3_view(wav) 
     
+    # 返回流式输出音频数据
+    if request.stream:
+        first_chunk = True
+        async def audio_stream():
+            nonlocal first_chunk
+            for wav in wavs:
+                if request.response_format == "wav" and first_chunk:
+                    yield generate_wav_header()  # 发送 WAV 头部 / Send WAV header
+                    first_chunk = False
+                yield convert_audio(wav, request.response_format)
+        media_type = "audio/wav" if request.response_format == "wav" else "audio/mpeg"
+        return StreamingResponse(audio_stream(), media_type=media_type)
+        
     # 直接返回音频文件 / Return audio file directly
-    music_data = convert_audio(wavs[0], request.response_format)
+    if request.response_format == 'wav':
+        music_data = pcm_arr_to_wav_view(wavs[0])
+    else:
+        music_data = convert_audio(wavs[0], request.response_format)
+        
     return StreamingResponse(io.BytesIO(music_data), media_type="audio/mpeg", headers={
         "Content-Disposition": f"attachment; filename=output.{request.response_format}"
     })

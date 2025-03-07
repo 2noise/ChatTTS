@@ -78,18 +78,25 @@ def pcm_arr_to_ogg_view(wav: np.ndarray, sample_rate: int = 24000) -> memoryview
     # 返回 OGG 数据 / Return OGG data
     return buf2.getbuffer()
 
-def pcm_arr_to_wav_view(wav: np.ndarray, sample_rate: int = 24000) -> memoryview:
+def pcm_arr_to_wav_view(wav: np.ndarray, sample_rate: int = 24000, include_header: bool = True) -> memoryview:
     """
-    将 PCM 音频数据转换为 WAV 格式。
-    Convert PCM audio data to WAV format.
+    将 PCM 音频数据转换为 WAV 格式，可选择是否包含头部。
+    Convert PCM audio data to WAV format, with an option to include header.
 
     :param wav: PCM 数据，NumPy 数组，通常为浮点型 (float32)。
                 PCM data, NumPy array, typically in float32 format.
     :param sample_rate: 采样率（单位：Hz），默认值为 24000。
                         Sample rate (in Hz), defaults to 24000.
-    :return: WAV 格式的字节数据，以 memoryview 形式返回。
-             WAV format byte data, returned as a memoryview.
+    :param include_header: 是否包含 WAV 文件头，默认为 True。
+                           Whether to include WAV header, defaults to True.
+    :return: WAV 格式或原始 PCM 的字节数据，以 memoryview 形式返回。
+             WAV format or raw PCM byte data, returned as a memoryview.
     """
-    # 获取 WAV 格式的字节流并直接返回 / Get WAV format byte stream and return directly
-    buf = _pcm_to_wav_buffer(wav, sample_rate)
-    return buf.getbuffer()
+    if include_header:
+        # 获取完整的 WAV 字节流 / Get complete WAV byte stream
+        buf = _pcm_to_wav_buffer(wav, sample_rate)
+        return buf.getbuffer()
+    else:
+        # 仅返回转换后的 16-bit PCM 数据 / Return only converted 16-bit PCM data
+        pcm_data = float_to_int16(wav)
+        return memoryview(pcm_data.tobytes())
