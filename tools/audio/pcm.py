@@ -4,6 +4,7 @@ import numpy as np
 from .np import float_to_int16
 from .av import wav2
 
+
 def _pcm_to_wav_buffer(wav: np.ndarray, sample_rate: int = 24000) -> BytesIO:
     """
     Convert PCM audio data to a WAV format byte stream (internal utility function).
@@ -14,7 +15,7 @@ def _pcm_to_wav_buffer(wav: np.ndarray, sample_rate: int = 24000) -> BytesIO:
     """
     # Create an in-memory byte stream buffer
     buf = BytesIO()
-    
+
     # Open a WAV file stream in write mode
     with wave.open(buf, "wb") as wf:
         # Set number of channels to 1 (mono)
@@ -25,10 +26,11 @@ def _pcm_to_wav_buffer(wav: np.ndarray, sample_rate: int = 24000) -> BytesIO:
         wf.setframerate(sample_rate)
         # Convert PCM to 16-bit integer and write
         wf.writeframes(float_to_int16(wav))
-    
+
     # Reset buffer pointer to the beginning
     buf.seek(0, 0)
     return buf
+
 
 def pcm_arr_to_mp3_view(wav: np.ndarray, sample_rate: int = 24000) -> memoryview:
     """
@@ -40,13 +42,14 @@ def pcm_arr_to_mp3_view(wav: np.ndarray, sample_rate: int = 24000) -> memoryview
     """
     # Get WAV format byte stream
     buf = _pcm_to_wav_buffer(wav, sample_rate)
-    
+
     # Create output buffer
     buf2 = BytesIO()
     # Convert WAV data to MP3
     wav2(buf, buf2, "mp3")
     # Return MP3 data
     return buf2.getbuffer()
+
 
 def pcm_arr_to_ogg_view(wav: np.ndarray, sample_rate: int = 24000) -> memoryview:
     """
@@ -58,7 +61,7 @@ def pcm_arr_to_ogg_view(wav: np.ndarray, sample_rate: int = 24000) -> memoryview
     """
     # Get WAV format byte stream
     buf = _pcm_to_wav_buffer(wav, sample_rate)
-    
+
     # Create output buffer
     buf2 = BytesIO()
     # Convert WAV data to OGG
@@ -66,7 +69,10 @@ def pcm_arr_to_ogg_view(wav: np.ndarray, sample_rate: int = 24000) -> memoryview
     # Return OGG data
     return buf2.getbuffer()
 
-def pcm_arr_to_wav_view(wav: np.ndarray, sample_rate: int = 24000, include_header: bool = True) -> memoryview:
+
+def pcm_arr_to_wav_view(
+    wav: np.ndarray, sample_rate: int = 24000, include_header: bool = True
+) -> memoryview:
     """
     Convert PCM audio data to WAV format, with an option to include header.
 
