@@ -1,8 +1,6 @@
 # ChatTTS-TF
 A TensorFlow implementation of ChatTTS, a generative speech model for daily dialogue.
 
-[![License](https://img.shields.io/github/license/loda616/ChatTTS-TF?style=for-the-badge)]([https://github.com/loda616/ChatTTS-TF/blob/main/LICENSE](https://github.com/loda616/ChatTTS/blob/TF-conversion/LICENSE))
-[![PyPI](https://img.shields.io/pypi/v/ChatTTS-TF.svg?style=for-the-badge&color=green)](https://pypi.org/project/ChatTTS-TF)
 
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://www.tensorflow.org/)
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/loda616/ChatTTS-TF/blob/main/examples/ipynb/colab.ipynb)
