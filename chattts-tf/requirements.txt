@@ -1,0 +1,7 @@
+tensorflow>=2.9.0
+tensorflow-hub>=0.12.0
+tensorflow-text>=2.9.0
+torch>=1.12.0
+onnx>=1.12.0
+numpy>=1.21.0
+tflite-runtime>=2.9.0 
