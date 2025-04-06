@@ -1,4 +1,4 @@
-                    GNU AFFERO GENERAL PUBLIC LICENSE
+GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 
  Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
@@ -336,7 +336,7 @@ Additional permissions that are applicable to the entire Program shall
 be treated as though they were included in this License, to the extent
 that they are valid under applicable law.  If additional permissions
 apply only to part of the Program, that part may be used separately
-under those permissions, but the entire Program remains governed by
+under those permissions, but the entire work remains governed by
 this License without regard to the additional permissions.
 
   When you convey a copy of a covered work, you may at your option
@@ -658,4 +658,4 @@ specific requirements.
   You should also get your employer (if you work as a programmer) or school,
 if any, to sign a "copyright disclaimer" for the program, if necessary.
 For more information on this, and how to apply and follow the GNU AGPL, see
-<https://www.gnu.org/licenses/>.
+<https://www.gnu.org/licenses/>. 
