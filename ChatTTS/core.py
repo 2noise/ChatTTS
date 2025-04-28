@@ -27,10 +27,11 @@ from .utils import logger as utils_logger
 
 from .norm import Normalizer
 
-if hasattr(torch.serialization, 'FILE_LIKE'):
+if hasattr(torch.serialization, "FILE_LIKE"):
     FileLike = torch.serialization.FILE_LIKE
 else:
     FileLike = Union[str, os.PathLike, IO[bytes]]
+
 
 class Chat:
     def __init__(self, logger=logging.getLogger(__name__)):

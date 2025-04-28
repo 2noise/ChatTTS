@@ -13,10 +13,11 @@ from transformers import BertTokenizerFast
 
 from ..utils import del_all
 
-if hasattr(torch.serialization, 'FILE_LIKE'):
+if hasattr(torch.serialization, "FILE_LIKE"):
     FileLike = torch.serialization.FILE_LIKE
 else:
     FileLike = Union[str, os.PathLike, IO[bytes]]
+
 
 class Tokenizer:
     def __init__(
