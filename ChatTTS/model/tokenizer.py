@@ -1,3 +1,4 @@
+from typing import Union, IO
 import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -12,11 +13,15 @@ from transformers import BertTokenizerFast
 
 from ..utils import del_all
 
+if hasattr(torch.serialization, 'FILE_LIKE'):
+    FileLike = torch.serialization.FILE_LIKE
+else:
+    FileLike = Union[str, os.PathLike, IO[bytes]]
 
 class Tokenizer:
     def __init__(
         self,
-        tokenizer_path: torch.serialization.FILE_LIKE,
+        tokenizer_path: FileLike,
     ):
         """
         tokenizer: BertTokenizerFast = torch.load(

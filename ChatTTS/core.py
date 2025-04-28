@@ -3,7 +3,7 @@ import re
 import logging
 import tempfile
 from dataclasses import dataclass, asdict
-from typing import Literal, Optional, List, Tuple, Dict, Union
+from typing import Literal, Optional, List, Tuple, Dict, Union, IO
 from json import load
 from pathlib import Path
 
@@ -27,6 +27,10 @@ from .utils import logger as utils_logger
 
 from .norm import Normalizer
 
+if hasattr(torch.serialization, 'FILE_LIKE'):
+    FileLike = torch.serialization.FILE_LIKE
+else:
+    FileLike = Union[str, os.PathLike, IO[bytes]]
 
 class Chat:
     def __init__(self, logger=logging.getLogger(__name__)):
@@ -66,7 +70,7 @@ class Chat:
         self,
         source: Literal["huggingface", "local", "custom"] = "local",
         force_redownload=False,
-        custom_path: Optional[torch.serialization.FILE_LIKE] = None,
+        custom_path: Optional[FileLike] = None,
     ) -> Optional[str]:
         if source == "local":
             download_path = custom_path if custom_path is not None else os.getcwd()
@@ -138,7 +142,7 @@ class Chat:
         source: Literal["huggingface", "local", "custom"] = "local",
         force_redownload=False,
         compile: bool = False,
-        custom_path: Optional[torch.serialization.FILE_LIKE] = None,
+        custom_path: Optional[FileLike] = None,
         device: Optional[torch.device] = None,
         coef: Optional[torch.Tensor] = None,
         use_flash_attn=False,
