@@ -15,6 +15,7 @@ elif hasattr(torch.types, "FILE_LIKE"):
 else:
     FileLike = Union[str, os.PathLike, IO[bytes]]
 
+
 @torch.inference_mode()
 def load_safetensors(filename: str):
     state_dict_tensors = {}
