@@ -3,7 +3,7 @@ import re
 import logging
 import tempfile
 from dataclasses import dataclass, asdict
-from typing import Literal, Optional, List, Tuple, Dict, Union, IO
+from typing import Literal, Optional, List, Tuple, Dict, Union
 from json import load
 from pathlib import Path
 
