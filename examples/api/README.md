@@ -14,6 +14,11 @@ pip install -r examples/api/requirements.txt
 fastapi dev examples/api/main.py --host 0.0.0.0 --port 8000
 ```
 
+## Run openAI_API server
+
+```
+fastapi dev examples/api/openai_api.py --host 0.0.0.0 --port 8000
+```
 ## Generate audio using requests
 
 ```
