@@ -24,13 +24,9 @@ from .utils import (
     del_all,
 )
 from .utils import logger as utils_logger
+from .utils import FileLike
 
 from .norm import Normalizer
-
-if hasattr(torch.serialization, "FILE_LIKE"):
-    FileLike = torch.serialization.FILE_LIKE
-else:
-    FileLike = Union[str, os.PathLike, IO[bytes]]
 
 
 class Chat:

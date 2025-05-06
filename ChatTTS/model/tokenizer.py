@@ -11,12 +11,7 @@ from typing import List, Tuple, Optional, Union
 import torch
 from transformers import BertTokenizerFast
 
-from ..utils import del_all
-
-if hasattr(torch.serialization, "FILE_LIKE"):
-    FileLike = torch.serialization.FILE_LIKE
-else:
-    FileLike = Union[str, os.PathLike, IO[bytes]]
+from ..utils import del_all, FileLike
 
 
 class Tokenizer:
