@@ -10,13 +10,13 @@ from typing import List, Tuple, Optional, Union
 import torch
 from transformers import BertTokenizerFast
 
-from ..utils import del_all
+from ..utils import del_all, FileLike
 
 
 class Tokenizer:
     def __init__(
         self,
-        tokenizer_path: torch.serialization.FILE_LIKE,
+        tokenizer_path: FileLike,
     ):
         """
         tokenizer: BertTokenizerFast = torch.load(

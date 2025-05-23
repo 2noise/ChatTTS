@@ -1,2 +1,3 @@
 # ignore jupyter notebooks in the language bar on github
 **/*.ipynb linguist-vendored
+*.ipynb
