@@ -38,7 +38,7 @@ def select_device(min_memory=2047, experimental=False):
         """
         if experimental:
             # For Apple M1/M2 chips with Metal Performance Shaders
-            logger.get_logger().warning("experimantal: found apple GPU, using MPS.")
+            logger.get_logger().warning("experimental: found apple GPU, using MPS.")
             device = torch.device("mps")
         else:
             logger.get_logger().info("found Apple GPU, but use CPU.")

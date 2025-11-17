@@ -401,9 +401,9 @@ class ModelRunner:
                 broadcast(input_metadata.block_tables, src=0)
             broadcast(sampling_metadata.selected_token_indices, src=0)
         else:
-            receving_list = [None]
-            broadcast_object_list(receving_list, src=0)
-            py_data = receving_list[0]
+            receiving_list = [None]
+            broadcast_object_list(receiving_list, src=0)
+            py_data = receiving_list[0]
             input_tokens = torch.empty(
                 *py_data["input_tokens_size"], dtype=torch.long, device="cuda"
             )
@@ -505,9 +505,9 @@ class ModelRunner:
             model_executable = self.model
 
         infer_text = sampling_metadata.seq_groups[0][1].infer_text
-        temperture = sampling_metadata.seq_groups[0][1].temperature
+        temperature = sampling_metadata.seq_groups[0][1].temperature
         if not infer_text:
-            temperture = torch.tensor(temperture).to(input_tokens.device)
+            temperature = torch.tensor(temperature).to(input_tokens.device)
         logits_processors, logits_warpers = sampling_metadata.seq_groups[0][
             1
         ].logits_processors
@@ -553,7 +553,7 @@ class ModelRunner:
             ),
             hidden_states=hidden_states,
             infer_text=infer_text,
-            temperature=temperture,
+            temperature=temperature,
             logits_processors=logits_processors,
             logits_warpers=logits_warpers,
             min_new_token=min_new_token,

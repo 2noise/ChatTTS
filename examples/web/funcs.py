@@ -102,7 +102,7 @@ def reload_chat(coef: Optional[str]) -> str:
     chat.unload()
     gr.Info("Model unloaded.")
     if len(coef) != 230:
-        gr.Warning("Ingore invalid DVAE coefficient.")
+        gr.Warning("Ignore invalid DVAE coefficient.")
         coef = None
     try:
         global custom_path
@@ -111,7 +111,7 @@ def reload_chat(coef: Optional[str]) -> str:
         raise gr.Error(str(e))
     if not ret:
         raise gr.Error("Unable to load model.")
-    gr.Info("Reload succeess.")
+    gr.Info("Reload success.")
     return chat.coef
 
 
