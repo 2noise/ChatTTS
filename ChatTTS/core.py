@@ -289,7 +289,7 @@ class Chat:
         use_flash_attn=False,
         use_vllm=False,
         experimental: bool = False,
-        enable_cache = True,
+        enable_cache=True,
     ):
         if device is None:
             device = select_device(experimental=experimental)

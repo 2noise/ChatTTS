@@ -62,12 +62,14 @@ def on_audio_seed_change(audio_seed_input):
     return rand_spk
 
 
-def load_chat(cust_path: Optional[str], coef: Optional[str], enable_cache = True) -> bool:
+def load_chat(cust_path: Optional[str], coef: Optional[str], enable_cache=True) -> bool:
     if cust_path == None:
         ret = chat.load(coef=coef, enable_cache=enable_cache)
     else:
         logger.info("local model path: %s", cust_path)
-        ret = chat.load("custom", custom_path=cust_path, coef=coef, enable_cache=enable_cache)
+        ret = chat.load(
+            "custom", custom_path=cust_path, coef=coef, enable_cache=enable_cache
+        )
         global custom_path
         custom_path = cust_path
     if ret:

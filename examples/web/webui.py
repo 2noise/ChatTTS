@@ -261,7 +261,9 @@ def main():
     parser.add_argument("--root_path", type=str, help="root path")
     parser.add_argument("--custom_path", type=str, help="custom model path")
     parser.add_argument("--coef", type=str, help="custom dvae coefficient")
-    parser.add_argument("--disable_cache", action="store_true", help="enable model cache")
+    parser.add_argument(
+        "--disable_cache", action="store_true", help="enable model cache"
+    )
     args = parser.parse_args()
 
     logger.info("loading ChatTTS model...")
