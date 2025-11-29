@@ -13,6 +13,7 @@ import torchaudio
 from pydub import AudioSegment
 import numpy as np
 
+
 def save_as_mp3(wav_array, filename, sample_rate=24000):
     """Convert numpy array to MP3 file using pydub"""
     # Normalize audio to prevent clipping
@@ -26,12 +27,13 @@ def save_as_mp3(wav_array, filename, sample_rate=24000):
         wav_array_int.tobytes(),
         frame_rate=sample_rate,
         sample_width=2,  # 16-bit
-        channels=1
+        channels=1,
     )
 
     # Export as MP3
     audio_segment.export(filename, format="mp3", bitrate="192k")
     print(f"✓ Saved as MP3: {filename}")
+
 
 def test_basic_functionality():
     """Test basic ChatTTS functionality with MP3 output"""
@@ -68,7 +70,9 @@ def test_basic_functionality():
 
                 # Also save as WAV for reference
                 wav_tensor = torch.from_numpy(wav).unsqueeze(0)
-                torchaudio.save(output_filename.replace('.mp3', '.wav'), wav_tensor, 24000)
+                torchaudio.save(
+                    output_filename.replace(".mp3", ".wav"), wav_tensor, 24000
+                )
                 print(f"✓ Saved as WAV: {output_filename.replace('.mp3', '.wav')}")
 
             print(f"\n🎉 Successfully generated {len(wavs)} audio file(s)!")
@@ -81,13 +85,16 @@ def test_basic_functionality():
         print(f"❌ Error: {e}")
         return False
 
+
 if __name__ == "__main__":
     success = test_basic_functionality()
     if success:
         print("\n✅ Test completed successfully!")
         print("📁 Output files:")
-        for file in os.listdir('.'):
-            if file.startswith('test_output_') and (file.endswith('.mp3') or file.endswith('.wav')):
+        for file in os.listdir("."):
+            if file.startswith("test_output_") and (
+                file.endswith(".mp3") or file.endswith(".wav")
+            ):
                 print(f"   - {file}")
     else:
         print("\n❌ Test failed!")

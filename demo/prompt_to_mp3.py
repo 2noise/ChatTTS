@@ -20,6 +20,7 @@ import torchaudio
 from pydub import AudioSegment
 import numpy as np
 
+
 def save_as_mp3(wav_array, filename, sample_rate=24000):
     """Convert numpy array to MP3 file using pydub"""
     # Normalize audio to prevent clipping
@@ -33,18 +34,19 @@ def save_as_mp3(wav_array, filename, sample_rate=24000):
         wav_array_int.tobytes(),
         frame_rate=sample_rate,
         sample_width=2,  # 16-bit
-        channels=1
+        channels=1,
     )
 
     # Export as MP3
     audio_segment.export(filename, format="mp3", bitrate="192k")
     print(f"✓ Saved as MP3: {filename}")
 
+
 def get_user_input():
     """Get text input from user with options for advanced features"""
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("ChatTTS Prompt to MP3 Demo")
-    print("="*50)
+    print("=" * 50)
 
     # Get main text input
     print("\n📝 Enter the text you want to convert to speech:")
@@ -57,7 +59,7 @@ def get_user_input():
 
     # Ask for optional speaker control
     print("\n🎤 Do you want to use a specific speaker? (y/n)")
-    use_speaker = input(">>> ").strip().lower() == 'y'
+    use_speaker = input(">>> ").strip().lower() == "y"
 
     speaker_emb = None
     if use_speaker:
@@ -96,11 +98,8 @@ def get_user_input():
     if not filename:
         filename = "output"
 
-    return {
-        'text': text,
-        'speaker_emb': speaker_emb,
-        'filename': filename
-    }
+    return {"text": text, "speaker_emb": speaker_emb, "filename": filename}
+
 
 def main():
     """Main function to run the demo"""
@@ -130,21 +129,18 @@ def main():
 
             # Prepare inference parameters
             params_infer_code = ChatTTS.Chat.InferCodeParams(
-                temperature=0.3,
-                top_P=0.7,
-                top_K=20
+                temperature=0.3, top_P=0.7, top_K=20
             )
 
             # Apply speaker embedding if provided
-            if user_input['speaker_emb']:
-                params_infer_code.spk_emb = user_input['speaker_emb']
+            if user_input["speaker_emb"]:
+                params_infer_code.spk_emb = user_input["speaker_emb"]
 
             # Generate speech
             print("\n🔊 Generating speech...")
             try:
                 wavs = chat.infer(
-                    user_input['text'],
-                    params_infer_code=params_infer_code
+                    user_input["text"], params_infer_code=params_infer_code
                 )
 
                 if wavs and len(wavs) > 0:
@@ -159,8 +155,12 @@ def main():
 
                         # Also save as WAV for reference
                         wav_tensor = torch.from_numpy(wav).unsqueeze(0)
-                        torchaudio.save(output_filename.replace('.mp3', '.wav'), wav_tensor, 24000)
-                        print(f"✓ Saved as WAV: {output_filename.replace('.mp3', '.wav')}")
+                        torchaudio.save(
+                            output_filename.replace(".mp3", ".wav"), wav_tensor, 24000
+                        )
+                        print(
+                            f"✓ Saved as WAV: {output_filename.replace('.mp3', '.wav')}"
+                        )
 
                     print(f"\n🎉 Successfully generated {len(wavs)} audio file(s)!")
 
@@ -172,7 +172,7 @@ def main():
 
             # Ask if user wants to continue
             print("\n🔄 Do you want to generate another audio? (y/n)")
-            if input(">>> ").strip().lower() != 'y':
+            if input(">>> ").strip().lower() != "y":
                 break
 
         print("\n👋 Demo completed. Thank you for using ChatTTS!")
@@ -181,6 +181,7 @@ def main():
         print(f"❌ Error initializing ChatTTS: {e}")
         print("\n💡 Make sure you have installed all dependencies:")
         print("   pip install -r requirements.txt")
+
 
 if __name__ == "__main__":
     main()

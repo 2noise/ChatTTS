@@ -21,4 +21,3 @@ for i, wav in enumerate(wavs):
     torchaudio.save(f"output{i}.wav", wav_tensor, 24000)
 
 print("done")
-
