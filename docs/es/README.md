@@ -11,11 +11,16 @@ Un modelo de generación de voz para la conversación diaria.
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
 
 [**English**](../../README.md) | [**简体中文**](../cn/README.md) | [**日本語**](../jp/README.md) | [**Русский**](../ru/README.md) | **Español**
- | [**Français**](../fr/README.md)
+ | [**Français**](../fr/README.md) | [**한국어**](../kr/README.md)
 </div>
 
 > [!NOTE]
 > Atención, es posible que esta versión no sea la última. Por favor, consulte la versión en inglés para conocer todo el contenido.
+
+> [!Tip]
+> Para los productos finales ampliados, consulta el repositorio índice [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS/tree/en) mantenido por la comunidad.  
+> Puedes encontrar una visualización en forma de diagrama del código [aquí](https://github.com/CodeBoarding/GeneratedOnBoardings/blob/main/ChatTTS/on_boarding.md).
+
 
 ## Introducción
 

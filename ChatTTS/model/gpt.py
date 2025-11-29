@@ -28,6 +28,7 @@ class GPT(nn.Module):
         device=torch.device("cpu"),
         device_gpt=torch.device("cpu"),
         logger=logging.getLogger(__name__),
+        enable_cache=True,
     ):
         super().__init__()
 
@@ -35,6 +36,8 @@ class GPT(nn.Module):
 
         self.device = device
         self.device_gpt = device_gpt
+
+        self.enable_cache = enable_cache
 
         self.generator = torch.Generator(device=device)
 
@@ -56,7 +59,7 @@ class GPT(nn.Module):
         self.head_text = embed.head_text.__call__
         self.head_code = [hc.__call__ for hc in embed.head_code]
 
-    def from_pretrained(
+    def load_pretrained(
         self, gpt_folder: str, embed_file_path: str, experimental=False
     ):
         if self.is_vllm and platform.system().lower() == "linux":
@@ -142,7 +145,6 @@ class GPT(nn.Module):
     class _GenerationInputs:
         position_ids: torch.Tensor
         cache_position: torch.Tensor
-        use_cache: bool
         input_ids: Optional[torch.Tensor] = None
         past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
         attention_mask: Optional[torch.Tensor] = None
@@ -162,12 +164,11 @@ class GPT(nn.Module):
     def _prepare_generation_inputs(
         self,
         input_ids: torch.Tensor,
-        past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+        past_key_values: Optional[Union[Tuple[Tuple[torch.FloatTensor]], Cache]] = None,
         attention_mask: Optional[torch.Tensor] = None,
         inputs_embeds: Optional[torch.Tensor] = None,
         cache_position: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.Tensor] = None,
-        use_cache=True,
     ) -> _GenerationInputs:
         # With static cache, the `past_key_values` is None
         # TODO joao: standardize interface for the different Cache classes and remove of this if
@@ -180,23 +181,30 @@ class GPT(nn.Module):
             has_static_cache = past_key_values is not None
 
         past_length = 0
+        max_cache_length = None
+        cache_length = 0
         if past_key_values is not None:
             if isinstance(past_key_values, Cache):
-                past_length = (
-                    int(cache_position[0])
-                    if cache_position is not None
-                    else past_key_values.get_seq_length()
-                )
-                max_cache_length = past_key_values.get_max_length()
-                cache_length = (
-                    past_length
-                    if max_cache_length is None
-                    else min(max_cache_length, past_length)
-                )
+                if past_key_values.layers and len(past_key_values.layers):
+                    past_length = (
+                        int(cache_position[0])
+                        if cache_position is not None
+                        else past_key_values.get_seq_length()
+                    )
+                    try:
+                        max_cache_length = past_key_values.get_max_cache_shape()
+                    except:
+                        max_cache_length = (
+                            past_key_values.get_max_length()
+                        )  # deprecated in transformers 4.48
+                    cache_length = (
+                        past_length
+                        if max_cache_length is None
+                        else min(max_cache_length, past_length)
+                    )
             # TODO joao: remove this `else` after `generate` prioritizes `Cache` objects
             else:
                 cache_length = past_length = past_key_values[0][0].shape[2]
-                max_cache_length = None
 
             # Keep only the unprocessed tokens:
             # 1 - If the length of the attention_mask exceeds the length of input_ids, then we are in a setting where
@@ -219,6 +227,7 @@ class GPT(nn.Module):
             # If we are about to go beyond the maximum cache length, we need to crop the input attention mask.
             if (
                 max_cache_length is not None
+                and max_cache_length > 0
                 and attention_mask is not None
                 and cache_length + input_ids.shape[1] > max_cache_length
             ):
@@ -251,7 +260,6 @@ class GPT(nn.Module):
         model_inputs = self._GenerationInputs(
             position_ids=position_ids,
             cache_position=cache_position,
-            use_cache=use_cache,
         )
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
@@ -392,7 +400,6 @@ class GPT(nn.Module):
                 inputs_ids,
                 past_key_values,
                 attention_mask_cache.narrow(1, 0, inputs_ids.shape[1]),
-                use_cache=not self.is_te_llama,
             )
 
             if i > 0:
@@ -416,7 +423,7 @@ class GPT(nn.Module):
                 position_ids=model_input.position_ids,
                 past_key_values=model_input.past_key_values,
                 inputs_embeds=model_input.inputs_embeds,
-                use_cache=model_input.use_cache,
+                use_cache=not self.is_te_llama and self.enable_cache,
                 output_attentions=return_attn,
                 cache_position=model_input.cache_position,
             )

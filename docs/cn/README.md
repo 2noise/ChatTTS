@@ -12,7 +12,7 @@
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
 [![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Ud5Jxgx5yD)
 
-[**English**](../../README.md) | **简体中文** | [**日本語**](../jp/README.md) | [**Русский**](../ru/README.md) | [**Español**](../es/README.md) | [**Français**](../fr/README.md)
+[**English**](../../README.md) | **简体中文** | [**日本語**](../jp/README.md) | [**Русский**](../ru/README.md) | [**Español**](../es/README.md) | [**Français**](../fr/README.md) | [**한국어**](../kr/README.md)
 
 </div>
 
@@ -25,7 +25,8 @@
 > 这个仓库包含算法架构和一些简单的示例。
 
 > [!Tip]
-> 由本仓库衍生出的用户端产品，请参见由社区维护的索引仓库  [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS)。
+> 由本仓库衍生出的用户端产品，请参见由社区维护的索引仓库  [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS)。  
+> 您可以在[这里](https://github.com/CodeBoarding/GeneratedOnBoardings/blob/main/ChatTTS/on_boarding.md)查看代码库的图解。
 
 ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转语音模型。
 
@@ -52,6 +53,7 @@ ChatTTS 是一款专门为对话场景（例如 LLM 助手）设计的文本转�
 
 - [x] 开源 4 万小时基础模型和 spk_stats 文件。
 - [x] 支持流式语音输出。
+- [x] 开源 DVAE 编码器和零样本推理代码
 - [ ] 开源具有多情感控制功能的 4 万小时版本。
 - [ ] ChatTTS.cpp (欢迎在 2noise 组织中新建仓库)。
 

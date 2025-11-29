@@ -29,6 +29,7 @@ refined = chat.infer(
     texts,
     refine_text_only=True,
     stream=False,
+    split_text=False,
     params_refine_text=ChatTTS.Chat.RefineTextParams(show_tqdm=False),
 )
 

@@ -4,11 +4,20 @@
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 
-[**English**](../../README.md) | [**简体中文**](../cn/README.md) | **日本語** | [**Русский**](../ru/README.md) | [**Español**](../es/README.md) | [**Français**](../fr/README.md)
+[**English**](../../README.md) | [**简体中文**](../cn/README.md) | **日本語** | [**Русский**](../ru/README.md) | [**Español**](../es/README.md) | [**Français**](../fr/README.md) | [**한국어**](../kr/README.md)
 
 ChatTTSは、LLMアシスタントなどの対話シナリオ用に特別に設計されたテキストから音声へのモデルです。英語と中国語の両方をサポートしています。私たちのモデルは、中国語と英語で構成される100,000時間以上でトレーニングされています。**[HuggingFace](https://huggingface.co/2Noise/ChatTTS)**でオープンソース化されているバージョンは、40,000時間の事前トレーニングモデルで、SFTは行われていません。
 
 モデルやロードマップについての正式なお問い合わせは、**open-source@2noise.com**までご連絡ください。QQグループ：808364215に参加してディスカッションすることもできます。GitHubでの問題提起も歓迎します。
+
+## はじめに
+> [!Note]
+> このリポジトリにはアルゴリズムのインフラといくつかの簡単な例が含まれています。
+
+> [!Tip]
+> エンドユーザー向けに拡張された製品については、コミュニティによって管理されているインデックスリポジトリ [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS/tree/en) を参照してください。  
+> コードベースの図解は[こちら](https://github.com/CodeBoarding/GeneratedOnBoardings/blob/main/ChatTTS/on_boarding.md)でご覧いただけます。
+
 
 ---
 ## ハイライト

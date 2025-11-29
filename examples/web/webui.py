@@ -102,7 +102,7 @@ def main():
                 minimum=seed_min,
                 maximum=seed_max,
             )
-            generate_audio_seed = gr.Button("\U0001F3B2", interactive=True)
+            generate_audio_seed = gr.Button("\U0001f3b2", interactive=True)
             text_seed_input = gr.Number(
                 value=ex[0][5],
                 label="Text Seed",
@@ -110,20 +110,20 @@ def main():
                 minimum=seed_min,
                 maximum=seed_max,
             )
-            generate_text_seed = gr.Button("\U0001F3B2", interactive=True)
+            generate_text_seed = gr.Button("\U0001f3b2", interactive=True)
 
         with gr.Row():
             spk_emb_text = gr.Textbox(
                 label="Speaker Embedding",
                 max_lines=3,
-                show_copy_button=True,
+                buttons=["copy"],
                 interactive=True,
                 scale=2,
             )
             dvae_coef_text = gr.Textbox(
                 label="DVAE Coefficient",
                 max_lines=3,
-                show_copy_button=True,
+                buttons=["copy"],
                 interactive=True,
                 scale=2,
             )
@@ -137,6 +137,14 @@ def main():
                 label="Stream Mode",
                 value=False,
                 scale=1,
+                interactive=True,
+            )
+            split_batch_slider = gr.Slider(
+                minimum=0,
+                maximum=100,
+                step=1,
+                value=4,
+                label="Split Batch",
                 interactive=True,
             )
             generate_button = gr.Button(
@@ -153,7 +161,7 @@ def main():
         text_output = gr.Textbox(
             label="Output Text",
             interactive=False,
-            show_copy_button=True,
+            buttons=["copy"],
         )
 
         sample_audio_input.change(
@@ -208,6 +216,7 @@ def main():
                     temperature_slider,
                     top_p_slider,
                     top_k_slider,
+                    split_batch_slider,
                 ],
                 outputs=text_output,
             ).then(
@@ -222,6 +231,7 @@ def main():
                     audio_seed_input,
                     sample_text_input,
                     sample_audio_code_input,
+                    split_batch_slider,
                 ],
                 outputs=audio_output,
             ).then(
@@ -248,18 +258,17 @@ def main():
         "--server_name", type=str, default="0.0.0.0", help="server name"
     )
     parser.add_argument("--server_port", type=int, default=8080, help="server port")
-    parser.add_argument("--root_path", type=str, default=None, help="root path")
+    parser.add_argument("--root_path", type=str, help="root path")
+    parser.add_argument("--custom_path", type=str, help="custom model path")
+    parser.add_argument("--coef", type=str, help="custom dvae coefficient")
     parser.add_argument(
-        "--custom_path", type=str, default=None, help="custom model path"
-    )
-    parser.add_argument(
-        "--coef", type=str, default=None, help="custom dvae coefficient"
+        "--disable_cache", action="store_true", help="enable model cache"
     )
     args = parser.parse_args()
 
     logger.info("loading ChatTTS model...")
 
-    if load_chat(args.custom_path, args.coef):
+    if load_chat(args.custom_path, args.coef, not args.disable_cache):
         logger.info("Models loaded successfully.")
     else:
         logger.error("Models load failed.")
@@ -273,7 +282,7 @@ def main():
         server_port=args.server_port,
         root_path=args.root_path,
         inbrowser=True,
-        show_api=False,
+        footer_links=["api", "gradio", "settings"],
     )
 
 

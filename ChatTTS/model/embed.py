@@ -1,7 +1,8 @@
-from safetensors.torch import safe_open
 import torch
 import torch.nn as nn
 from torch.nn.utils.parametrizations import weight_norm
+
+from ..utils import load_safetensors
 
 
 class Embed(nn.Module):
@@ -34,11 +35,8 @@ class Embed(nn.Module):
         )
 
     @torch.inference_mode()
-    def from_pretrained(self, filename: str, device: torch.device):
-        state_dict_tensors = {}
-        with safe_open(filename, framework="pt") as f:
-            for k in f.keys():
-                state_dict_tensors[k] = f.get_tensor(k)
+    def load_pretrained(self, filename: str, device: torch.device):
+        state_dict_tensors = load_safetensors(filename)
         self.load_state_dict(state_dict_tensors)
         self.to(device)
 
@@ -56,12 +54,15 @@ class Embed(nn.Module):
         get_emb
         """
         device = next(self.parameters()).device
+        input_ids_dev = input_ids.to(device)
+        text_mask_dev = text_mask.to(device)
+
         emb_text: torch.Tensor = self.emb_text(
-            input_ids[text_mask].narrow(1, 0, 1).squeeze_(1).to(device)
+            input_ids_dev[text_mask_dev].narrow(1, 0, 1).squeeze_(1)
         )
 
-        text_mask_inv = text_mask.logical_not().to(device)
-        masked_input_ids: torch.Tensor = input_ids[text_mask_inv].to(device)
+        text_mask_inv = text_mask_dev.logical_not()
+        masked_input_ids: torch.Tensor = input_ids_dev[text_mask_inv]
 
         emb_code = [
             self.emb_code[i](masked_input_ids[:, i]) for i in range(self.num_vq)
@@ -69,11 +70,11 @@ class Embed(nn.Module):
         emb_code = torch.stack(emb_code, 2).sum(2)
 
         emb = torch.zeros(
-            (input_ids.shape[:-1]) + (emb_text.shape[-1],),
+            (input_ids_dev.shape[:-1]) + (emb_text.shape[-1],),
             device=emb_text.device,
             dtype=emb_text.dtype,
         )
-        emb[text_mask] = emb_text
+        emb[text_mask_dev] = emb_text
         emb[text_mask_inv] = emb_code.to(emb.dtype)
 
         del emb_text, emb_code, text_mask_inv

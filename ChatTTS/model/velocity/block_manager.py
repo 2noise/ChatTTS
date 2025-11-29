@@ -156,7 +156,7 @@ class BlockSpaceManager:
                 self.block_sliding_window
                 and len(block_table) >= self.block_sliding_window
             ):
-                # re-use a block
+                # reuse a block
                 block_table.append(
                     block_table[len(block_table) % self.block_sliding_window]
                 )

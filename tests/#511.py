@@ -41,6 +41,7 @@ fail = False
 wavs = chat.infer(
     texts,
     skip_refine_text=True,
+    split_text=False,
     params_infer_code=params_infer_code,
 )
 

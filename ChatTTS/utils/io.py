@@ -1,9 +1,28 @@
 import os
 import logging
-from typing import Union
+from typing import Union, IO
 from dataclasses import is_dataclass
 
+from safetensors import safe_open
+import torch
+
 from .log import logger
+
+if hasattr(torch.serialization, "FILE_LIKE"):
+    FileLike = torch.serialization.FILE_LIKE
+elif hasattr(torch.types, "FILE_LIKE"):
+    FileLike = torch.types.FileLike
+else:
+    FileLike = Union[str, os.PathLike, IO[bytes]]
+
+
+@torch.inference_mode()
+def load_safetensors(filename: str):
+    state_dict_tensors = {}
+    with safe_open(filename, framework="pt") as f:
+        for k in f.keys():
+            state_dict_tensors[k] = f.get_tensor(k)
+    return state_dict_tensors
 
 
 def get_latest_modified_file(directory):

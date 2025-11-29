@@ -5,9 +5,10 @@ import numpy as np
 import pybase16384 as b14
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchaudio
 from vector_quantize_pytorch import GroupedResidualFSQ
+
+from ..utils import load_safetensors
 
 
 class ConvNeXtBlock(nn.Module):
@@ -36,7 +37,7 @@ class ConvNeXtBlock(nn.Module):
         )  # pointwise/1x1 convs, implemented with linear layers
         self.act = nn.GELU()
         self.pwconv2 = nn.Linear(intermediate_dim, dim)
-        self.gamma = (
+        self.weight = (
             nn.Parameter(layer_scale_init_value * torch.ones(dim), requires_grad=True)
             if layer_scale_init_value > 0
             else None
@@ -55,8 +56,8 @@ class ConvNeXtBlock(nn.Module):
         del y
         y = self.pwconv2(x)
         del x
-        if self.gamma is not None:
-            y *= self.gamma
+        if self.weight is not None:
+            y *= self.weight
         y.transpose_(1, 2)  # (B, T, C) -> (B, C, T)
 
         x = y + residual
@@ -250,6 +251,12 @@ class DVAE(nn.Module):
         self, inp: torch.Tensor, mode: Literal["encode", "decode"] = "decode"
     ) -> torch.Tensor:
         return super().__call__(inp, mode)
+
+    @torch.inference_mode()
+    def load_pretrained(self, filename: str, device: torch.device):
+        state_dict_tensors = load_safetensors(filename)
+        self.load_state_dict(state_dict_tensors)
+        self.to(device)
 
     @torch.inference_mode()
     def forward(

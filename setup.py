@@ -20,7 +20,7 @@ setup(
     license="AGPLv3+",
     install_requires=[
         "numba",
-        "numpy<2.0.0",
+        "numpy<3.0.0",
         "pybase16384",
         "torch>=2.1.0",
         "torchaudio",

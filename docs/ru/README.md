@@ -4,7 +4,16 @@
 
 [![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/2Noise/ChatTTS)
 
-[**English**](../../README.md) | [**简体中文**](../cn/README.md) | [**日本語**](../jp/README.md) | **Русский** | [**Español**](../es/README.md) | [**Français**](../fr/README.md)
+[**English**](../../README.md) | [**简体中文**](../cn/README.md) | [**日本語**](../jp/README.md) | **Русский** | [**Español**](../es/README.md) | [**Français**](../fr/README.md) | [**한국어**](../kr/README.md)
+
+## Введение
+> [!Note]
+> Этот репозиторий содержит инфраструктуру алгоритма и некоторые простые примеры.
+
+> [!Tip]
+> Для полнофункциональных пользовательских продуктов обратитесь к индексному репозиторию [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS/tree/en), поддерживаемому сообществом.  
+> Схематичную визуализацию кодовой базы можно найти [здесь](https://github.com/CodeBoarding/GeneratedOnBoardings/blob/main/ChatTTS/on_boarding.md).
+
 
 ChatTTS - это модель преобразования текста в речь, специально разработанная для диалоговых сценариев, таких как помощник LLM. Она поддерживает как английский, так и китайский языки. Наша модель обучена на более чем 100 000 часах английского и китайского языков. Открытая версия на **[HuggingFace](https://huggingface.co/2Noise/ChatTTS)** - это предварительно обученная модель с 40 000 часами без SFT.
 

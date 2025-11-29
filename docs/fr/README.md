@@ -12,7 +12,7 @@ Un modèle de parole génératif pour le dialogue quotidien.
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/github/2noise/ChatTTS/blob/main/examples/ipynb/colab.ipynb)
 [![Discord](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Ud5Jxgx5yD)
 
-[**English**](../../README.md) | [**简体中文**](../cn/README.md) | [**日本語**](../jp/README.md) | [**Русский**](../ru/README.md) | [**Español**](../es/README.md)| **Français** 
+[**English**](../../README.md) | [**简体中文**](../cn/README.md) | [**日本語**](../jp/README.md) | [**Русский**](../ru/README.md) | [**Español**](../es/README.md)| **Français**  | [**한국어**](../kr/README.md)
 
 </div>
 
@@ -21,7 +21,8 @@ Un modèle de parole génératif pour le dialogue quotidien.
 > Ce dépôt contient l'infrastructure de l'algorithme et quelques exemples simples.
 
 > [!Tip]
-> Pour les produits finaux étendus pour les utilisateurs, veuillez consulter le dépôt index [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS/tree/en) maintenu par la communauté.
+> Pour les produits finaux étendus pour les utilisateurs, veuillez consulter le dépôt index [Awesome-ChatTTS](https://github.com/libukai/Awesome-ChatTTS/tree/en) maintenu par la communauté.  
+> Vous pouvez consulter un diagramme du code [ici](https://github.com/CodeBoarding/GeneratedOnBoardings/blob/main/ChatTTS/on_boarding.md).
 
 ChatTTS est un modèle de synthèse vocale conçu spécifiquement pour les scénarios de dialogue tels que les assistants LLM.
 
