@@ -741,7 +741,7 @@ class LLMEngine:
 
     def _decode_sequence(self, seq: Sequence, prms: SamplingParams) -> None:
         """Decodes the new token for a sequence."""
-        (new_tokens, new_output_text, prefix_offset, read_offset) = (
+        new_tokens, new_output_text, prefix_offset, read_offset = (
             detokenize_incrementally(
                 self.tokenizer,
                 all_input_ids=seq.get_token_ids(),
