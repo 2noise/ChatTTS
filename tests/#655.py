@@ -21,7 +21,7 @@ chat = ChatTTS.Chat(logger)
 chat.load(compile=False, source="huggingface")  # Set to True for better performance
 try:
     chat.normalizer.register("en", normalizer_en_nemo_text())
-except:
+except Exception:
     logger.warning("Package nemo_text_processing not found!")
 
 rand_spk = chat.sample_random_speaker()

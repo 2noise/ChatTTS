@@ -193,7 +193,7 @@ class GPT(nn.Module):
                     )
                     try:
                         max_cache_length = past_key_values.get_max_cache_shape()
-                    except:
+                    except Exception:
                         max_cache_length = (
                             past_key_values.get_max_length()
                         )  # deprecated in transformers 4.48

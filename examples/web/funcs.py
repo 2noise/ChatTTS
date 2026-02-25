@@ -77,7 +77,7 @@ def load_chat(cust_path: Optional[str], coef: Optional[str], enable_cache=True) 
             chat.normalizer.register("en", normalizer_en_nemo_text())
         except ValueError as e:
             logger.error(e)
-        except:
+        except Exception:
             logger.warning("Package nemo_text_processing not found!")
             logger.warning(
                 "Run: conda install -c conda-forge pynini=2.1.5 && pip install nemo_text_processing",
@@ -86,7 +86,7 @@ def load_chat(cust_path: Optional[str], coef: Optional[str], enable_cache=True) 
             chat.normalizer.register("zh", normalizer_zh_tn())
         except ValueError as e:
             logger.error(e)
-        except:
+        except Exception:
             logger.warning("Package WeTextProcessing not found!")
             logger.warning(
                 "Run: conda install -c conda-forge pynini=2.1.5 && pip install WeTextProcessing",

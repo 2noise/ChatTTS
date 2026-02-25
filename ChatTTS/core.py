@@ -100,7 +100,7 @@ class Chat:
                         os.path.join(custom_path, "models--2Noise--ChatTTS/snapshots")
                     )
                 )
-            except:
+            except Exception:
                 download_path = None
             if download_path is None or force_redownload:
                 self.logger.log(
@@ -114,7 +114,7 @@ class Chat:
                         cache_dir=custom_path,
                         force_download=force_redownload,
                     )
-                except:
+                except Exception:
                     download_path = None
                 else:
                     self.logger.log(
