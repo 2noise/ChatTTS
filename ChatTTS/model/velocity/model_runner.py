@@ -360,11 +360,11 @@ class ModelRunner:
             is_prompt = seq_group_metadata_list[0].is_prompt
             # Prepare input tensors.
             if is_prompt:
-                (input_tokens, input_positions, input_metadata, prompt_lens) = (
+                input_tokens, input_positions, input_metadata, prompt_lens = (
                     self._prepare_prompt(seq_group_metadata_list)
                 )
             else:
-                (input_tokens, input_positions, input_metadata) = self._prepare_decode(
+                input_tokens, input_positions, input_metadata = self._prepare_decode(
                     seq_group_metadata_list
                 )
                 prompt_lens = []

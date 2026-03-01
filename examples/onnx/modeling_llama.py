@@ -21,6 +21,7 @@
 PyTorch LLaMA model.
 Copied from https://github.com/sophgo/LLM-TPU/blob/main/models/Llama2/compile/files/llama-2-7b-chat-hf/modeling_llama.py
 """
+
 import math
 from typing import List, Optional, Tuple, Union
 
@@ -44,7 +45,6 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.models.llama.configuration_llama import LlamaConfig
-
 
 logger = logging.get_logger(__name__)
 
