@@ -187,7 +187,15 @@ texts = ["PUT YOUR 1st TEXT HERE", "PUT YOUR 2nd TEXT HERE"]
 
 wavs = chat.infer(texts)
 
-torchaudio.save("output1.wav", torch.from_numpy(wavs[0]), 24000)
+for i in range(len(wavs)):
+    """
+    在某些版本的 torchaudio 中，第一行能运行，
+    但在另一些版本中，则需要使用第二行。
+    """
+    try:
+        torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]).unsqueeze(0), 24000)
+    except:
+        torchaudio.save(f"basic_output{i}.wav", torch.from_numpy(wavs[i]), 24000)
 ```
 
 ### 进阶用法
