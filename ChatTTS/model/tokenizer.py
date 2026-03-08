@@ -125,7 +125,7 @@ class Tokenizer:
 
         return new_input_ids, attention_mask, text_mask
 
-    @torch.inference_mode
+    @torch.inference_mode()
     def decode(
         self,
         sequences: Union[List[int], List[List[int]]],
