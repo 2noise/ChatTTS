@@ -7,7 +7,6 @@ from av.audio.frame import AudioFrame
 from av.audio.resampler import AudioResampler
 import numpy as np
 
-
 video_format_dict: Dict[str, str] = {
     "m4a": "mp4",
 }

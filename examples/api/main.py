@@ -6,7 +6,6 @@ import zipfile
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-
 if sys.platform == "darwin":
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
