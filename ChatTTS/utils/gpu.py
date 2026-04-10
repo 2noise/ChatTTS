@@ -46,9 +46,18 @@ def select_device(min_memory=2047, experimental=False):
             logger.get_logger().info("found Apple GPU, but use CPU.")
             device = torch.device("cpu")
     elif importlib.util.find_spec("torch_directml") is not None:
-        import torch_directml
+        """
+        Currently DML is under developing and may output wrong result,
+        so only enable this for experimental use.
+        """
+        if experimental:
+            logger.get_logger().warning("experimental: using DML.")
+            import torch_directml
 
-        device = torch_directml.device(torch_directml.default_device())
+            device = torch_directml.device(torch_directml.default_device())
+        else:
+            logger.get_logger().info("found DML, but use CPU.")
+            device = torch.device("cpu")
     else:
         logger.get_logger().warning("no GPU or NPU found, use CPU instead")
         device = torch.device("cpu")

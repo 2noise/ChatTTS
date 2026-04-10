@@ -264,11 +264,14 @@ def main():
     parser.add_argument(
         "--disable_cache", action="store_true", help="enable model cache"
     )
+    parser.add_argument(
+        "--experimental", action="store_true", help="enable model cache"
+    )
     args = parser.parse_args()
-
+    set_params(not args.disable_cache, args.experimental)
     logger.info("loading ChatTTS model...")
 
-    if load_chat(args.custom_path, args.coef, not args.disable_cache):
+    if load_chat(args.custom_path, args.coef):
         logger.info("Models loaded successfully.")
     else:
         logger.error("Models load failed.")
