@@ -71,4 +71,6 @@ class ChatOpenAI:
             temperature=temperature,
             **kwargs
         )
+        if not completion.choices or completion.choices[0].message is None:
+            raise ValueError("LLM returned empty or filtered response")
         return completion.choices[0].message.content
