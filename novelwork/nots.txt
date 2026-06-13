@@ -1,0 +1,5 @@
+source /workspaces/ChatTTS/.venv/bin/activate
+python novelwork/audio.py
+deactivate
+source /workspaces/ChatTTS/.venv/bin/activate
+python novelwork/textcopy.py

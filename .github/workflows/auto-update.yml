@@ -1,0 +1,41 @@
+name: Auto-Generate Novel JSON
+
+on:
+  push:
+    paths:
+      - 'novels/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4 # नया वर्जन (नोड 24 वार्निंग खत्म)
+
+      - name: Setup Python
+        uses: actions/setup-python@v5 # नया वर्जन (नोड 24 वार्निंग खत्म)
+        with:
+          python-version: '3.x'
+
+      - name: Run Python Script
+        run: |
+          if [ -f "generate_json.py" ]; then
+            python generate_json.py
+          elif [ -f "book/generate_json.py" ]; then
+            python book/generate_json.py
+          else
+            echo "Error: generate_json.py नहीं मिली!"
+            exit 1
+          fi
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git commit -m "Auto-updated data.json" || echo "No changes"
+          git push

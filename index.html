@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>मेरी ऑडियोबुक लाइब्रेरी</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background-color: #f5f6fa; color: #2f3640; padding-bottom: 140px; }
+        
+        /* हेडर */
+        header { background: #8c7ae6; color: white; padding: 15px; text-align: center; position: fixed; width: 100%; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        /* मुख्य कंटेनर */
+        .container { max-width: 800px; margin: 80px auto 20px auto; padding: 15px; }
+        
+        /* सिलेक्शन बॉक्स */
+        .selector-box { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #7f8c8d; }
+        select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #dcdde1; font-size: 16px; background-color: #f8f9fa; outline: none; }
+        
+        /* नोवेल टेक्स्ट एरिया */
+        .text-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 350px; line-height: 1.9; font-size: 18px; white-space: pre-line; word-wrap: break-word; }
+        .novel-title-header { font-size: 22px; color: #8c7ae6; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #f5f6fa; padding-bottom: 10px; }
+
+        /* बॉटम फिक्स्ड ऑडियो प्लेयर */
+        .audio-player-fixed { position: fixed; bottom: 0; left: 0; width: 100%; background: #2f3640; color: white; padding: 15px; text-align: center; box-shadow: 0 -4px 10px rgba(0,0,0,0.15); z-index: 100; border-top-left-radius: 15px; border-top-right-radius: 15px; }
+        .audio-player-fixed p { margin-bottom: 10px; font-size: 14px; color: #dcdde1; font-weight: 500; }
+        audio { width: 100%; max-width: 600px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>📚 My Audiobook Library</h2>
+    </header>
+
+    <div class="container">
+        <div class="selector-box">
+            <label for="chapterSelect">📖 नोवेल और चैप्टर चुनें:</label>
+            <select id="chapterSelect" onchange="changeChapter()">
+                <option value="">लोड़ हो रहा है (Loading)...</option>
+            </select>
+        </div>
+
+        <div class="text-card">
+            <div id="novelEpisodeTitle" class="novel-title-header">शुरू करने के लिए चुनिए</div>
+            <div id="novelText">कृपया ऊपर ड्रॉपडाउन मेनू से कोई भी चैप्टर चुनें। पढ़ने के साथ-साथ ऑडियो नीचे अपने आप शुरू हो जाएगा।</div>
+        </div>
+    </div>
+
+    <div class="audio-player-fixed">
+        <p id="nowPlaying">🎵 अभी कुछ नहीं चल रहा है</p>
+        <audio id="mainAudioPlayer" controls></audio>
+    </div>
+
+    <script>
+        // आपका सही और फिक्स RAW JSON लिंक
+        const jsonUrl = "https://raw.githubusercontent.com/pavank11213-hub/ChatTTS/main/data.json";
+        let fullData = {};
+
+        // GitHub से data.json लोड करना
+        async function loadNovelData() {
+            try {
+                const response = await fetch(jsonUrl);
+                fullData = await response.json();
+                
+                const selectElement = document.getElementById('chapterSelect');
+                selectElement.innerHTML = '<option value="">-- यहाँ से चुनें --</option>';
+
+                // JSON डेटा को स्कैन करके ड्रॉपडाउन भरना
+                for (let novelName in fullData) {
+                    fullData[novelName].forEach((episode, index) => {
+                        let option = document.createElement('option');
+                        // वैल्यू में नोवेल का नाम और उसका इंडेक्स नंबर स्टोर कर रहे हैं
+                        option.value = `${novelName}|${index}`;
+                        option.textContent = `${novelName} - ${episode.title}`;
+                        selectElement.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error("Error loading JSON:", error);
+                document.getElementById('novelText').textContent = "डेटा लोड करने में समस्या आई। कृपया सुनिश्चित करें कि आपकी data.json फाइल जनरेट हो चुकी है।";
+            }
+        }
+
+        // चैप्टर बदलने पर टेक्स्ट बदलना और ऑडियो प्ले करना
+        async function changeChapter() {
+            const selectValue = document.getElementById('chapterSelect').value;
+            if (!selectValue) return;
+
+            // नोवेल का नाम और इंडेक्स अलग करें
+            const [novelName, index] = selectValue.split('|');
+            const episode = fullData[novelName][index];
+
+            // 1. ऑडियो प्लेयर सेट और प्ले करें
+            const player = document.getElementById('mainAudioPlayer');
+            player.src = episode.audio_url;
+            document.getElementById('nowPlaying').textContent = `🎵 चल रहा है: ${novelName} - ${episode.title}`;
+            player.play();
+
+            // 2. टेक्स्ट फाइल डाउनलोड करके स्क्रीन पर दिखाएं
+            document.getElementById('novelEpisodeTitle').textContent = `${novelName} - ${episode.title}`;
+            document.getElementById('novelText').textContent = "टेक्स्ट लोड हो रहा है, कृपया प्रतीक्षा करें...";
+            
+            try {
+                const textResponse = await fetch(episode.text_url);
+                const textData = await textResponse.text();
+                document.getElementById('novelText').textContent = textData;
+            } catch (error) {
+                document.getElementById('novelText').textContent = "माफ़ी चाहते हैं, इस चैप्टर का टेक्स्ट लोड नहीं हो सका।";
+            }
+        }
+
+        // ऐप लोड होते ही फंक्शन रन करें
+        loadNovelData();
+    </script>
+</body>
+</html>
