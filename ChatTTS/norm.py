@@ -49,7 +49,8 @@ def _split_tags(text: str) -> Tuple[List[str], List[str]]:
             current_tag += c
         else:
             current_text += c
-        if c == "]":
+        # A "]" only ends a tag that was opened. A loose "]" is text.
+        if c == "]" and current_tag != "":
             tags.append(current_tag)
             current_tag = ""
     if current_text != "":
